@@ -1,5 +1,5 @@
 /**
- * @file Gemineko Hive 侧边栏「社区主题商店 × 精细主题工坊」前端控制器。
+ * @file Gemineko Hive 侧边栏「高定光学主题商店 × 精细主题工坊」前端控制器。
  * 在打包阶段通过 build-bundle.mjs 内联至 dist/gemineko-hive.js。
  */
 
@@ -13,7 +13,7 @@ function escWorkshopHtml(str) {
 
 /**
  * 初始化侧边栏双 Tab 主题商店/工坊控制器。
- * @param {{ hostApi: Function, sidecarBanner: (text: string) => void }} deps
+ * @param {{ hostApi: Function, sidecarBanner: (text: string) => void, onThemeConfigChange?: (cfg: any) => void }} deps
  */
 export function createThemeWorkshopController(deps) {
   const state = {
@@ -31,6 +31,12 @@ export function createThemeWorkshopController(deps) {
     warning: '',
     exportedPack: null,
   };
+
+  function notifyHostTheme(cfg) {
+    if (cfg && typeof deps.onThemeConfigChange === 'function') {
+      deps.onThemeConfigChange(cfg);
+    }
+  }
 
   function getRoot() {
     let el = document.getElementById('gn-theme-workshop');
@@ -91,6 +97,7 @@ export function createThemeWorkshopController(deps) {
         state.presets = cfgRes.presets || {};
         state.rolePalettes = cfgRes.rolePalettes || {};
         if (cfgRes.brand) state.brand = cfgRes.brand;
+        notifyHostTheme(state.config);
       }
       if (regRes?.ok) {
         state.registry = Array.isArray(regRes.registry) ? regRes.registry : [];
@@ -116,8 +123,9 @@ export function createThemeWorkshopController(deps) {
       });
       if (data?.ok && data.config) {
         state.config = data.config;
+        notifyHostTheme(state.config);
         render();
-        showWorkshopToast(data.warning ? `已保存，壁纸提示：${data.warning}` : '✨ 已即时同步到 Antigravity 宿主窗口', Boolean(data.warning));
+        showWorkshopToast(data.warning ? `已保存，壁纸提示：${data.warning}` : '✨ 已即时同步到主窗口与基米窝', Boolean(data.warning));
       }
     } catch (err) {
       showWorkshopToast(`同步失败: ${err?.message || err}`, true);
@@ -129,6 +137,7 @@ export function createThemeWorkshopController(deps) {
       const data = await deps.hostApi('/api/theme/reset', { method: 'POST', body: '{}' });
       if (data?.ok && data.config) {
         state.config = data.config;
+        notifyHostTheme(state.config);
         render();
         showWorkshopToast('已恢复默认《基米窝》官方旗舰配置');
       }
@@ -143,8 +152,9 @@ export function createThemeWorkshopController(deps) {
       });
       if (data?.ok && data.config) {
         state.config = data.config;
+        notifyHostTheme(state.config);
         await loadConfig();
-        showWorkshopToast(`✨ 已激活主题「${data.config.activeThemePack?.name || '基米窝官方旗舰'}」`);
+        showWorkshopToast(`✨ 已应用主题「${data.config.activeThemePack?.name || '基米窝官方旗舰'}」`);
       } else {
         showWorkshopToast(data?.error || '启用主题失败', true);
       }
@@ -162,6 +172,7 @@ export function createThemeWorkshopController(deps) {
       });
       if (data?.ok) {
         state.config = data.config || state.config;
+        notifyHostTheme(state.config);
         await loadConfig();
         const warnTxt = data.warnings?.length ? `（已安全清洗 ${data.warnings.length} 项）` : '';
         showWorkshopToast(`🎉 已安装并启用「${data.pack?.name || data.pack?.id}」${warnTxt}`);
@@ -181,6 +192,7 @@ export function createThemeWorkshopController(deps) {
       });
       if (data?.ok) {
         state.config = data.config || state.config;
+        notifyHostTheme(state.config);
         await loadConfig();
         showWorkshopToast(`已卸载本地主题 ${packId}`);
       } else {
@@ -266,100 +278,138 @@ export function createThemeWorkshopController(deps) {
     }
   }
 
+  function renderPreviewMini(t) {
+    const sw = Array.isArray(t.swatches) && t.swatches.length ? t.swatches : ['#FFFFFF', '#6366F1', '#EC4899', '#38BDF8'];
+    const isDark = t.scheme === 'dark' || t.basePreset === 'carbon-obsidian' || t.basePreset === 'starry-nest';
+    const bgCanvas = escWorkshopHtml(sw[0] || (isDark ? '#0B0D14' : '#FFFFFF'));
+    const c1 = escWorkshopHtml(t.accent?.primary || sw[1] || '#6366F1');
+    const c2 = escWorkshopHtml(t.accent?.accent2 || sw[2] || '#EC4899');
+    const c3 = escWorkshopHtml(t.accent?.accent3 || sw[3] || '#38BDF8');
+    const sbBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
+    const cardBg = isDark ? 'rgba(255,255,255,0.11)' : 'rgba(255,255,255,0.92)';
+    const grad = escWorkshopHtml(t.accent?.gradient || `linear-gradient(90deg, ${c1}, ${c2}, ${c3})`);
+    return `
+      <div class="gn-store-preview" style="background:${bgCanvas};">
+        <div class="gn-pv-aurora" style="background:radial-gradient(circle at 24% 92%, ${c1}55, transparent 58%), radial-gradient(circle at 78% 88%, ${c2}50, transparent 56%), radial-gradient(circle at 52% 100%, ${c3}44, transparent 62%);"></div>
+        <div class="gn-pv-sidebar" style="background:${sbBg};">
+          <span class="gn-pv-dot" style="background:${grad};"></span>
+          <span class="gn-pv-bar" style="background:${c1}55;"></span>
+          <span class="gn-pv-bar"></span>
+        </div>
+        <div class="gn-pv-main">
+          <div class="gn-pv-gem" style="color:${c1};">✦</div>
+          <div class="gn-pv-composer" style="background:${cardBg};border-top:2px solid ${c1};box-shadow:0 4px 12px ${c2}33;"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSwitchRow(label, attrsHtml, checked) {
+    return `
+      <label class="gn-switch-row">
+        <span>${label}</span>
+        <input type="checkbox" class="gn-switch" ${attrsHtml} ${checked ? 'checked' : ''} />
+      </label>
+    `;
+  }
+
   function renderStoreTabHtml(c) {
     const activePackId = c.activeThemePackId || 'official-gemineko';
     const gh = state.github || {};
-    const starTxt = Number.isFinite(Number(gh.stars)) ? `⭐ ${gh.stars} Star 支持作者` : '⭐ 前往 GitHub 点 Star';
+    const starTxt = Number.isFinite(Number(gh.stars)) ? `⭐ ${gh.stars} Star` : '⭐ 点 Star 支持';
     const verTxt = gh.hasUpdate
       ? `🚀 发现新版 v${escWorkshopHtml(gh.latestVersion)}（当前 v${escWorkshopHtml(gh.currentVersion)}）`
-      : `✅ 已是最新版 v${escWorkshopHtml(gh.currentVersion || state.brand?.version || '0.7.0')}`;
+      : `v${escWorkshopHtml(gh.currentVersion || state.brand?.version || '0.7.2')} · 源 ${escWorkshopHtml(state.registrySource)}`;
 
     const cardsHtml = state.registry.map((t) => {
       const isActive = activePackId === t.id;
       const authorName = escWorkshopHtml(t.author?.name || 'Community');
       const authorUrl = t.author?.url ? escWorkshopHtml(t.author.url) : '';
-      const swatches = (t.swatches || []).slice(0, 4).map((hex) => `<span style="background:${escWorkshopHtml(hex)}"></span>`).join('');
-      const tagsHtml = [
-        t.official ? '<span class="gn-store-tag is-official">官方</span>' : (t.inRegistry === false ? '<span class="gn-store-tag is-local">本地包</span>' : '<span class="gn-store-tag">社区</span>'),
-        ...(t.tags || []).slice(0, 2).map((tag) => `<span class="gn-store-tag">${escWorkshopHtml(tag)}</span>`),
-      ].join('');
+      const badgeCls = t.official ? 'is-official' : (t.inRegistry === false ? 'is-local' : '');
+      const badgeLabel = t.official ? '官方' : (t.inRegistry === false ? '本地' : '社区');
       const actBtn = isActive
-        ? '<button type="button" class="gn-pill is-primary" disabled>✓ 使用中</button>'
+        ? '<button type="button" class="gn-pill is-primary" disabled>✓ 当前使用中</button>'
         : (t.installed || t.official
             ? `<button type="button" class="gn-pill is-primary" data-ws-activate="${escWorkshopHtml(t.id)}">应用主题</button>`
-            : `<button type="button" class="gn-pill is-primary" data-ws-install-id="${escWorkshopHtml(t.id)}">安装并启用</button>`);
+            : `<button type="button" class="gn-pill is-primary" data-ws-install-id="${escWorkshopHtml(t.id)}">安装启用</button>`);
       const uninstBtn = (!t.official && t.installed)
         ? `<button type="button" class="gn-pill" data-ws-uninstall="${escWorkshopHtml(t.id)}">卸载</button>`
         : '';
 
       return `
-        <div class="gn-store-card ${isActive ? 'is-active' : ''}">
-          <div class="gn-store-card-top">
-            <div class="gn-ws-swatches">${swatches}</div>
-            <div class="gn-store-tags">${tagsHtml}</div>
+        <article class="gn-store-card ${isActive ? 'is-active' : ''}">
+          ${renderPreviewMini(t)}
+          <div class="gn-store-body">
+            <div class="gn-store-head-row">
+              <div class="gn-store-name">${escWorkshopHtml(t.name)}</div>
+              <span class="gn-store-tag ${badgeCls}">${badgeLabel}</span>
+            </div>
+            <div class="gn-store-author">
+              by ${authorUrl ? `<a href="#" data-ws-ext="${authorUrl}">${authorName}</a>` : authorName} · ${(t.tags || []).slice(0, 2).map((tag) => escWorkshopHtml(tag)).join(' · ')}
+            </div>
+            <div class="gn-store-desc">${escWorkshopHtml(t.description || '开放式社区主题包')}</div>
+            <div class="gn-store-card-actions">${actBtn}${uninstBtn}</div>
           </div>
-          <div class="gn-store-name">${escWorkshopHtml(t.name)}</div>
-          <div class="gn-store-author">
-            by ${authorUrl ? `<a href="#" data-ws-ext="${authorUrl}">${authorName}</a>` : authorName} · v${escWorkshopHtml(t.version || '1.0.0')}
-          </div>
-          <div class="gn-store-desc">${escWorkshopHtml(t.description || '开放式社区主题包')}</div>
-          <div class="gn-store-card-actions">${actBtn}${uninstBtn}</div>
-        </div>
+        </article>
       `;
     }).join('');
 
     return `
       <div class="gn-store-hero">
-        <div>
-          <div class="gn-store-hero-title">💎 Gemineko Hive 开放主题引擎 · 社区商店</div>
-          <div class="gn-store-hero-sub">${verTxt} · 源: ${escWorkshopHtml(state.registrySource)}</div>
+        <div class="gn-store-hero-meta">
+          <span class="gn-store-hero-title">💎 社区主题画廊</span>
+          <span class="gn-store-hero-sub">${verTxt}</span>
         </div>
         <div class="gn-store-hero-btns">
-          <button type="button" class="gn-pill is-primary" data-ws-ext="${escWorkshopHtml(gh.repoUrl || state.brand?.repoUrl || 'https://github.com/AEmbers/gemineko-hive')}">${starTxt}</button>
-          <button type="button" class="gn-pill" data-ws-act="refresh-store">🔄 刷新商店/版本</button>
-          <button type="button" class="gn-pill" data-ws-ext="${escWorkshopHtml(state.brand?.submitThemeUrl || 'https://github.com/AEmbers/gemineko-hive/issues/new?template=theme-submission.yml')}">🚀 投稿上架我的主题</button>
+          <button type="button" class="gn-pill gn-star-pill" data-ws-ext="${escWorkshopHtml(gh.repoUrl || state.brand?.repoUrl || 'https://github.com/AEmbers/gemineko-hive')}">${starTxt}</button>
+          <button type="button" class="gn-pill" data-ws-act="refresh-store">🔄 刷新</button>
+          <button type="button" class="gn-pill" data-ws-ext="${escWorkshopHtml(state.brand?.submitThemeUrl || 'https://github.com/AEmbers/gemineko-hive/issues/new?template=theme-submission.yml')}">🚀 投稿</button>
         </div>
       </div>
 
       <div class="gn-store-grid">${cardsHtml || '<div class="gn-ws-sub">暂无主题条目</div>'}</div>
 
-      <div class="gn-ws-grid" style="margin-top:8px;">
-        <div class="gn-ws-card">
-          <div class="gn-ws-card-title">📥 导入第三方主题包（GitHub Raw / 本地 JSON）</div>
-          <div class="gn-ws-row">
-            <input type="text" data-ws-import-url="1" placeholder="粘贴 GitHub / Gist Raw JSON 链接 (https://...)" />
-            <button type="button" class="gn-pill is-primary" data-ws-act="import-url">拉取并安装</button>
+      <div class="gn-store-tools">
+        <details class="gn-store-collapse">
+          <summary>📥 导入第三方主题包（GitHub Raw / 本地 JSON）</summary>
+          <div class="gn-store-collapse-body">
+            <div class="gn-ws-row">
+              <input type="text" data-ws-import-url="1" placeholder="粘贴 GitHub / Gist Raw JSON 链接 (https://...)" />
+              <button type="button" class="gn-pill is-primary" data-ws-act="import-url">拉取安装</button>
+            </div>
+            <div class="gn-ws-row">
+              <label class="gn-pill" style="cursor:pointer;">
+                📂 选择本地 .gemineko-theme.json 导入
+                <input type="file" accept=".json,application/json" data-ws-import-file="1" style="display:none;" />
+              </label>
+            </div>
           </div>
-          <div class="gn-ws-row">
-            <label class="gn-pill" style="cursor:pointer;">
-              📂 选择本地 .gemineko-theme.json 导入
-              <input type="file" accept=".json,application/json" data-ws-import-file="1" style="display:none;" />
-            </label>
-          </div>
-        </div>
+        </details>
 
-        <div class="gn-ws-card">
-          <div class="gn-ws-card-title">📦 打包我的主题 & 投稿给全球用户</div>
-          <div class="gn-ws-row">
-            <input type="text" data-ws-exp="id" placeholder="主题ID (如 neon-sakura)" value="${escWorkshopHtml(state.exportedPack?.pack?.id || '')}" />
-            <input type="text" data-ws-exp="name" placeholder="主题名称" value="${escWorkshopHtml(state.exportedPack?.pack?.name || '')}" />
+        <details class="gn-store-collapse">
+          <summary>📦 打包当前配色导出 &amp; 投稿到官方商店</summary>
+          <div class="gn-store-collapse-body">
+            <div class="gn-ws-row">
+              <input type="text" data-ws-exp="id" placeholder="主题ID (如 neon-sakura)" value="${escWorkshopHtml(state.exportedPack?.pack?.id || '')}" />
+              <input type="text" data-ws-exp="name" placeholder="主题名称" value="${escWorkshopHtml(state.exportedPack?.pack?.name || '')}" />
+            </div>
+            <div class="gn-ws-row">
+              <input type="text" data-ws-exp="authorName" placeholder="作者署名 (GitHub ID)" value="${escWorkshopHtml(state.exportedPack?.pack?.author?.name || '')}" />
+              <input type="text" data-ws-exp="description" placeholder="一句话介绍亮点" value="${escWorkshopHtml(state.exportedPack?.pack?.description || '')}" />
+            </div>
+            <div class="gn-ws-row">
+              <button type="button" class="gn-pill is-primary" data-ws-act="export-pack">⬇ 导出并复制 .gemineko-theme.json</button>
+              <button type="button" class="gn-pill" data-ws-ext="${escWorkshopHtml(state.brand?.submitThemeUrl || 'https://github.com/AEmbers/gemineko-hive/issues/new?template=theme-submission.yml')}">前往 GitHub 投稿 ↗</button>
+            </div>
           </div>
-          <div class="gn-ws-row">
-            <input type="text" data-ws-exp="authorName" placeholder="作者署名 (如你的 GitHub ID)" value="${escWorkshopHtml(state.exportedPack?.pack?.author?.name || '')}" />
-            <input type="text" data-ws-exp="description" placeholder="一句话介绍亮点" value="${escWorkshopHtml(state.exportedPack?.pack?.description || '')}" />
-          </div>
-          <div class="gn-ws-row">
-            <button type="button" class="gn-pill is-primary" data-ws-act="export-pack">⬇ 导出并复制 .gemineko-theme.json</button>
-            <button type="button" class="gn-pill" data-ws-ext="${escWorkshopHtml(state.brand?.submitThemeUrl || 'https://github.com/AEmbers/gemineko-hive/issues/new?template=theme-submission.yml')}">前往 GitHub 投稿 ↗</button>
-          </div>
-        </div>
+        </details>
       </div>
     `;
   }
 
   function renderWorkshopTabHtml(c) {
     const presetItems = [
-      { id: 'auto', name: '跟随宿主', swatches: ['#E8EEF6', '#0F101A', '#8B5CF6', '#EC4899'], badge: '自动日夜' },
+      { id: 'auto', name: '跟随宿主', swatches: ['#FFFFFF', '#0B0D14', '#8B5CF6', '#EC4899'], badge: '自动日夜' },
       ...Object.values(state.presets || {}),
     ];
     const roles = [
@@ -371,32 +421,38 @@ export function createThemeWorkshopController(deps) {
     return `
       <div class="gn-ws-grid">
         <div class="gn-ws-card">
-          <div class="gn-ws-card-title">1. 基底配色、角色母题与视觉浓度</div>
+          <div class="gn-ws-card-title">1. 基底画布、角色母题与视觉浓度</div>
           <div class="gn-ws-presets">
-            ${presetItems.map((p) => `
-              <button type="button" class="gn-ws-preset-btn ${c.preset === p.id ? 'is-active' : ''}" data-ws-preset="${p.id}">
-                <div class="gn-ws-swatches">${(p.swatches || []).slice(0, 4).map((hex) => `<span style="background:${hex}"></span>`).join('')}</div>
-                <div class="gn-ws-preset-name">${p.name}</div>
-                <div class="gn-ws-preset-badge">${p.badge || ''}</div>
-              </button>
-            `).join('')}
+            ${presetItems.map((p) => {
+              const sw = p.swatches || ['#fff', '#000', '#8b5cf6', '#ec4899'];
+              return `
+                <button type="button" class="gn-ws-preset-btn ${c.preset === p.id ? 'is-active' : ''}" data-ws-preset="${p.id}">
+                  <div class="gn-preset-thumb" style="background:linear-gradient(135deg, ${sw[0]} 48%, ${sw[1] || sw[0]} 52%);">
+                    <span class="gn-preset-dot" style="background:${sw[2] || '#8b5cf6'};"></span>
+                    <span class="gn-preset-dot" style="background:${sw[3] || '#ec4899'};"></span>
+                  </div>
+                  <div class="gn-ws-preset-name">${p.name}</div>
+                  <div class="gn-ws-preset-badge">${p.badge || ''}</div>
+                </button>
+              `;
+            }).join('')}
           </div>
-          <div class="gn-ws-row" style="margin-top:8px;">
-            <span>视觉模式：</span>
+          <div class="gn-ws-row" style="margin-top:6px;">
+            <span>视觉模式</span>
             <select data-ws-field="themeIntensity">
-              <option value="optical-neko" ${(c.themeIntensity === 'optical-neko' || c.themeIntensity === 'balanced' || !c.themeIntensity) ? 'selected' : ''}>光学高定哈基米（默认 · 高透光影×无满屏花纹）</option>
-              <option value="vivid" ${c.themeIntensity === 'vivid' ? 'selected' : ''}>浓郁二次元（全屏角色纹样×旋转纹章）</option>
-              <option value="minimal" ${c.themeIntensity === 'minimal' ? 'selected' : ''}>极简专注（仅保留配色层次）</option>
+              <option value="optical-neko" ${(c.themeIntensity === 'optical-neko' || c.themeIntensity === 'balanced' || !c.themeIntensity) ? 'selected' : ''}>光学高定哈基米（推荐 · 高透流光）</option>
+              <option value="vivid" ${c.themeIntensity === 'vivid' ? 'selected' : ''}>浓郁二次元（全屏纹样×星环）</option>
+              <option value="minimal" ${c.themeIntensity === 'minimal' ? 'selected' : ''}>极简专注（纯净配色）</option>
             </select>
           </div>
           <div class="gn-ws-row">
-            <span>动态角色母题：</span>
+            <span>角色母题</span>
             <select data-ws-field="accentMode">
               ${roles.map((r) => `<option value="${r.id}" ${c.accentMode === r.id ? 'selected' : ''}>${r.label}</option>`).join('')}
             </select>
           </div>
           <div class="gn-ws-row">
-            <span>动效与圆角：</span>
+            <span>动效圆角</span>
             <select data-ws-field="motionLevel">
               <option value="standard" ${c.motionLevel === 'standard' ? 'selected' : ''}>标准丝滑</option>
               <option value="subtle" ${c.motionLevel === 'subtle' ? 'selected' : ''}>轻柔微动</option>
@@ -409,7 +465,7 @@ export function createThemeWorkshopController(deps) {
             </select>
           </div>
           <div class="gn-ws-row">
-            <span>加载动效：</span>
+            <span>加载星徽</span>
             <select data-ws-field="spinnerStyle">
               <option value="role-motif" ${(c.spinnerStyle || 'role-motif') === 'role-motif' ? 'selected' : ''}>5角色专属星徽</option>
               <option value="paw-bounce" ${c.spinnerStyle === 'paw-bounce' ? 'selected' : ''}>弹跳发光猫肉垫</option>
@@ -421,19 +477,19 @@ export function createThemeWorkshopController(deps) {
 
         <div class="gn-ws-card">
           <div class="gn-ws-card-title">2. 角落立绘水印与 5 角色联动彩蛋</div>
-          <div class="gn-ws-checks">
-            <label><input type="checkbox" data-ws-wm-bool="enabled" ${c.watermark?.enabled !== false ? 'checked' : ''} /> 角落二次元角色立绘水印</label>
-            <label><input type="checkbox" data-ws-bool="askStageEnabled" ${c.askStageEnabled !== false ? 'checked' : ''} /> 提问模式抱臂思考+轮盘舞台</label>
-            <label><input type="checkbox" data-ws-meme="inlineRender" ${c.memes?.inlineRender !== false ? 'checked' : ''} /> 聊天[表情]免改ASAR内联贴纸</label>
-            <label><input type="checkbox" data-ws-meme="autoFinishSticker" ${c.memes?.autoFinishSticker !== false ? 'checked' : ''} /> 收工弹出猫娘贴纸（工作中禁弹）</label>
-            <label><input type="checkbox" data-ws-link="roleSwitchAurora" ${c.linkages?.roleSwitchAurora ? 'checked' : ''} /> 切模型极光扫屏</label>
-            <label><input type="checkbox" data-ws-link="composerBreathGlow" ${c.linkages?.composerBreathGlow ? 'checked' : ''} /> 思考/运行呼吸流光边框</label>
-            <label><input type="checkbox" data-ws-link="errorHissShake" ${c.linkages?.errorHissShake ? 'checked' : ''} /> 工具报错「哈气」微抖</label>
-            <label><input type="checkbox" data-ws-link="pokeBurst" ${c.linkages?.pokeBurst ? 'checked' : ''} /> 连击5次「捅了基米窝」全员巡游</label>
-            <label><input type="checkbox" data-ws-link="nightLamp" ${c.linkages?.nightLamp ? 'checked' : ''} /> 深夜小夜灯（23:00-05:00）</label>
+          <div class="gn-ws-switches">
+            ${renderSwitchRow('角落角色立绘水印', 'data-ws-wm-bool="enabled"', c.watermark?.enabled !== false)}
+            ${renderSwitchRow('提问舞台抱臂思考', 'data-ws-bool="askStageEnabled"', c.askStageEnabled !== false)}
+            ${renderSwitchRow('免ASAR贴纸内联', 'data-ws-meme="inlineRender"', c.memes?.inlineRender !== false)}
+            ${renderSwitchRow('长任务收工贴纸', 'data-ws-meme="autoFinishSticker"', c.memes?.autoFinishSticker !== false)}
+            ${renderSwitchRow('切模型极光扫屏', 'data-ws-link="roleSwitchAurora"', Boolean(c.linkages?.roleSwitchAurora))}
+            ${renderSwitchRow('思考呼吸流光框', 'data-ws-link="composerBreathGlow"', Boolean(c.linkages?.composerBreathGlow))}
+            ${renderSwitchRow('报错「哈气」微抖', 'data-ws-link="errorHissShake"', Boolean(c.linkages?.errorHissShake))}
+            ${renderSwitchRow('捅基米窝全员巡游', 'data-ws-link="pokeBurst"', Boolean(c.linkages?.pokeBurst))}
+            ${renderSwitchRow('深夜模式小夜灯', 'data-ws-link="nightLamp"', Boolean(c.linkages?.nightLamp))}
           </div>
-          <div class="gn-ws-row" style="margin-top:6px;">
-            <span>水印形象：</span>
+          <div class="gn-ws-row" style="margin-top:4px;">
+            <span>水印角色</span>
             <select data-ws-wm="role">
               <option value="follow-role" ${(c.watermark?.role || 'follow-role') === 'follow-role' ? 'selected' : ''}>跟随当前模型角色</option>
               <option value="neon" ${c.watermark?.role === 'neon' ? 'selected' : ''}>Neon · 炫彩哈基米</option>
@@ -443,65 +499,65 @@ export function createThemeWorkshopController(deps) {
               <option value="gpt" ${c.watermark?.role === 'gpt' ? 'selected' : ''}>GPT · 白紫小龙娘</option>
               ${c.watermark?.customFilePath ? `<option value="custom" ${c.watermark?.role === 'custom' ? 'selected' : ''}>自定义透明立绘</option>` : ''}
             </select>
-            <button type="button" class="gn-pill" data-ws-act="pick-wm">🖼️ 换透明立绘</button>
+            <button type="button" class="gn-pill" data-ws-act="pick-wm">🖼️ 换立绘</button>
           </div>
           <div class="gn-ws-row">
-            <label>水印显眼度 ${Math.round((c.watermark?.opacity ?? 0.14) * 100)}% <input type="range" min="4" max="38" value="${Math.round((c.watermark?.opacity ?? 0.14) * 100)}" data-ws-wm-range="opacity" /></label>
+            <label class="gn-range-label">水印显眼度 ${Math.round((c.watermark?.opacity ?? 0.14) * 100)}% <input type="range" min="4" max="38" value="${Math.round((c.watermark?.opacity ?? 0.14) * 100)}" data-ws-wm-range="opacity" /></label>
           </div>
-          <div class="gn-ws-row" style="margin-top:4px;">
-            <button type="button" class="gn-pill is-primary" data-ws-egg="hive-poke-burst">💥 立即捅了基米窝</button>
-            <button type="button" class="gn-pill" data-ws-egg="stardust-rain">🐾 炫彩 SVG 爪印雨 (Ctrl+Shift+P)</button>
+          <div class="gn-ws-row" style="margin-top:2px;">
+            <button type="button" class="gn-pill is-primary" data-ws-egg="hive-poke-burst">💥 捅基米窝巡游</button>
+            <button type="button" class="gn-pill" data-ws-egg="stardust-rain">🐾 爪印雨 (Ctrl+Shift+P)</button>
           </div>
         </div>
 
         <div class="gn-ws-card">
           <div class="gn-ws-card-title">3. 工作台增强与自定义壁纸</div>
-          <div class="gn-ws-checks">
-            <label><input type="checkbox" data-ws-wb="pawOutline" ${c.workbench?.pawOutline ? 'checked' : ''} /> 悬浮猫爪对话大纲</label>
-            <label><input type="checkbox" data-ws-wb="codeBlockFold" ${c.workbench?.codeBlockFold ? 'checked' : ''} /> 超长代码块吸顶+折叠（≥32行）</label>
-            <label><input type="checkbox" data-ws-wb="contextMenu" ${c.workbench?.contextMenu ? 'checked' : ''} /> 毛玻璃右键快捷菜单 (/btw/@引用)</label>
-            <label><input type="checkbox" data-ws-wb="smoothScroll" ${c.workbench?.smoothScroll ? 'checked' : ''} /> 滚底平滑动效</label>
+          <div class="gn-ws-switches">
+            ${renderSwitchRow('悬浮猫爪大纲', 'data-ws-wb="pawOutline"', Boolean(c.workbench?.pawOutline))}
+            ${renderSwitchRow('代码块吸顶折叠', 'data-ws-wb="codeBlockFold"', Boolean(c.workbench?.codeBlockFold))}
+            ${renderSwitchRow('毛玻璃右键菜单', 'data-ws-wb="contextMenu"', Boolean(c.workbench?.contextMenu))}
+            ${renderSwitchRow('滚底平滑动效', 'data-ws-wb="smoothScroll"', Boolean(c.workbench?.smoothScroll))}
           </div>
-          <div class="gn-ws-row" style="margin-top:8px;">
-            <span>壁纸模式：</span>
+          <div class="gn-ws-row" style="margin-top:6px;">
+            <span>壁纸模式</span>
             <select data-ws-wp="mode">
-              <option value="off" ${c.wallpaper?.mode === 'off' ? 'selected' : ''}>关闭（默认零占用）</option>
+              <option value="off" ${c.wallpaper?.mode === 'off' ? 'selected' : ''}>关闭（零占用）</option>
               <option value="builtin-starry" ${c.wallpaper?.mode === 'builtin-starry' ? 'selected' : ''}>内置星轨猫窝</option>
               <option value="builtin-aurora" ${c.wallpaper?.mode === 'builtin-aurora' ? 'selected' : ''}>内置极光雾幕</option>
-              <option value="custom" ${c.wallpaper?.mode === 'custom' ? 'selected' : ''}>本机图片 / MP4-WebM</option>
+              <option value="custom" ${c.wallpaper?.mode === 'custom' ? 'selected' : ''}>本机图片 / 视频</option>
             </select>
-            <button type="button" class="gn-pill" data-ws-act="pick-wp">📁 选择壁纸</button>
+            <button type="button" class="gn-pill" data-ws-act="pick-wp">📁 选文件</button>
           </div>
           <div class="gn-ws-row">
             <input type="text" data-ws-wp-path="1" placeholder="粘贴本地图片/视频绝对路径..." value="${escWorkshopHtml(c.wallpaper?.filePath || '')}" />
             <button type="button" class="gn-pill" data-ws-act="apply-wp-path">应用</button>
           </div>
           <div class="gn-ws-row">
-            <label>透明度 ${Math.round((c.wallpaper?.opacity ?? 0.22) * 100)}% <input type="range" min="5" max="65" value="${Math.round((c.wallpaper?.opacity ?? 0.22) * 100)}" data-ws-wp-range="opacity" /></label>
-            <label>模糊 ${c.wallpaper?.blur ?? 4}px <input type="range" min="0" max="24" value="${c.wallpaper?.blur ?? 4}" data-ws-wp-range="blur" /></label>
-            <label>遮罩 ${Math.round((c.wallpaper?.scrim ?? 0.35) * 100)}% <input type="range" min="0" max="85" value="${Math.round((c.wallpaper?.scrim ?? 0.35) * 100)}" data-ws-wp-range="scrim" /></label>
+            <label class="gn-range-label">透明 ${Math.round((c.wallpaper?.opacity ?? 0.22) * 100)}% <input type="range" min="5" max="65" value="${Math.round((c.wallpaper?.opacity ?? 0.22) * 100)}" data-ws-wp-range="opacity" /></label>
+            <label class="gn-range-label">模糊 ${c.wallpaper?.blur ?? 4}px <input type="range" min="0" max="24" value="${c.wallpaper?.blur ?? 4}" data-ws-wp-range="blur" /></label>
+            <label class="gn-range-label">遮罩 ${Math.round((c.wallpaper?.scrim ?? 0.35) * 100)}% <input type="range" min="0" max="85" value="${Math.round((c.wallpaper?.scrim ?? 0.35) * 100)}" data-ws-wp-range="scrim" /></label>
           </div>
         </div>
 
         <div class="gn-ws-card">
           <div class="gn-ws-card-title">4. 内置 Antigravity 全量汉化（面向国际用户可选）</div>
           <div class="gn-ws-row">
-            <span>汉化模式：</span>
+            <span>汉化模式</span>
             <select data-ws-i18n="mode">
-              <option value="auto" ${(c.i18n?.mode || 'auto') === 'auto' ? 'selected' : ''}>跟随系统语言（中文自动开启 / 海外自动英文）</option>
-              <option value="neko-zh" ${c.i18n?.mode === 'neko-zh' ? 'selected' : ''}>哈基米萌系中文（猫窝风全量汉化）</option>
-              <option value="zh" ${c.i18n?.mode === 'zh' ? 'selected' : ''}>标准专业中文（规范准确术语）</option>
-              <option value="off" ${c.i18n?.mode === 'off' ? 'selected' : ''}>关闭 · 保留原版英文（零开销）</option>
+              <option value="auto" ${(c.i18n?.mode || 'auto') === 'auto' ? 'selected' : ''}>跟随系统（中文自动开 / 海外英文）</option>
+              <option value="neko-zh" ${c.i18n?.mode === 'neko-zh' ? 'selected' : ''}>哈基米萌系中文</option>
+              <option value="zh" ${c.i18n?.mode === 'zh' ? 'selected' : ''}>标准专业中文</option>
+              <option value="off" ${c.i18n?.mode === 'off' ? 'selected' : ''}>关闭 · 保留原版英文</option>
             </select>
           </div>
           <div class="gn-ws-row">
-            <span>自动汉化默认词库：</span>
+            <span>默认词库</span>
             <select data-ws-i18n="autoChineseStyle">
               <option value="neko-zh" ${(c.i18n?.autoChineseStyle || 'neko-zh') === 'neko-zh' ? 'selected' : ''}>哈基米萌系中文（推荐）</option>
               <option value="zh" ${c.i18n?.autoChineseStyle === 'zh' ? 'selected' : ''}>标准专业中文</option>
             </select>
           </div>
-          <div class="gn-ws-sub" style="margin-top:4px;">保留 Antigravity / Gemini 品牌与代码正文原样，切回「关闭」立即无损还原英文。</div>
+          <div class="gn-ws-sub" style="margin-top:4px;">保留 Antigravity / Gemini 品牌与代码正文原样，切回「关闭」无损还原英文。</div>
         </div>
       </div>
     `;
@@ -512,7 +568,7 @@ export function createThemeWorkshopController(deps) {
     root.classList.toggle('hidden', !state.open);
     if (!state.open) return;
     if (!state.config) {
-      root.innerHTML = '<div class="gn-ws-card">正在读取 Gemineko Hive 主题引擎...</div>';
+      root.innerHTML = '<div class="gn-ws-card">正在连接 Gemineko Hive 主题引擎...</div>';
       return;
     }
     const c = state.config;
@@ -522,20 +578,22 @@ export function createThemeWorkshopController(deps) {
     root.innerHTML = `
       <div class="gn-ws-head">
         <div>
-          <div class="gn-ws-title">🏪 Gemineko Hive · 开放主题商店与创作工坊</div>
-          <div class="gn-ws-sub">双层生态：官方旗舰《基米窝》 × 社区主题热插拔 × 一键打包导出投稿</div>
+          <div class="gn-ws-title">✦ Gemineko Hive · 高定光学主题引擎</div>
+          <div class="gn-ws-sub">社区主题热插拔 × 5 角色流光联动 × 一键打包投稿</div>
         </div>
         <div class="gn-ws-actions">
-          <button type="button" class="gn-pill ${state.tab === 'store' ? 'is-active' : ''}" data-ws-tab="store">🏪 主题商店</button>
-          <button type="button" class="gn-pill ${state.tab === 'workshop' ? 'is-active' : ''}" data-ws-tab="workshop">🎨 精细工坊</button>
-          <button type="button" class="gn-pill" data-ws-act="toggle-enabled">${c.enabled ? '✅ 已开启' : '⚪ 已停用'}</button>
-          <button type="button" class="gn-pill ${c.focusMode ? 'is-primary' : ''}" data-ws-act="toggle-focus">🧘 专注 ${c.focusMode ? '开' : '关'}</button>
-          <button type="button" class="gn-pill" data-ws-act="reset">↺ 默认</button>
-          <button type="button" class="gn-pill" data-ws-act="close">收起</button>
+          <div class="gn-ws-tabs">
+            <button type="button" class="gn-tab-btn ${state.tab === 'store' ? 'is-active' : ''}" data-ws-tab="store">🏪 主题商店</button>
+            <button type="button" class="gn-tab-btn ${state.tab === 'workshop' ? 'is-active' : ''}" data-ws-tab="workshop">🎨 精细工坊</button>
+          </div>
+          <button type="button" class="gn-pill" data-ws-act="toggle-enabled">${c.enabled ? '✅ 已启用' : '⚪ 已停用'}</button>
+          <button type="button" class="gn-pill ${c.focusMode ? 'is-primary' : ''}" data-ws-act="toggle-focus">🧘 专注</button>
+          <button type="button" class="gn-pill" data-ws-act="reset" title="恢复默认配置">↺</button>
+          <button type="button" class="gn-pill" data-ws-act="close" title="收起抽屉">✕</button>
         </div>
       </div>
 
-      <div class="gn-ws-status ${state.warning ? 'is-warn' : ''}">${escWorkshopHtml(state.warning || '调整或安装任意主题后，实时无损作用于 Antigravity 主窗口')}</div>
+      <div class="gn-ws-status ${state.warning ? 'is-warn' : ''}">${escWorkshopHtml(state.warning || '调整或启用主题后实时无损作用于主窗口与基米窝侧栏')}</div>
 
       ${state.tab === 'store' ? renderStoreTabHtml(c) : renderWorkshopTabHtml(c)}
 

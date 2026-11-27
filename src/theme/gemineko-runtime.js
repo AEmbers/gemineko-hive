@@ -187,6 +187,51 @@ export function bootGeminekoHive() {
   let lastCdpStatus = null;
   let lastGithubPulse = null;
   let updateBannerDismissed = false;
+  let lastSidecarThemeConfig = null;
+  let lastSidecarThemeTs = 0;
+
+  function syncSidecarHostTheme(cfg) {
+    if (cfg && typeof cfg === 'object') {
+      lastSidecarThemeConfig = cfg;
+      lastSidecarThemeTs = Number(cfg.updatedAt || 0);
+    }
+    const cur = lastSidecarThemeConfig;
+    const root = document.documentElement;
+    if (!root) return;
+    if (!cur || cur.enabled === false) {
+      root.removeAttribute('data-gn-preset');
+      root.removeAttribute('data-gn-scheme');
+      root.style.removeProperty('--gn-hive-accent');
+      root.style.removeProperty('--gn-hive-accent-2');
+      return;
+    }
+
+    const pack = cur.activeThemePack && typeof cur.activeThemePack === 'object' ? cur.activeThemePack : null;
+    const preset = cur.preset || 'auto';
+    let sysDark = false;
+    try {
+      sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch {}
+    const hostDark = root.getAttribute('data-theme') === 'dark' || sysDark;
+
+    let scheme = hostDark ? 'dark' : 'light';
+    if (pack && (pack.scheme === 'light' || pack.scheme === 'dark')) {
+      scheme = pack.scheme;
+    } else if (preset === 'nebula-day' || preset === 'cream-paper') {
+      scheme = 'light';
+    } else if (preset === 'starry-nest' || preset === 'carbon-obsidian') {
+      scheme = 'dark';
+    }
+
+    const effPreset = preset === 'auto' ? (scheme === 'dark' ? 'starry-nest' : 'nebula-day') : preset;
+    setAttrIfChanged(root, 'data-gn-scheme', scheme);
+    setAttrIfChanged(root, 'data-gn-preset', effPreset);
+    setAttrIfChanged(root, 'data-theme', scheme);
+
+    const acc = pack?.accent || {};
+    root.style.setProperty('--gn-hive-accent', acc.primary || '#7c6cf6');
+    root.style.setProperty('--gn-hive-accent-2', acc.accent2 || '#ec4899');
+  }
 
   async function openExternalSafe(url) {
     const target = String(url || lastGithubPulse?.repoUrl || 'https://github.com/AEmbers/gemineko-hive');
@@ -741,6 +786,9 @@ export function bootGeminekoHive() {
   }
 
   function applyThemeAndLocale() {
+    if (lastSidecarThemeConfig) {
+      syncSidecarHostTheme();
+    }
     const nextMinimal = prefs.themeMode === 'avatar-only' ? '1' : '0';
     setAttrIfChanged(document.body, 'data-gemineko-minimal', nextMinimal);
 
@@ -1247,11 +1295,12 @@ export function bootGeminekoHive() {
     try {
       const convId = getSidecarConversationId();
       const liveUrl = convId ? `/api/live-activity?conversationId=${encodeURIComponent(convId)}` : '/api/live-activity';
-      const [nativeResp, liveResp, cdpResp, ghResp] = await Promise.all([
+      const [nativeResp, liveResp, cdpResp, ghResp, themeResp] = await Promise.all([
         originalFetch('/api/native-patch/status'),
         originalFetch(liveUrl),
         originalFetch('/api/cdp/status'),
         originalFetch('/api/github/status'),
+        originalFetch('/api/theme/config'),
       ]);
       if (nativeResp.ok) lastNativeStatus = await nativeResp.json();
       if (liveResp.ok) {
@@ -1265,6 +1314,10 @@ export function bootGeminekoHive() {
       if (ghResp.ok) {
         const g = await ghResp.json();
         if (g?.ok) lastGithubPulse = g;
+      }
+      if (themeResp.ok) {
+        const th = await themeResp.json();
+        if (th?.config) syncSidecarHostTheme(th.config);
       }
       if (barUpdateCb) barUpdateCb();
     } catch {
@@ -1721,6 +1774,9 @@ export function bootGeminekoHive() {
         const rect = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { left: 80, bottom: 48 };
         spawnBubbleAt(rect.left + 80, rect.bottom + 26, text);
       },
+      onThemeConfigChange: (nextCfg) => {
+        syncSidecarHostTheme(nextCfg);
+      },
     });
   }
 
@@ -1810,6 +1866,14 @@ export function bootGeminekoHive() {
           })
           .catch(() => {});
         workshop?.pollEvents?.();
+        originalFetch('/api/theme/config')
+          .then((r) => (r.ok ? r.json() : null))
+          .then((th) => {
+            if (th?.config && Number(th.config.updatedAt || 0) !== lastSidecarThemeTs) {
+              syncSidecarHostTheme(th.config);
+            }
+          })
+          .catch(() => {});
       }, 4000);
     }
 

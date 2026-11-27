@@ -327,6 +327,8 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
     assert.match(overlayScript, /gemineko-cdp-composer-dock/);
     assert.match(overlayScript, /antigravity\.agentSidePanelInputBox/);
     assert.match(overlayScript, /gk-live-inline-wrap/);
+    assert.match(overlayScript, /status-loading-spinner/);
+    assert.doesNotMatch(overlayScript, /activePattern\s*=\s*\/\^\(\?:[^;\n]*爪子狂敲/);
     assert.match(overlayScript, /getCurrentConversationId/);
     assert.doesNotMatch(overlayScript, /cursor:\s*grabbing/);
     assert.doesNotMatch(overlayScript, /querySelectorAll\(['"]button, summary, \[role="button"\], div['"]\)/);
@@ -719,6 +721,10 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     const bundleContent = fs.readFileSync(bundleRes.outPath, 'utf8');
     assert.match(bundleContent, /createThemeWorkshopController/);
     assert.match(bundleContent, /主题商店|主题工坊/);
+    assert.match(bundleContent, /syncSidecarHostTheme/);
+    assert.match(bundleContent, /data-gn-scheme/);
+    assert.match(bundleContent, /gn-store-preview/);
+    assert.match(bundleContent, /gn-switch/);
     assert.match(bundleContent, /gemineko-sidecar-shell/);
     assert.match(bundleContent, /guardLoadingSkeleton/);
     assert.match(bundleContent, /offsetWidth/);

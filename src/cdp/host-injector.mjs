@@ -381,8 +381,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         display: inline-flex !important;
         align-items: center;
         justify-content: center;
-        width: 38px;
-        height: 38px;
+        width: 34px;
+        height: 34px;
         margin-right: 6px;
         flex-shrink: 0;
         background: transparent !important;
@@ -392,8 +392,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         vertical-align: middle;
       }
       .\${INLINE_CLASS} img.gk-inline-sprite {
-        width: 38px;
-        height: 38px;
+        width: 34px;
+        height: 34px;
         object-fit: contain;
         background: transparent !important;
         border: none !important;
@@ -717,38 +717,63 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
 
   function syncActiveStatusSprite() {
     if (stopped) return;
-    const activePattern = /^(?:Thinking(?:\\s+for\\s+\\d|\\s*\\d|$)|Working(?:\\b|\\s*$)|Running\\b|Planning\\b|Reading\\b|Editing\\b|Analyzing\\b|思考中|猫脑运转|猫脑高速运转|处理中|认真干活|运行中|飞速狂奔|规划中|军师规划|读取中|凑近仔细看|编辑中|爪子狂敲|分析中|深潜洞察)/i;
+    const scope = document.querySelector('[data-testid="conversation-view"]') || document.body;
     const anchor = findComposerAnchor();
     const maxY = anchor ? anchor.getBoundingClientRect().top - 4 : window.innerHeight - 60;
     let bestCandidate = null;
     let bestTop = -Infinity;
 
-    if (document.body) {
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      let node;
-      while ((node = walker.nextNode())) {
-        const txt = (node.nodeValue || '').trim();
-        if (!txt || txt.length > 72 || !activePattern.test(txt)) continue;
-        const p = node.parentElement;
-        if (!p) continue;
-        if (p.closest('#' + DOCK_ID) || p.closest('.' + INLINE_CLASS)) continue;
-        if (p.closest('code, pre, textarea, [contenteditable="true"], .monaco-editor')) continue;
-        // 排除已折叠的历史 Worked for 块内部文本（含中英文与萌系译文）
-        const btn = p.closest('button, summary');
-        if (btn && /^(?:Worked for|已工作|猫猫打工)\\b/i.test((btn.textContent || '').trim())) continue;
+    if (scope) {
+      // 1. 优先识别宿主原生加载指示器 / 流光文本（兼容动态焦点文案如 update_focus）
+      const liveSignals = scope.querySelectorAll('[data-testid="status-loading-spinner"], [class*="animate-shimmer"]');
+      for (const sig of liveSignals) {
+        if (!sig || !sig.isConnected) continue;
+        if (sig.closest('#' + DOCK_ID) || sig.closest('.' + INLINE_CLASS)) continue;
+        if (sig.closest('code, pre, textarea, [contenteditable="true"], .monaco-editor')) continue;
+        if (sig.closest('[data-testid="worked-for-collapsible"]')) continue;
 
+        const hostLine = sig.closest('div, span, p') || sig;
+        const p = hostLine.parentElement && /flex/.test(getComputedStyle(hostLine.parentElement).display) && getComputedStyle(hostLine.parentElement).flexDirection !== 'column'
+          ? hostLine.parentElement
+          : hostLine;
         const r = p.getBoundingClientRect();
         if (r.width <= 0 || r.height <= 0 || r.height > 64) continue;
         if (r.bottom < 45 || r.top > maxY) continue;
-
-        // 优先横向 flex 容器作为锚定行
-        const row = (p.parentElement && /flex/.test(getComputedStyle(p.parentElement).display) && getComputedStyle(p.parentElement).flexDirection !== 'column')
-          ? p.parentElement
-          : p;
-
         if (r.top > bestTop) {
           bestTop = r.top;
-          bestCandidate = row;
+          bestCandidate = p;
+        }
+      }
+
+      // 2. 空闲期绝不滞留；仅活跃运行态再走收敛文本兜底，彻底杜绝误挂到历史「爪子狂敲中 +6 -2」
+      if (!bestCandidate && latestState.active) {
+        const activePattern = /^(?:Thinking(?:\\s+for\\s+\\d|\\s*\\d|$)|Working(?:\\b|\\s*$)|Running\\b|Planning\\b|思考中|猫脑运转|猫脑高速运转|处理中|认真干活|运行中|飞速狂奔|规划中|军师规划)/i;
+        const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+          const txt = (node.nodeValue || '').trim();
+          if (!txt || txt.length > 72 || !activePattern.test(txt)) continue;
+          if (/[+-]\\d+\\s+[+-]\\d+/.test(txt)) continue;
+          const p = node.parentElement;
+          if (!p) continue;
+          if (p.closest('#' + DOCK_ID) || p.closest('.' + INLINE_CLASS)) continue;
+          if (p.closest('code, pre, textarea, [contenteditable="true"], .monaco-editor')) continue;
+          if (p.closest('[data-testid="worked-for-collapsible"]')) continue;
+          const btn = p.closest('button, summary');
+          if (btn && /^(?:Worked for|已工作|猫猫打工)\\b/i.test((btn.textContent || '').trim())) continue;
+
+          const r = p.getBoundingClientRect();
+          if (r.width <= 0 || r.height <= 0 || r.height > 64) continue;
+          if (r.bottom < 45 || r.top > maxY || (maxY - r.bottom) > 220) continue;
+
+          const row = (p.parentElement && /flex/.test(getComputedStyle(p.parentElement).display) && getComputedStyle(p.parentElement).flexDirection !== 'column')
+            ? p.parentElement
+            : p;
+
+          if (r.top > bestTop) {
+            bestTop = r.top;
+            bestCandidate = row;
+          }
         }
       }
     }
