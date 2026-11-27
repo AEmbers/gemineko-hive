@@ -6,6 +6,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BRAND_META } from '../meta/brand.mjs';
 import { DEFAULT_HOST_THEME_CONFIG, ROLE_PALETTES, THEME_PRESETS } from '../theme/host-theme-config.mjs';
 
 const THEME_RUNTIME_DIR = dirname(fileURLToPath(import.meta.url));
@@ -198,12 +199,12 @@ function buildTopBrandPawUri() {
   return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
 }
 
-/** 读取预渲染 3D 晶透猫耳星钻 256×256 透明 PNG 为内联 Base64 Data URI（带矢量兜底） */
-function readHomeGemDataUri(fileName, fallbackBuilder) {
+/** 读取《基米窝》官方高清 256×256 图标（assets/logo.png）为内联 Base64 Data URI（带矢量兜底） */
+function readHomeGemDataUri(_fileName, fallbackBuilder) {
   try {
-    const absPath = resolve(THEME_RUNTIME_DIR, '..', '..', 'assets', 'sprites', fileName);
-    if (existsSync(absPath)) {
-      const b64 = readFileSync(absPath).toString('base64');
+    const logoPath = resolve(THEME_RUNTIME_DIR, '..', '..', 'assets', 'logo.png');
+    if (existsSync(logoPath)) {
+      const b64 = readFileSync(logoPath).toString('base64');
       return `url("data:image/png;base64,${b64}")`;
     }
   } catch {
@@ -275,12 +276,14 @@ export function buildHostThemeRuntimeSnippet() {
   const topBrandPawJson = JSON.stringify(buildTopBrandPawUri());
   const homeGemLightJson = JSON.stringify(readHomeGemDataUri('home-star-gem-light.png', buildHomeBrandCatUri));
   const homeGemDarkJson = JSON.stringify(readHomeGemDataUri('home-star-gem-dark.png', buildHomeBrandCatUri));
+  const brandMetaJson = JSON.stringify(BRAND_META);
 
   return `
   function initHostThemeSuite(ctx) {
     const THEME_PRESETS = ${presetsJson};
     const ROLE_PALETTES = ${palettesJson};
     const DEFAULT_CFG = ${defaultCfgJson};
+    const BRAND = ${brandMetaJson};
     const ROLE_PATTERNS = ${rolePatternsJson};
     const ROLE_CREST_SVGS = ${roleCrestsJson};
     const ROLE_SPINNERS = ${roleSpinnersJson};
@@ -289,6 +292,7 @@ export function buildHostThemeRuntimeSnippet() {
     const HOME_GEM_LIGHT_URI = ${homeGemLightJson};
     const HOME_GEM_DARK_URI = ${homeGemDarkJson};
     const THEME_STYLE_ID = 'gemineko-host-theme-v5';
+    const COMMUNITY_PACK_STYLE_ID = 'gemineko-community-pack-style';
     const WP_LAYER_ID = 'gemineko-wallpaper-layer';
     const AURORA_HOST_ID = 'gemineko-conv-aurora';
     const WATERMARK_ID = 'gemineko-corner-watermark';
@@ -1172,6 +1176,27 @@ html[data-gk-smooth="1"] * { scroll-behavior: smooth; }
   background: color-mix(in srgb, var(--gk-role-primary) 12%, var(--secondary));
   border: 1px solid color-mix(in srgb, var(--gk-role-primary) 26%, transparent);
 }
+#\${HOME_STAGE_ID} .gk-home-brand-foot {
+  margin-top: 7px;
+  padding-top: 5px;
+  border-top: 1px dashed color-mix(in srgb, var(--gk-role-primary) 18%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 10.5px !important;
+  color: var(--muted-foreground);
+  opacity: 0.86;
+}
+#\${HOME_STAGE_ID} .gk-home-brand-foot a {
+  color: var(--gk-role-primary, #8b5cf6);
+  font-weight: 700;
+  text-decoration: none;
+}
+#\${HOME_STAGE_ID} .gk-home-brand-foot a:hover {
+  text-decoration: underline;
+}
 
 /* === 7.5 提问模式 (ask_question) 主题舞台：上问题 / 左下抱臂仰头思考+真实编号气泡 / 右下选项+Other+提交 === */
 html[data-gk-theme] [data-gk-ask-stage="1"] {
@@ -1576,17 +1601,27 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-ne
   transform: scale(1.08) rotate(-4deg) !important;
 }
 
-/* 焦点 3：空白首页中央大 A 全量升级为 116×116 电影级裸眼 3D 晶透猫耳星钻（✦）× 4 层视差折射 */
+/* 焦点 3：空白首页主视觉高定重构（严格中轴居中 × 76×76 苹果风 Squircle 基米窝玻璃徽章 × 纯净沉稳标题） */
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home .home-greeting-mark,
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="home-greeting"] .home-greeting-mark {
   display: none !important;
 }
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) :is(.agy-home [data-testid="home-greeting"], [data-testid="home-greeting"], [data-gk-home-greeting-host="1"]) {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  gap: 2px !important;
+}
 #\${HOME_EMBLEM_ID} {
   position: relative !important;
-  width: 116px !important;
-  height: 116px !important;
-  min-width: 116px !important;
-  min-height: 116px !important;
+  width: 76px !important;
+  height: 76px !important;
+  min-width: 76px !important;
+  min-height: 76px !important;
   margin: 0 auto 14px !important;
   display: flex !important;
   align-items: center !important;
@@ -1596,23 +1631,23 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="home-greeti
   overflow: visible !important;
   flex-shrink: 0 !important;
   perspective: 680px !important;
-  perspective-origin: 50% 48% !important;
+  perspective-origin: 50% 50% !important;
 }
 #\${HOME_EMBLEM_ID} .gk-he-halo {
   position: absolute;
-  inset: -28px;
-  border-radius: 999px;
+  inset: 4px;
+  border-radius: 24px;
   pointer-events: none;
-  filter: blur(26px);
-  opacity: 0.56;
-  background:
-    radial-gradient(circle at 28% 32%, rgba(56, 189, 248, 0.52) 0%, transparent 56%),
-    radial-gradient(circle at 74% 38%, rgba(168, 85, 247, 0.48) 0%, transparent 56%),
-    radial-gradient(circle at 50% 76%, rgba(236, 72, 153, 0.42) 0%, rgba(251, 191, 36, 0.24) 44%, transparent 72%);
-  animation: gkAuroraFlowDriftA 7.5s ease-in-out infinite;
+  filter: blur(14px);
+  opacity: 0.24;
+  background: radial-gradient(circle at 50% 60%, var(--gk-role-primary, #8b5cf6) 0%, var(--gk-role-accent2, #ec4899) 55%, transparent 100%);
+  transition: opacity 0.26s ease;
 }
 html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-halo {
-  opacity: 0.78;
+  opacity: 0.44;
+}
+#\${HOME_EMBLEM_ID}:hover .gk-he-halo {
+  opacity: 0.38;
 }
 #\${HOME_EMBLEM_ID} .gk-he-stage {
   position: relative;
@@ -1629,120 +1664,107 @@ html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-halo {
   transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 #\${HOME_EMBLEM_ID}:hover .gk-he-stage {
-  transform: rotateX(var(--gk-gem-rx, -4deg)) rotateY(var(--gk-gem-ry, 6deg)) scale(1.06) translateZ(10px) !important;
+  transform: rotateX(var(--gk-gem-rx, -4deg)) rotateY(var(--gk-gem-ry, 6deg)) scale(1.05) translateZ(8px) !important;
 }
 #\${HOME_EMBLEM_ID}.is-sparkling .gk-he-stage {
   animation: none !important;
-  transform: rotateX(-8deg) rotateY(12deg) scale(1.14) translateZ(14px) !important;
+  transform: rotateX(-6deg) rotateY(8deg) scale(1.10) translateZ(12px) !important;
 }
 #\${HOME_EMBLEM_ID} .gk-he-caustic {
   position: absolute;
-  inset: 10px;
+  inset: 14px 10px -8px;
   border-radius: 999px;
   pointer-events: none;
-  background:
-    radial-gradient(circle at 36% 40%, rgba(56, 189, 248, 0.56) 0%, transparent 52%),
-    radial-gradient(circle at 68% 42%, rgba(192, 132, 252, 0.52) 0%, transparent 52%),
-    radial-gradient(circle at 52% 68%, rgba(244, 114, 182, 0.44) 0%, transparent 56%);
-  filter: blur(12px);
-  opacity: 0.68;
-  transform: translate3d(var(--gk-gem-cx, 0px), var(--gk-gem-cy, 0px), -22px) scale(0.92);
+  background: radial-gradient(ellipse at 50% 50%, rgba(30, 27, 75, 0.24) 0%, rgba(139, 92, 246, 0.16) 52%, transparent 80%);
+  filter: blur(10px);
+  opacity: 0.72;
+  transform: translate3d(var(--gk-gem-cx, 0px), var(--gk-gem-cy, 0px), -18px);
   transition: transform 0.18s ease-out, opacity 0.24s ease;
 }
 html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-caustic {
-  opacity: 0.92;
-  filter: blur(14px) brightness(1.16);
+  background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.56) 0%, rgba(139, 92, 246, 0.28) 56%, transparent 82%);
+  opacity: 0.85;
 }
 #\${HOME_EMBLEM_ID} .gk-he-gem {
   position: relative;
   z-index: 1;
-  width: 116px;
-  height: 116px;
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
   display: block;
   pointer-events: none;
   transform: translateZ(0px);
   background-image: \${HOME_GEM_LIGHT_URI};
   background-repeat: no-repeat;
   background-position: center;
-  background-size: contain;
-  animation: gkGemIridescence 5.4s ease-in-out infinite;
-  transition: filter 0.24s ease;
+  background-size: cover;
+  border: 1.5px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 28px -10px rgba(30, 27, 75, 0.22), 0 4px 12px -4px color-mix(in srgb, var(--gk-role-primary, #8b5cf6) 30%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  transition: filter 0.24s ease, box-shadow 0.24s ease;
 }
 html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-gem {
   background-image: \${HOME_GEM_DARK_URI};
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.56), 0 4px 16px -4px color-mix(in srgb, var(--gk-role-primary, #8b5cf6) 40%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.34);
 }
 #\${HOME_EMBLEM_ID}.is-sparkling .gk-he-gem {
-  filter: brightness(1.18) saturate(1.26) drop-shadow(0 0 30px rgba(255, 255, 255, 0.88)) drop-shadow(0 10px 28px rgba(139, 92, 246, 0.52)) !important;
+  filter: brightness(1.08) saturate(1.12) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gk-role-primary) 42%, transparent), 0 14px 32px -6px var(--gk-role-glow) !important;
 }
 #\${HOME_EMBLEM_ID} .gk-he-sheen {
   position: absolute;
   inset: 0;
+  z-index: 2;
+  border-radius: 22px;
   pointer-events: none;
-  transform: translateZ(14px);
-  -webkit-mask-image: \${HOME_GEM_LIGHT_URI};
-  mask-image: \${HOME_GEM_LIGHT_URI};
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  background: radial-gradient(circle 48px at var(--gk-gem-gx, 36%) var(--gk-gem-gy, 28%), rgba(255, 255, 255, 0.52) 0%, rgba(186, 230, 253, 0.22) 48%, transparent 76%);
+  transform: translateZ(8px);
+  background: radial-gradient(circle 42px at var(--gk-gem-gx, 32%) var(--gk-gem-gy, 22%), rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.08) 48%, transparent 74%);
   mix-blend-mode: screen;
   overflow: hidden;
-}
-html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-sheen {
-  -webkit-mask-image: \${HOME_GEM_DARK_URI};
-  mask-image: \${HOME_GEM_DARK_URI};
 }
 #\${HOME_EMBLEM_ID} .gk-he-sheen::before {
   content: "";
   position: absolute;
-  inset: -34%;
-  background: linear-gradient(122deg, transparent 36%, rgba(255, 255, 255, 0.72) 49%, rgba(255, 255, 255, 0.92) 50%, rgba(255, 255, 255, 0.68) 51%, transparent 64%);
-  animation: gkGemSheenSweep 4.6s ease-in-out infinite;
+  inset: -40%;
+  background: linear-gradient(122deg, transparent 40%, rgba(255, 255, 255, 0.36) 50%, transparent 60%);
+  animation: gkGemSheenSweep 5.8s ease-in-out infinite;
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark {
-  position: absolute;
-  z-index: 3;
-  pointer-events: none;
-  line-height: 1;
-  transform: translateZ(28px);
+  display: none !important;
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark-a {
-  top: 4px;
-  right: 4px;
-  font-size: 13px !important;
-  color: #FBBF24;
-  text-shadow: 0 0 10px rgba(251, 191, 36, 0.82);
   animation: gkStarTwinkle 3.2s ease-in-out infinite;
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark-b {
-  bottom: 8px;
-  left: 6px;
-  font-size: 11px !important;
-  color: #38BDF8;
-  text-shadow: 0 0 9px rgba(56, 189, 248, 0.80);
   animation: gkStarTwinkle 3.8s ease-in-out 1.4s infinite;
 }
 html[data-gk-theme] .agy-home > :not(#\${AURORA_HOST_ID}):not(#\${WATERMARK_ID}) {
   position: relative;
   z-index: 1;
 }
-html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1) {
-  background: linear-gradient(110deg, #1E1B4B 0%, #4F46E5 26%, #9333EA 50%, #DB2777 74%, #0284C7 100%) !important;
-  background-size: 240% 100% !important;
-  -webkit-background-clip: text !important;
-  background-clip: text !important;
-  color: transparent !important;
-  animation: gkPrismHairlineFlow 9s linear infinite;
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1),
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1) {
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: #18181B !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.024em !important;
+  line-height: 1.32 !important;
+  text-align: center !important;
+  animation: none !important;
 }
-html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1) {
-  background: linear-gradient(110deg, #F8FAFC 0%, #7DD3FC 26%, #C4B5FD 52%, #F9A8D4 76%, #FDE68A 100%) !important;
-  background-size: 240% 100% !important;
+html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1),
+html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1) {
+  background: linear-gradient(180deg, #FFFFFF 0%, #CBD5E1 100%) !important;
   -webkit-background-clip: text !important;
   background-clip: text !important;
   color: transparent !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.024em !important;
+  line-height: 1.32 !important;
+  text-align: center !important;
+  animation: none !important;
 }
 
 html[data-gk-theme][data-gk-intensity="optical-neko"] {
@@ -2225,14 +2247,64 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       return scheme === 'dark' ? patPack.vividDark : patPack.vividLight;
     }
 
+    function syncCommunityPackLayer(root) {
+      const pack = cfg.enabled && cfg.activeThemePack && typeof cfg.activeThemePack === 'object' ? cfg.activeThemePack : null;
+      const existingStyle = document.getElementById(COMMUNITY_PACK_STYLE_ID);
+      if (!pack || !pack.id || pack.id === 'official-gemineko') {
+        if (root) root.removeAttribute('data-gk-pack');
+        if (existingStyle) existingStyle.remove();
+        return;
+      }
+
+      if (root) {
+        root.setAttribute('data-gk-pack', pack.id);
+        const acc = pack.accent && typeof pack.accent === 'object' ? pack.accent : {};
+        if (acc.primary) root.style.setProperty('--gk-role-primary', acc.primary);
+        if (acc.accent2) root.style.setProperty('--gk-role-accent2', acc.accent2);
+        if (acc.accent3) root.style.setProperty('--gk-role-accent3', acc.accent3);
+        if (acc.glow) root.style.setProperty('--gk-role-glow', acc.glow);
+        if (acc.gradient) root.style.setProperty('--gk-role-gradient', acc.gradient);
+        if (Array.isArray(pack.aurora)) {
+          if (pack.aurora[0]) root.style.setProperty('--gk-aurora-1', pack.aurora[0]);
+          if (pack.aurora[1]) root.style.setProperty('--gk-aurora-2', pack.aurora[1]);
+          if (pack.aurora[2]) root.style.setProperty('--gk-aurora-3', pack.aurora[2]);
+        }
+      }
+
+      const tokenEntries = pack.tokens && typeof pack.tokens === 'object'
+        ? Object.entries(pack.tokens)
+            .filter(([k, v]) => /^--[a-zA-Z0-9-]{1,48}$/.test(k) && typeof v === 'string' && !/[;{}]/.test(v))
+            .map(([k, v]) => \`\${k}: \${v};\`)
+            .join(' ')
+        : '';
+      const safeCssText = [
+        tokenEntries ? \`html[data-gk-theme][data-gk-pack="\${pack.id}"] { \${tokenEntries} }\` : '',
+        typeof pack.customCss === 'string' ? pack.customCss : '',
+      ].filter(Boolean).join('\\n');
+
+      if (!safeCssText) {
+        if (existingStyle) existingStyle.remove();
+        return;
+      }
+      let packSt = existingStyle;
+      if (!packSt) {
+        packSt = document.createElement('style');
+        packSt.id = COMMUNITY_PACK_STYLE_ID;
+        document.head.appendChild(packSt);
+      }
+      if (packSt.textContent !== safeCssText) {
+        packSt.textContent = safeCssText;
+      }
+    }
+
     function applyThemeDom(activity) {
       const root = document.documentElement;
       if (!root) return;
       if (!cfg.enabled) {
-        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
+        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper','data-gk-pack']) {
           root.removeAttribute(attr);
         }
-        for (const id of [THEME_STYLE_ID, AURORA_HOST_ID, HOME_STAGE_ID, HOME_EMBLEM_ID, WATERMARK_ID]) {
+        for (const id of [THEME_STYLE_ID, COMMUNITY_PACK_STYLE_ID, AURORA_HOST_ID, HOME_STAGE_ID, HOME_EMBLEM_ID, WATERMARK_ID]) {
           const n = document.getElementById(id);
           if (n) n.remove();
         }
@@ -2280,6 +2352,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       root.style.setProperty('--gk-ambient-alpha', String(amp.toFixed(2)));
       root.style.setProperty('--gk-watermark-opacity', String(cfg.watermark?.opacity ?? 0.14));
 
+      syncCommunityPackLayer(root);
       syncConvAurora();
       syncCornerWatermark(activity, roleId);
       syncHomeBrandEmblem();
@@ -2307,14 +2380,15 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         if (old) old.remove();
         return;
       }
-      const host = markEl?.parentElement || greetingEl;
+      const host = greetingEl || markEl?.parentElement;
       if (!host) return;
+      host.setAttribute('data-gk-home-greeting-host', '1');
 
       let emblem = document.getElementById(HOME_EMBLEM_ID);
       if (!emblem) {
         emblem = document.createElement('div');
         emblem.id = HOME_EMBLEM_ID;
-        emblem.title = '点击摸摸基米窝 3D 晶透猫耳星钻 ✦';
+        emblem.title = '点击摸摸基米窝徽章';
         emblem.innerHTML = '<span class="gk-he-halo"></span><div class="gk-he-stage"><span class="gk-he-caustic"></span><span class="gk-he-gem"></span><span class="gk-he-sheen"></span><span class="gk-he-spark gk-he-spark-a">✦</span><span class="gk-he-spark gk-he-spark-b">✦</span></div>';
         emblem.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -2326,9 +2400,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           onDockPoke(resolveActiveRoleId(ctx.getActivity()), e.clientX, e.clientY);
         });
       }
-      if (markEl && markEl.parentElement === host) {
-        if (emblem.nextElementSibling !== markEl) host.insertBefore(emblem, markEl);
-      } else if (emblem.parentElement !== host || host.firstElementChild !== emblem) {
+      if (emblem.parentElement !== host || host.firstElementChild !== emblem) {
         host.prepend(emblem);
       }
     }
@@ -2726,6 +2798,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
               </button>
             \`).join('')}
           </div>
+          <div class="gk-home-brand-foot"></div>
         \`;
         stage.querySelectorAll('img').forEach((img, idx) => {
           const rId = HOME_ROLES[idx]?.id || 'neon';
@@ -2736,6 +2809,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           });
         });
         stage.addEventListener('click', (e) => {
+          if (e.target.closest('.gk-home-brand-foot a')) return;
           const themeBtn = e.target.closest('.gk-home-theme-btn');
           if (themeBtn) {
             e.stopPropagation();
@@ -2750,6 +2824,23 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         parentWrap.insertBefore(stage, inputBox);
       } else if (stage.nextElementSibling !== inputBox) {
         parentWrap.insertBefore(stage, inputBox);
+      }
+
+      const foot = stage.querySelector('.gk-home-brand-foot');
+      if (foot) {
+        const activePack = cfg.activeThemePack && cfg.activeThemePack.id !== 'official-gemineko' ? cfg.activeThemePack : null;
+        foot.textContent = '';
+        const txtSpan = document.createElement('span');
+        txtSpan.textContent = activePack
+          ? \`✦ Powered by \${BRAND.engineName} · by \${BRAND.author.name} · 当前主题：\${activePack.name} (\${activePack.author?.name || 'Community'})\`
+          : \`✦ Powered by \${BRAND.engineName} · by \${BRAND.author.name}\`;
+        const link = document.createElement('a');
+        link.href = BRAND.repoUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = '⭐ GitHub';
+        foot.appendChild(txtSpan);
+        foot.appendChild(link);
       }
     }
 
@@ -3636,10 +3727,11 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       document.removeEventListener('click', onGlobalClickCloseMenus, true);
       window.removeEventListener('keydown', onKeyDownComposerOrEgg, true);
 
-      for (const id of [THEME_STYLE_ID, WP_LAYER_ID, AURORA_HOST_ID, WATERMARK_ID, HOME_STAGE_ID, HOME_EMBLEM_ID, NIGHT_LAYER_ID, AURORA_SWEEP_ID, OUTLINE_FAB_ID, OUTLINE_POP_ID, CTX_MENU_ID, MINI_BAR_ID]) {
+      for (const id of [THEME_STYLE_ID, COMMUNITY_PACK_STYLE_ID, WP_LAYER_ID, AURORA_HOST_ID, WATERMARK_ID, HOME_STAGE_ID, HOME_EMBLEM_ID, NIGHT_LAYER_ID, AURORA_SWEEP_ID, OUTLINE_FAB_ID, OUTLINE_POP_ID, CTX_MENU_ID, MINI_BAR_ID]) {
         const el = document.getElementById(id);
         if (el) el.remove();
       }
+      document.querySelectorAll('[data-gk-home-greeting-host]').forEach((n) => n.removeAttribute('data-gk-home-greeting-host'));
       document.querySelectorAll('.gk-speech-bubble, .gk-stardust-particle, .gk-send-spark, .gk-parade-overlay, .gk-parade-banner').forEach((n) => n.remove());
       const box = document.getElementById('antigravity.agentSidePanelInputBox');
       if (box) {
@@ -3648,7 +3740,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       }
       const root = document.documentElement;
       if (root) {
-        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
+        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper','data-gk-pack']) {
           root.removeAttribute(attr);
         }
         for (const prop of ['--gk-role-primary','--gk-role-accent2','--gk-role-accent3','--gk-role-glow','--gk-role-gradient','--gk-role-spark','--gk-role-tint','--gk-catnest-pattern','--gk-spinner-role-svg','--gk-spinner-paw-svg','--gk-aurora-1','--gk-aurora-2','--gk-aurora-3','--gk-ambient-alpha','--gk-watermark-opacity']) {

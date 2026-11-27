@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0] - 2026-11-27
+
+### Added & Upgraded
+- **从单一皮肤插件正式升级为开放式「Gemineko Hive 主题引擎 × 社区主题商店」**：
+  - 新增单点品牌元数据 [src/meta/brand.mjs](src/meta/brand.mjs) 与双层版权声明（源码保持 `MIT`，[LICENSE](LICENSE) 追加原创美术/立绘/3D 星钻 `CC BY-NC-SA 4.0` 非商用署名协议）；
+  - 新增社区主题包引擎 [src/theme/theme-store.mjs](src/theme/theme-store.mjs) 与商店索引 [themes/registry.json](themes/registry.json)（内置官方旗舰 `official-gemineko` 与《京都樱吹雪》《翡翠矩阵》《暖金琥珀》三款完整可玩社区示例包）；
+  - 支持从 GitHub Raw / Gist 链接（自动改写 `github.com/.../blob/...`、严格 HTTPS 与防 SSRF 校验）或本地 `.gemineko-theme.json` 安装、激活与卸载第三方主题包；内置严格 `customCss` 与 CSS 变量消毒（剥离 `@import`、`javascript:`、`expression(`、`</style>` 与 `data-has-browser-hole`）；
+  - 侧边栏升级为双 Tab **「🏪 主题商店 × 🎨 精细工坊」**，支持一键将当前配置导出打包为 `.gemineko-theme.json` 并直达 GitHub 投稿模板（[.github/ISSUE_TEMPLATE/theme-submission.yml](.github/ISSUE_TEMPLATE/theme-submission.yml) 与 [docs/THEME_AUTHORING.md](docs/THEME_AUTHORING.md)）。
+- **GitHub 生态增长闭环与版权署名露出**：
+  - 新增 [src/sidecar/github-pulse.mjs](src/sidecar/github-pulse.mjs) 与 `/api/github/status`、`/api/store/*`、`/api/open-external` 路由：6 小时缓存静默检测 GitHub 最新版本与实时 Star 数，发现新版时在侧边栏顶部展示带更新页与一键更新命令复制的渐变动效横幅，并常驻 `⭐ Star` 胶囊按钮调起系统浏览器直达仓库；
+  - 首页底部与商店页脚温和署名 `Powered by Gemineko Hive · by AEmbers` 及当前社区主题原作者署名，不侵扰代码与对话内容流。
+
 ## [0.6.6] - 2026-11-27
 
 ### Fixed

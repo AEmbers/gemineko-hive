@@ -29,7 +29,7 @@ foreach ($file in $rootFiles) {
     }
 }
 
-$copyDirs = @("assets", "bin", "dist", "docs", "rules", "scripts", "sidecars", "skills", "src")
+$copyDirs = @("assets", "bin", "dist", "docs", "rules", "scripts", "sidecars", "skills", "src", "themes")
 foreach ($dir in $copyDirs) {
     $srcSub = Join-Path $SourceDir $dir
     $dstSub = Join-Path $TargetDir $dir

@@ -185,6 +185,28 @@ export function bootGeminekoHive() {
   let lastNativeStatus = null;
   let lastLiveActivity = null;
   let lastCdpStatus = null;
+  let lastGithubPulse = null;
+  let updateBannerDismissed = false;
+
+  async function openExternalSafe(url) {
+    const target = String(url || lastGithubPulse?.repoUrl || 'https://github.com/AEmbers/gemineko-hive');
+    if (window.__GEMINEKO_SIDECAR_MODE__) {
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (window.__SIDECAR_TOKEN__) headers['x-sidecar-token'] = window.__SIDECAR_TOKEN__;
+        const r = await originalFetch('/api/open-external', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ url: target }),
+        });
+        if (r.ok) return true;
+      } catch {
+        /* fallback */
+      }
+    }
+    try { window.open(target, '_blank', 'noopener,noreferrer'); } catch {}
+    return false;
+  }
 
   function ingestMembersFromSnap(snap) {
     if (!snap || !snap.members) return;
@@ -1225,10 +1247,11 @@ export function bootGeminekoHive() {
     try {
       const convId = getSidecarConversationId();
       const liveUrl = convId ? `/api/live-activity?conversationId=${encodeURIComponent(convId)}` : '/api/live-activity';
-      const [nativeResp, liveResp, cdpResp] = await Promise.all([
+      const [nativeResp, liveResp, cdpResp, ghResp] = await Promise.all([
         originalFetch('/api/native-patch/status'),
         originalFetch(liveUrl),
         originalFetch('/api/cdp/status'),
+        originalFetch('/api/github/status'),
       ]);
       if (nativeResp.ok) lastNativeStatus = await nativeResp.json();
       if (liveResp.ok) {
@@ -1238,6 +1261,10 @@ export function bootGeminekoHive() {
       if (cdpResp.ok) {
         const c = await cdpResp.json();
         if (c?.cdp) lastCdpStatus = c.cdp;
+      }
+      if (ghResp.ok) {
+        const g = await ghResp.json();
+        if (g?.ok) lastGithubPulse = g;
       }
       if (barUpdateCb) barUpdateCb();
     } catch {
@@ -1381,14 +1408,29 @@ export function bootGeminekoHive() {
         </div>`
       : '';
 
+    const starCountText = Number.isFinite(Number(lastGithubPulse?.stars))
+      ? `⭐ ${lastGithubPulse.stars} Star`
+      : '⭐ Star 支持';
+    const updateBannerHtml = (window.__GEMINEKO_SIDECAR_MODE__ && lastGithubPulse?.hasUpdate && !updateBannerDismissed)
+      ? `<div class="gn-update-banner">
+          <span>🚀 发现新版本 <strong>v${lastGithubPulse.latestVersion}</strong>（当前 v${lastGithubPulse.currentVersion}）</span>
+          <div class="gn-update-actions">
+            <button type="button" class="gn-pill is-primary" data-gn-act="open-releases">查看更新</button>
+            <button type="button" class="gn-pill" data-gn-act="copy-update-cmd" title="${lastGithubPulse.updateCommand || ''}">复制更新命令</button>
+            <button type="button" class="gn-pill" data-gn-act="dismiss-update">×</button>
+          </div>
+        </div>`
+      : '';
+
     bar.innerHTML = `
       <div class="gn-bar-top">
-        <span class="gn-brand" data-gn-act="collapse" title="展开/收起基米窝面板">
+        <span class="gn-brand" data-gn-act="collapse" title="Gemineko Hive 开源主题引擎 · by AEmbers (Code: MIT · Artwork: CC BY-NC-SA 4.0)">
           <img class="gn-brand-dot" src="${GEMINEKO_ASSETS.logo}" alt="" />
-          <span>基米窝 v0.5</span>
+          <span>基米窝 v0.7</span>
         </span>
         <div class="gn-top-actions">
-          ${window.__GEMINEKO_SIDECAR_MODE__ ? `<button type="button" id="gn-workshop-toggle-btn" class="gn-pill ${workshop?.isOpen?.() ? 'is-active' : ''}" data-gn-act="toggle-workshop" title="打开《基米窝》原生宿主主题工坊（替代 Obsidian Prism）">🎨 主题工坊</button>` : ''}
+          ${window.__GEMINEKO_SIDECAR_MODE__ ? `<button type="button" id="gn-workshop-toggle-btn" class="gn-pill ${workshop?.isOpen?.() ? 'is-active' : ''}" data-gn-act="toggle-workshop" title="打开《Gemineko Hive · 基米窝》社区主题商店与精细工坊">🏪 主题商店</button>` : ''}
+          <button type="button" class="gn-pill gn-star-pill" data-gn-act="open-star" title="前往 GitHub 仓库 AEmbers/gemineko-hive 点亮 Star 支持作者">${starCountText}</button>
           <button type="button" class="gn-pill ${prefs.settingsOpen ? 'is-active' : ''}" data-gn-act="toggle-settings" title="展开或收起各项模式明确开关">⚙️ ${L.settingsBtn} ${prefs.settingsOpen ? '▴' : '▾'}</button>
           <button type="button" class="gn-pill is-poke" data-gn-act="poke">🐾 ${L.poke}</button>
           ${nativeBtnHtml}
@@ -1396,6 +1438,7 @@ export function bootGeminekoHive() {
           <button type="button" class="gn-pill gn-collapse-btn" data-gn-act="collapse" aria-label="折叠工具栏">${prefs.collapsed ? '展开 ▾' : '收起 ▴'}</button>
         </div>
       </div>
+      ${updateBannerHtml}
       <div class="gn-chips-row">
         <button type="button" class="gn-chip" data-gn-act="toggle-settings" title="当前生效角色（点击下方展开开关切换）"><span class="gn-chip-k">角色</span><span class="gn-chip-v">${roleText}</span></button>
         <button type="button" class="gn-chip" data-gn-act="toggle-settings" title="当前生效画风"><span class="gn-chip-k">画风</span><span class="gn-chip-v">${artText}</span></button>
@@ -1432,6 +1475,21 @@ export function bootGeminekoHive() {
           prefs.collapsed = !prefs.collapsed;
         } else if (act === 'toggle-workshop') {
           workshop?.toggle?.();
+          return;
+        } else if (act === 'open-star') {
+          void openExternalSafe(lastGithubPulse?.starUrl || 'https://github.com/AEmbers/gemineko-hive');
+          return;
+        } else if (act === 'open-releases') {
+          void openExternalSafe(lastGithubPulse?.releaseUrl || lastGithubPulse?.releasesUrl || 'https://github.com/AEmbers/gemineko-hive/releases');
+          return;
+        } else if (act === 'copy-update-cmd') {
+          const cmd = lastGithubPulse?.updateCommand || 'git pull && npm run build && .\\scripts\\install-local.ps1';
+          navigator.clipboard?.writeText?.(cmd).catch(() => {});
+          spawnBubbleAt(btn.getBoundingClientRect().left + 30, btn.getBoundingClientRect().bottom + 20, '📋 已复制更新命令，粘贴到仓库终端执行即可');
+          return;
+        } else if (act === 'dismiss-update') {
+          updateBannerDismissed = true;
+          renderToolbar();
           return;
         } else if (act === 'toggle-settings') {
           prefs.settingsOpen = !prefs.settingsOpen;

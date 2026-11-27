@@ -17,8 +17,15 @@ import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../s
 import { translateHostText } from '../src/cdp/host-i18n-runtime.mjs';
 import { buildCdpOverlayScript, formatDockModelDisplay } from '../src/cdp/host-injector.mjs';
 import { parseMemeCaptionFromText } from '../src/cdp/host-meme-runtime.mjs';
+import { BRAND_META } from '../src/meta/brand.mjs';
+import { compareSemver, createGithubPulseService } from '../src/sidecar/github-pulse.mjs';
 import { createHiveSidecarServer } from '../src/sidecar/server.mjs';
 import { resolveMemeNickname } from '../src/theme/nicknames.js';
+import {
+  createThemePackManager,
+  normalizeRemoteThemeUrl,
+  sanitizeThemePack,
+} from '../src/theme/theme-store.mjs';
 import {
   buildCatNestDecoSvg,
   buildCatNestPath,
@@ -309,7 +316,7 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
   try {
     const hz = await srv.inject({ url: '/healthz' });
     assert.equal(hz.statusCode, 200);
-    assert.equal(hz.json().version, '0.5.0');
+    assert.equal(hz.json().version, BRAND_META.version);
 
     const preloadRes = await srv.inject({ url: '/preload.js' });
     assert.equal(preloadRes.statusCode, 200);
@@ -504,8 +511,8 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(translateHostText('5 files changed', 'zh'), '5 个文件已变更');
   assert.equal(translateHostText('Ask anything, @ to mention, / for actions', 'zh'), '随便问点什么，@ 提及文件，/ 呼出指令');
   assert.equal(translateHostText('Welcome back, qilin. Where should we pick up?', 'neko-zh'), '欢迎回窝，qilin！今天想从哪开工喵？');
-  assert.equal(translateHostText('Hey qilin, what should we build today?', 'neko-zh'), '嗨 qilin，今天带哈基米一起造点什么喵？✦');
-  assert.equal(translateHostText("Good to see you, qilin. What's next?", 'neko-zh'), '见到你真开心，qilin 喵！接下来干点啥？✦');
+  assert.equal(translateHostText('Hey qilin, what should we build today?', 'neko-zh'), '嗨 qilin，今天带哈基米一起造点什么喵？');
+  assert.equal(translateHostText("Good to see you, qilin. What's next?", 'neko-zh'), '见到你真开心，qilin 喵！接下来干点啥？');
   assert.equal(translateHostText('Interface Layout', 'zh'), '界面布局');
   assert.equal(translateHostText('Configure agent execution, queued message delivery, and permissions.', 'zh'), '配置智能体执行策略、排队消息投递方式及权限控制。');
   assert.equal(translateHostText('Send Immediately', 'zh'), '立即发送');
@@ -580,7 +587,7 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
   try {
     const hz = await srv.inject({ url: '/healthz' });
     assert.equal(hz.statusCode, 200);
-    assert.equal(hz.json().version, '0.5.0');
+    assert.equal(hz.json().version, BRAND_META.version);
 
     const unauthPost = await srv.inject({
       method: 'POST',
@@ -638,6 +645,10 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /app-icon-new-conversation-button/);
     assert.match(cdpScript, /home-greeting-mark/);
     assert.match(cdpScript, /gemineko-home-emblem/);
+    assert.match(cdpScript, /gemineko-community-pack-style/);
+    assert.match(cdpScript, /data-gk-pack/);
+    assert.match(cdpScript, /gk-home-brand-foot/);
+    assert.match(cdpScript, /AEmbers\/gemineko-hive/);
     assert.match(cdpScript, /gk-he-gem/);
     assert.match(cdpScript, /gk-he-caustic/);
     assert.match(cdpScript, /gkGem3DFloat/);
@@ -705,7 +716,7 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.ok(bundleRes.bytes < 420_000, `主包体过大: ${bundleRes.bytes}`);
     const bundleContent = fs.readFileSync(bundleRes.outPath, 'utf8');
     assert.match(bundleContent, /createThemeWorkshopController/);
-    assert.match(bundleContent, /主题工坊|全量汉化工坊/);
+    assert.match(bundleContent, /主题商店|主题工坊/);
     assert.match(bundleContent, /gemineko-sidecar-shell/);
     assert.match(bundleContent, /guardLoadingSkeleton/);
     assert.match(bundleContent, /offsetWidth/);
@@ -723,6 +734,182 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.equal(fbSwarmRes.json().conversationId, fallbackConv);
     assert.equal(fbSwarmRes.json().isFallbackSwarm, true);
     assert.equal(fbSwarmRes.json().swarm, sb.convId);
+  } finally {
+    await srv.close();
+    fs.rmSync(sb.root, { recursive: true, force: true });
+  }
+});
+
+test('开放主题引擎安全门禁：CSS 注入拦截、GitHub Raw URL 规范化与社区商店全闭环', async () => {
+  const dirty = sanitizeThemePack({
+    schemaVersion: 1,
+    id: 'bad-xss-pack',
+    name: '恶意注入测试包',
+    tokens: {
+      '--valid-token': '#ff66aa',
+      '--bad;color': 'red',
+      '--js-val': 'javascript:alert(1)',
+    },
+    customCss: [
+      '@import url("https://evil.com/x.css");',
+      'body { background: url("http://evil.com/bg.png"); color: expression(alert(1)); }',
+      '[data-has-browser-hole="true"] { background: #000 !important; }',
+      'html[data-gk-pack="bad-xss-pack"] .surface-composer-card { border-radius: 16px; }',
+      '</style><script>alert(1)</script>',
+    ].join('\n'),
+  });
+
+  assert.equal(dirty.ok, true);
+  assert.equal(dirty.pack.tokens['--valid-token'], '#ff66aa');
+  assert.equal(dirty.pack.tokens['--bad;color'], undefined);
+  assert.equal(dirty.pack.tokens['--js-val'], undefined);
+  assert.ok(!/@import/i.test(dirty.pack.customCss));
+  assert.ok(!/expression\s*\(/i.test(dirty.pack.customCss));
+  assert.ok(!/<\/style/i.test(dirty.pack.customCss));
+  assert.ok(!/data-has-browser-hole/i.test(dirty.pack.customCss));
+  assert.ok((dirty.warnings || []).length >= 4);
+
+  const reserved = sanitizeThemePack({ schemaVersion: 1, id: 'official-gemineko', name: '伪装官方包' });
+  assert.equal(reserved.ok, false);
+
+  assert.equal(normalizeRemoteThemeUrl('http://raw.githubusercontent.com/a/b/main/x.json').ok, false);
+  assert.equal(normalizeRemoteThemeUrl('https://127.0.0.1/theme.json').ok, false);
+  assert.equal(normalizeRemoteThemeUrl('https://evil.com/theme.json').ok, false);
+  const blobNorm = normalizeRemoteThemeUrl('https://github.com/AEmbers/gemineko-hive/blob/main/themes/registry.json');
+  assert.equal(blobNorm.ok, true);
+  assert.equal(blobNorm.url, 'https://raw.githubusercontent.com/AEmbers/gemineko-hive/main/themes/registry.json');
+
+  const tmpPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gemineko-packs-'));
+  try {
+    const mgr = createThemePackManager({ packsDir: tmpPacksDir, disableNetwork: true });
+    const reg = await mgr.getCommunityRegistry();
+    assert.equal(reg.ok, true);
+    assert.ok(reg.registry.some((t) => t.id === 'official-gemineko' && t.official));
+    assert.ok(reg.registry.some((t) => t.id === 'kyoto-sakura-glass'));
+
+    const inst = mgr.installPack({
+      schemaVersion: 1,
+      id: 'moonlight-cat',
+      name: '月光猫窝',
+      author: { name: 'Tester', url: 'https://github.com/AEmbers' },
+      accent: { primary: '#38BDF8', accent2: '#A855F7' },
+    });
+    assert.equal(inst.ok, true);
+    assert.equal(mgr.listInstalled().length, 1);
+
+    const exported = mgr.exportThemePack({ preset: 'nebula-day', accentMode: 'neon' }, { id: 'exported-cat', name: '导出测试', authorName: 'AEmbers' });
+    assert.equal(exported.ok, true);
+    assert.equal(exported.pack.engine, BRAND_META.engineName);
+    assert.ok(exported.pack.copyright.includes('AEmbers'));
+    assert.ok(exported.submitUrl.includes('theme-submission'));
+
+    assert.equal(mgr.uninstallPack('official-gemineko').ok, false);
+    assert.equal(mgr.uninstallPack('moonlight-cat').ok, true);
+    assert.equal(mgr.listInstalled().length, 0);
+  } finally {
+    fs.rmSync(tmpPacksDir, { recursive: true, force: true });
+  }
+});
+
+test('Sidecar 社区商店接口、GitHub Star 与版本更新推送缓存闭环', async () => {
+  assert.equal(compareSemver('0.8.0', '0.7.0'), 1);
+  assert.equal(compareSemver('v0.7.0', '0.7.0'), 0);
+  assert.equal(compareSemver('0.6.6', '0.7.0'), -1);
+
+  const sb = createFakeSwarmSandbox();
+  const cfgPath = path.join(sb.root, 'theme-config.json');
+  const packsDir = path.join(sb.root, 'installed-themes');
+  const cachePath = path.join(sb.root, 'github-cache.json');
+  let fetchCount = 0;
+  const mockFetch = async (url) => {
+    fetchCount += 1;
+    if (String(url).includes('/releases/latest')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ tag_name: 'v0.8.0', body: 'Open Theme Store 0.8.0', html_url: 'https://github.com/AEmbers/gemineko-hive/releases/tag/v0.8.0' }),
+      };
+    }
+    if (String(url).includes('/repos/AEmbers/gemineko-hive')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ stargazers_count: 88, forks_count: 9 }),
+      };
+    }
+    return { ok: false, status: 404, text: async () => '', json: async () => ({}) };
+  };
+
+  const srv = await createHiveSidecarServer({
+    port: 0,
+    appDataDirs: [sb.appDataDir],
+    swarmDir: sb.swarmDir,
+    bundlePath: path.join(REPO_ROOT, 'dist', 'gemineko-hive.js'),
+    spritesSourceDir: path.join(REPO_ROOT, 'assets', 'sprites'),
+    logoPngPath: path.join(REPO_ROOT, 'assets', 'logo.png'),
+    themeConfigPath: cfgPath,
+    themePacksDir: packsDir,
+    githubCachePath: cachePath,
+    fetchImpl: mockFetch,
+    sideToken: 'test-store-secret',
+    enableCdp: false,
+  });
+
+  try {
+    const gh1 = await srv.inject({ url: '/api/github/status' });
+    assert.equal(gh1.statusCode, 200);
+    assert.equal(gh1.json().stars, 88);
+    assert.equal(gh1.json().latestVersion, '0.8.0');
+    assert.equal(gh1.json().hasUpdate, true);
+    assert.equal(gh1.json().source, 'github-live');
+    const callsAfterFirst = fetchCount;
+
+    const gh2 = await srv.inject({ url: '/api/github/status' });
+    assert.equal(gh2.statusCode, 200);
+    assert.equal(gh2.json().source, 'cache');
+    assert.equal(fetchCount, callsAfterFirst);
+
+    const regRes = await srv.inject({ url: '/api/store/registry' });
+    assert.equal(regRes.statusCode, 200);
+    assert.equal(regRes.json().officialId, 'official-gemineko');
+    assert.ok(regRes.json().registry.some((t) => t.id === 'kyoto-sakura-glass'));
+
+    const actRes = await srv.inject({
+      method: 'POST',
+      url: '/api/store/activate',
+      headers: { 'x-sidecar-token': 'test-store-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ packId: 'kyoto-sakura-glass' }),
+    });
+    assert.equal(actRes.statusCode, 200);
+    assert.equal(actRes.json().config.activeThemePackId, 'kyoto-sakura-glass');
+    assert.equal(actRes.json().config.activeThemePack.id, 'kyoto-sakura-glass');
+
+    const savedOnDisk = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+    assert.equal(savedOnDisk.activeThemePackId, 'kyoto-sakura-glass');
+    assert.equal(savedOnDisk.activeThemePack, undefined);
+
+    const expRes = await srv.inject({
+      method: 'POST',
+      url: '/api/store/export',
+      headers: { 'x-sidecar-token': 'test-store-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'my-test-pack', name: '我的分享包', authorName: 'AEmbers' }),
+    });
+    assert.equal(expRes.statusCode, 200);
+    assert.equal(expRes.json().pack.id, 'my-test-pack');
+    assert.equal(expRes.json().filename, 'my-test-pack.gemineko-theme.json');
+
+    const badExt = await srv.inject({
+      method: 'POST',
+      url: '/api/open-external',
+      headers: { 'x-sidecar-token': 'test-store-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: 'file:///C:/Windows/System32/calc.exe' }),
+    });
+    assert.equal(badExt.statusCode, 400);
+
+    const offlinePulse = createGithubPulseService({ cachePath: path.join(sb.root, 'missing-cache.json'), disableNetwork: true });
+    const offStatus = await offlinePulse.getStatus();
+    assert.equal(offStatus.ok, true);
+    assert.equal(offStatus.source, 'offline-fallback');
   } finally {
     await srv.close();
     fs.rmSync(sb.root, { recursive: true, force: true });

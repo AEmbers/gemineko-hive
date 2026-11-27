@@ -429,6 +429,7 @@ export const THEME_PRESETS = {
 export const DEFAULT_HOST_THEME_CONFIG = {
   enabled: true,
   preset: 'auto',
+  activeThemePackId: 'official-gemineko',
   accentMode: 'follow-role',
   themeIntensity: 'optical-neko',
   spinnerStyle: 'role-motif',
@@ -587,6 +588,10 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
   const b = base && typeof base === 'object' ? base : DEFAULT_HOST_THEME_CONFIG;
 
   const preset = ALLOWED_PRESETS.has(src.preset) ? src.preset : (ALLOWED_PRESETS.has(b.preset) ? b.preset : 'auto');
+  const rawPackId = typeof src.activeThemePackId === 'string'
+    ? src.activeThemePackId.trim().toLowerCase()
+    : (typeof b.activeThemePackId === 'string' ? b.activeThemePackId.trim().toLowerCase() : 'official-gemineko');
+  const activeThemePackId = /^[a-z0-9][a-z0-9-]{1,47}$/.test(rawPackId) ? rawPackId : 'official-gemineko';
   const accentMode = ALLOWED_ACCENT_MODES.has(src.accentMode)
     ? src.accentMode
     : (ALLOWED_ACCENT_MODES.has(b.accentMode) ? b.accentMode : 'follow-role');
@@ -659,6 +664,10 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
   return {
     enabled: asBool(src.enabled, asBool(b.enabled, true)),
     preset,
+    activeThemePackId,
+    ...(src.activeThemePack && typeof src.activeThemePack === 'object' && typeof src.activeThemePack.id === 'string'
+      ? { activeThemePack: src.activeThemePack }
+      : {}),
     accentMode,
     themeIntensity,
     spinnerStyle,
@@ -745,10 +754,11 @@ export function createThemeConfigStore(customPath) {
   function save(nextConfig) {
     const dir = path.dirname(filePath);
     mkdirSync(dir, { recursive: true });
+    const { activeThemePack: _runtimePack, ...persistable } = nextConfig || {};
     const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
-    writeFileSync(tmp, JSON.stringify(nextConfig, null, 2), 'utf8');
+    writeFileSync(tmp, JSON.stringify(persistable, null, 2), 'utf8');
     renameSync(tmp, filePath);
-    current = nextConfig;
+    current = persistable;
     return current;
   }
 

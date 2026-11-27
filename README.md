@@ -2,16 +2,26 @@
   <img src="assets/logo.png" width="150" alt="Gemineko Hive Logo" />
 </p>
 
-<h1 align="center">Gemineko Hive · 基米窝 v0.5.0</h1>
+<h1 align="center">Gemineko Hive · 基米窝 v0.7.0</h1>
 
 <p align="center">
   <strong>“坏了，捅了基米窝了！”</strong><br />
-  为 <strong>Google Antigravity</strong> 注入源自社区同人官设的 25 态透明 APNG 伴生猫娘、原生《基米窝》宿主主题工坊（4 套基底+动态强调色+流式壁纸）、5 角色联动彩蛋与工作台效率增强！
+  面向 <strong>Google Antigravity</strong> 的开源主题引擎 × 社区主题商店：内置官方旗舰《基米窝》（3D 晶透猫耳星钻 + 25 态透明 APNG 伴生猫娘 + 5 角色联动皮肤），支持第三方主题包热插拔、一键打包投稿与 GitHub Star/更新推送闭环！
 </p>
 
 ---
 
-## ✨ v0.5.0 核心特性
+## ✨ v0.7.0 开放主题引擎 × 社区主题商店
+
+- **双层品牌架构（开源引擎 × 旗舰官包）**：
+  - 侧边栏升级为 **「🏪 主题商店 × 🎨 精细工坊」** 双标签面板：实时拉取官方/社区商店目录 `themes/registry.json`（内置离线缓存），内置旗舰包 `official-gemineko` 与《京都樱吹雪》《翡翠矩阵》《暖金琥珀》三款社区示例包，支持一键应用/安装/卸载与实时生效；
+  - 支持从 GitHub / Gist Raw 链接（严格 HTTPS + 自动转换 `blob` 地址 + 防 SSRF）或本机 `.gemineko-theme.json` 导入安装，带自动 CSS 变量与安全规则消毒；
+  - 支持在「精细工坊」调色后一键 **打包导出 `.gemineko-theme.json`**（自动附带 `Gemineko Hive` 引擎署名与版权信息）并直达 [GitHub 主题投稿表单](https://github.com/AEmbers/gemineko-hive/issues/new?template=theme-submission.yml&labels=theme-submission)，详见 [主题创作与上架指南](docs/THEME_AUTHORING.md)。
+- **GitHub 生态连接与版权署名声明**：
+  - 侧边栏顶栏常驻实时 **⭐ Star** 徽章直达按钮，并静默检测 GitHub 最新版本（6 小时缓存），发现新版时弹出带发布页与一键更新命令复制的渐变动效横幅；
+  - 源码采用 **MIT License**，原创美术与 3D 星钻素材采用 **CC BY-NC-SA 4.0**（非商用署名共享），首页底部与商店页脚保留克制优雅的引擎及原作者署名。
+
+## ✨ v0.5.0–v0.6.x 核心特性
 
 - **原生宿主主题工坊（侧边栏「🎨 主题工坊」 + 输入栏 `🎨` 快切，免改 `app.asar`）**：
   - **四套耐看基底配色 + 五角色动态流光**：支持 **跟随宿主日夜 / 星云冷白 / 奶油暖纸 / 星空猫窝深色 / 碳晶黑曜深色** 一键切换；强调色可随当前活跃角色（Neon / Hydrogen / Carbon / Claude / GPT）自动流转，支持一键「专注编码（0fps 降噪）」或关闭 100% 还原原生外观。
@@ -88,6 +98,8 @@ git clone https://github.com/AEmbers/gemineko-hive.git ~/.gemini/config/plugins/
 
 ---
 
-## 📄 License
+## 📄 License & Copyright
 
-[MIT](LICENSE) © 2026 AEmbers
+- **引擎源码与主题 JSON 规范**：[MIT License](LICENSE) © 2026 [AEmbers](https://github.com/AEmbers)
+- **原创美术与 3D 晶体素材（`assets/`）**：**CC BY-NC-SA 4.0**（署名—非商业性使用—相同方式共享），禁止未授权商用或打包倒卖。
+- 欢迎在 [AEmbers/gemineko-hive](https://github.com/AEmbers/gemineko-hive) 点亮 ⭐ Star 或投稿你的原创主题！

@@ -16,6 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { enrichSwarmMembersWithActivity, findActiveConversationActivity } from '../activity-tracker.mjs';
 import { CdpHostInjector } from '../cdp/host-injector.mjs';
+import { BRAND_META } from '../meta/brand.mjs';
 import { applyNativePatch, getNativePatchStatus, resolveSwarmPaths, restoreNativePatch } from '../native-patcher.mjs';
 import { buildDemoSwarmSnapshot } from '../theme/demo-data.js';
 import {
@@ -25,6 +26,8 @@ import {
   validateWallpaperFilePath,
   validateWatermarkImagePath,
 } from '../theme/host-theme-config.mjs';
+import { createThemePackManager } from '../theme/theme-store.mjs';
+import { createGithubPulseService } from './github-pulse.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
@@ -332,7 +335,53 @@ export async function createHiveSidecarServer(options = {}) {
 
   let cdpInjector = null;
   const themeStore = createThemeConfigStore(options.themeConfigPath);
+  const packManager = createThemePackManager({
+    packsDir: options.themePacksDir,
+    registryPath: options.themeRegistryPath,
+    fetchImpl: options.fetchImpl,
+    disableNetwork: options.disableNetwork,
+  });
+  const githubPulse = createGithubPulseService({
+    cachePath: options.githubCachePath,
+    currentVersion: BRAND_META.version,
+    fetchImpl: options.fetchImpl,
+    disableNetwork: options.disableNetwork,
+  });
   const themeEvents = { seq: 0, latest: null };
+
+  function getEnrichedThemeConfig(baseCfg = themeStore.get()) {
+    const packId = String(baseCfg?.activeThemePackId || 'official-gemineko');
+    const pack = packId && packId !== 'official-gemineko' ? packManager.getPackById(packId) : null;
+    if (pack) {
+      return { ...baseCfg, activeThemePack: pack };
+    }
+    return { ...baseCfg, activeThemePackId: 'official-gemineko', activeThemePack: null };
+  }
+
+  function openExternalHttpsUrl(rawUrl) {
+    let parsed;
+    try {
+      parsed = new URL(String(rawUrl || '').trim());
+    } catch {
+      return { ok: false, error: '无效的 URL' };
+    }
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) {
+      return { ok: false, error: '仅允许打开安全的 HTTPS 外部链接' };
+    }
+    const safeUrl = parsed.toString();
+    try {
+      if (process.platform === 'win32') {
+        execFile('cmd.exe', ['/c', 'start', '', safeUrl], { windowsHide: true }, () => {});
+      } else if (process.platform === 'darwin') {
+        execFile('open', [safeUrl], () => {});
+      } else {
+        execFile('xdg-open', [safeUrl], () => {});
+      }
+      return { ok: true, url: safeUrl };
+    } catch (err) {
+      return { ok: false, error: err?.message || String(err) };
+    }
+  }
 
   const MEME_MIME_MAP = {
     '.webp': 'image/webp',
@@ -576,7 +625,7 @@ export async function createHiveSidecarServer(options = {}) {
     }
 
     if (req.method === 'GET' && pathname === '/healthz') {
-      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.5.0', sidecar: 'hive_board' });
+      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: BRAND_META.version, sidecar: 'hive_board' });
       return;
     }
 
@@ -659,9 +708,10 @@ export async function createHiveSidecarServer(options = {}) {
     if (req.method === 'GET' && pathname === '/api/theme/config') {
       sendJson(res, 200, {
         ok: true,
-        config: themeStore.get(),
+        config: getEnrichedThemeConfig(),
         presets: THEME_PRESETS,
         rolePalettes: ROLE_PALETTES,
+        brand: BRAND_META,
       });
       return;
     }
@@ -681,7 +731,7 @@ export async function createHiveSidecarServer(options = {}) {
         const wmCheck = validateWatermarkImagePath(body.watermark.customFilePath);
         if (!wmCheck.ok) warningMsg = wmCheck.error || '水印图片路径无效';
       }
-      const next = themeStore.update(body);
+      const next = getEnrichedThemeConfig(themeStore.update(body));
       if (cdpInjector) {
         cdpInjector.pushThemeConfig(next).catch(() => {});
       }
@@ -698,11 +748,137 @@ export async function createHiveSidecarServer(options = {}) {
         sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
         return;
       }
-      const next = themeStore.reset();
+      const next = getEnrichedThemeConfig(themeStore.reset());
       if (cdpInjector) {
         cdpInjector.pushThemeConfig(next).catch(() => {});
       }
       sendJson(res, 200, { ok: true, config: next });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/github/status') {
+      const refresh = urlObj.searchParams.get('refresh') === '1';
+      const status = await githubPulse.getStatus({ forceRefresh: refresh });
+      sendJson(res, 200, status);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/store/registry') {
+      const refresh = urlObj.searchParams.get('refresh') === '1';
+      const data = await packManager.getCommunityRegistry({ forceRefresh: refresh });
+      sendJson(res, 200, {
+        ...data,
+        officialId: 'official-gemineko',
+        activeThemePackId: themeStore.get().activeThemePackId || 'official-gemineko',
+        brand: BRAND_META,
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/store/install') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const body = await readJsonBody(req);
+      let installRes;
+      if (typeof body?.url === 'string' && body.url.trim()) {
+        installRes = await packManager.installFromUrl(body.url);
+      } else if (body?.pack && typeof body.pack === 'object') {
+        installRes = packManager.installPack(body.pack);
+      } else if (typeof body?.packId === 'string' && body.packId.trim()) {
+        const found = packManager.getPackById(body.packId);
+        installRes = found
+          ? (found.id === 'official-gemineko' ? { ok: true, pack: found, warnings: [] } : packManager.installPack(found))
+          : { ok: false, error: `商店目录中未找到主题 ${body.packId}` };
+      } else {
+        installRes = { ok: false, error: '请提供 url、pack 或 packId' };
+      }
+      if (!installRes?.ok) {
+        sendJson(res, 400, installRes || { ok: false, error: '安装主题失败' });
+        return;
+      }
+      let nextCfg = getEnrichedThemeConfig();
+      if (body?.activate === true) {
+        const pack = installRes.pack;
+        const patch = { enabled: true, activeThemePackId: pack.id };
+        if (pack.basePreset) patch.preset = pack.basePreset;
+        if (pack.themeIntensity) patch.themeIntensity = pack.themeIntensity;
+        nextCfg = getEnrichedThemeConfig(themeStore.update(patch));
+        if (cdpInjector) cdpInjector.pushThemeConfig(nextCfg).catch(() => {});
+      }
+      sendJson(res, 200, { ...installRes, config: nextCfg });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/store/activate') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const packId = String(body?.packId || 'official-gemineko').trim().toLowerCase() || 'official-gemineko';
+      let nextPatch = { enabled: true, activeThemePackId: 'official-gemineko' };
+      if (packId !== 'official-gemineko') {
+        const found = packManager.getPackById(packId);
+        if (!found) {
+          sendJson(res, 404, { ok: false, error: `未找到主题包 ${packId}` });
+          return;
+        }
+        nextPatch.activeThemePackId = found.id;
+        if (body?.syncBasePreset !== false) {
+          if (found.basePreset) nextPatch.preset = found.basePreset;
+          if (found.themeIntensity) nextPatch.themeIntensity = found.themeIntensity;
+        }
+      } else if (body?.syncBasePreset !== false) {
+        nextPatch.preset = 'auto';
+        nextPatch.themeIntensity = 'optical-neko';
+      }
+      const nextCfg = getEnrichedThemeConfig(themeStore.update(nextPatch));
+      if (cdpInjector) cdpInjector.pushThemeConfig(nextCfg).catch(() => {});
+      sendJson(res, 200, { ok: true, config: nextCfg });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/store/uninstall') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const resUninstall = packManager.uninstallPack(body?.packId);
+      if (!resUninstall.ok) {
+        sendJson(res, 400, resUninstall);
+        return;
+      }
+      let nextCfg = getEnrichedThemeConfig();
+      if (themeStore.get().activeThemePackId === resUninstall.id) {
+        nextCfg = getEnrichedThemeConfig(themeStore.update({ activeThemePackId: 'official-gemineko' }));
+        if (cdpInjector) cdpInjector.pushThemeConfig(nextCfg).catch(() => {});
+      }
+      sendJson(res, 200, { ok: true, id: resUninstall.id, config: nextCfg });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/store/export') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const exported = packManager.exportThemePack(getEnrichedThemeConfig(), body || {});
+      sendJson(res, exported.ok ? 200 : 400, exported);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/open-external') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const openRes = openExternalHttpsUrl(body?.url);
+      sendJson(res, openRes.ok ? 200 : 400, openRes);
       return;
     }
 
@@ -936,7 +1112,7 @@ export async function createHiveSidecarServer(options = {}) {
       logoDataUri,
       debugPort: options.cdpPort,
       sideToken: validTokens[0] || generatedToken,
-      getThemeConfig: () => themeStore.get(),
+      getThemeConfig: () => getEnrichedThemeConfig(),
     });
     cdpInjector.start();
   }

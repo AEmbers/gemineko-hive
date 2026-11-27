@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "engine": "Gemineko Hive",
+  "updatedAt": "2026-11-27",
+  "repoUrl": "https://github.com/AEmbers/gemineko-hive",
+  "themes": [
+    {
+      "schemaVersion": 1,
+      "id": "official-gemineko",
+      "name": "基米窝 · 炫彩星钻（官方旗舰）",
+      "version": "0.7.0",
+      "scheme": "auto",
+      "builtin": true,
+      "official": true,
+      "author": {
+        "name": "AEmbers",
+        "url": "https://github.com/AEmbers"
+      },
+      "license": "MIT / CC BY-NC-SA 4.0",
+      "description": "官方旗舰主题：3D 晶透猫耳星钻 + 5 角色动态光影联动 + 高定光学玻璃极光层，自适应日夜模式。",
+      "tags": ["官方旗舰", "3D星钻", "日夜自适应"],
+      "swatches": ["#FFFFFF", "#0F101A", "#38BDF8", "#EC4899"],
+      "basePreset": "auto",
+      "themeIntensity": "optical-neko",
+      "tokens": {},
+      "aurora": [
+        "rgba(59, 130, 246, 0.28)",
+        "rgba(236, 72, 153, 0.22)",
+        "rgba(34, 211, 238, 0.18)"
+      ],
+      "accent": {
+        "primary": "#3B82F6",
+        "accent2": "#EC4899",
+        "accent3": "#22D3EE",
+        "glow": "rgba(59, 130, 246, 0.38)",
+        "gradient": "linear-gradient(120deg,#3b82f6,#a855f7,#ec4899,#22d3ee)"
+      },
+      "customCss": "",
+      "watermarkText": "Gemineko Hive · by AEmbers",
+      "homepage": "https://github.com/AEmbers/gemineko-hive"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kyoto-sakura-glass",
+      "name": "京都樱吹雪 · 光学玻璃",
+      "version": "1.0.0",
+      "scheme": "light",
+      "official": true,
+      "author": {
+        "name": "AEmbers",
+        "url": "https://github.com/AEmbers"
+      },
+      "license": "MIT",
+      "description": "极净纯白留白衬托樱花粉与紫藤霓虹折射光带，轻量柔焦适合长时间白天编码与阅读。",
+      "tags": ["浅色", "樱粉", "光学玻璃"],
+      "swatches": ["#FFFFFF", "#EC4899", "#A855F7", "#38BDF8"],
+      "basePreset": "nebula-day",
+      "themeIntensity": "optical-neko",
+      "tokens": {
+        "--gk-optical-hairline": "linear-gradient(90deg, rgba(244,114,182,0) 0%, #f472b6 24%, #ec4899 52%, #a855f7 76%, #38bdf8 92%, rgba(56,189,248,0) 100%)"
+      },
+      "aurora": [
+        "rgba(244, 114, 182, 0.28)",
+        "rgba(168, 85, 247, 0.22)",
+        "rgba(56, 189, 248, 0.16)"
+      ],
+      "accent": {
+        "primary": "#EC4899",
+        "accent2": "#A855F7",
+        "accent3": "#38BDF8",
+        "glow": "rgba(236, 72, 153, 0.34)",
+        "gradient": "linear-gradient(120deg, #f472b6, #ec4899, #a855f7, #38bdf8)"
+      },
+      "customCss": "html[data-gk-theme][data-gk-pack=\"kyoto-sakura-glass\"] .surface-composer-card { box-shadow: 0 14px 36px -14px rgba(236, 72, 153, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.92) !important; }",
+      "watermarkText": "Kyoto Sakura · by AEmbers",
+      "homepage": "https://github.com/AEmbers/gemineko-hive"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cyber-emerald-matrix",
+      "name": "翡翠矩阵 · 赛博终端",
+      "version": "1.0.0",
+      "scheme": "dark",
+      "official": true,
+      "author": {
+        "name": "AEmbers",
+        "url": "https://github.com/AEmbers"
+      },
+      "license": "MIT",
+      "description": "深邃黑曜基底搭配翡翠绿、湖青与电光靛赛博光带，暗夜高对比聚焦代码细节。",
+      "tags": ["深色", "赛博翡翠", "极客黑"],
+      "swatches": ["#080D11", "#10B981", "#06B6D4", "#3B82F6"],
+      "basePreset": "carbon-obsidian",
+      "themeIntensity": "optical-neko",
+      "tokens": {
+        "--gk-optical-hairline": "linear-gradient(90deg, rgba(16,185,129,0) 0%, #10b981 26%, #06b6d4 56%, #3b82f6 82%, rgba(59,130,246,0) 100%)"
+      },
+      "aurora": [
+        "rgba(16, 185, 129, 0.28)",
+        "rgba(6, 182, 212, 0.22)",
+        "rgba(59, 130, 246, 0.18)"
+      ],
+      "accent": {
+        "primary": "#10B981",
+        "accent2": "#06B6D4",
+        "accent3": "#3B82F6",
+        "glow": "rgba(16, 185, 129, 0.36)",
+        "gradient": "linear-gradient(120deg, #059669, #10b981, #06b6d4, #3b82f6)"
+      },
+      "customCss": "html[data-gk-theme][data-gk-pack=\"cyber-emerald-matrix\"] .surface-composer-card { border-color: rgba(16, 185, 129, 0.34) !important; box-shadow: 0 18px 40px -14px rgba(16, 185, 129, 0.28) !important; }",
+      "watermarkText": "Cyber Emerald · by AEmbers",
+      "homepage": "https://github.com/AEmbers/gemineko-hive"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "solar-amber-atelier",
+      "name": "暖金琥珀 · 创作室",
+      "version": "1.0.0",
+      "scheme": "light",
+      "official": true,
+      "author": {
+        "name": "AEmbers",
+        "url": "https://github.com/AEmbers"
+      },
+      "license": "MIT",
+      "description": "低蓝光奶油米纸搭配琥珀金与珊瑚橙流动光晕，柔和护眼适合深夜文档写作。",
+      "tags": ["浅色", "暖金护眼", "纸感"],
+      "swatches": ["#FCF9F2", "#F59E0B", "#EA580C", "#FB7185"],
+      "basePreset": "cream-paper",
+      "themeIntensity": "optical-neko",
+      "tokens": {
+        "--gk-optical-hairline": "linear-gradient(90deg, rgba(245,158,11,0) 0%, #f59e0b 28%, #f97316 58%, #fb7185 84%, rgba(251,113,133,0) 100%)"
+      },
+      "aurora": [
+        "rgba(245, 158, 11, 0.24)",
+        "rgba(249, 115, 22, 0.20)",
+        "rgba(251, 113, 133, 0.16)"
+      ],
+      "accent": {
+        "primary": "#F59E0B",
+        "accent2": "#EA580C",
+        "accent3": "#FB7185",
+        "glow": "rgba(245, 158, 11, 0.32)",
+        "gradient": "linear-gradient(120deg, #f59e0b, #f97316, #fb7185, #fbbf24)"
+      },
+      "customCss": "html[data-gk-theme][data-gk-pack=\"solar-amber-atelier\"] .surface-composer-card { box-shadow: 0 14px 34px -14px rgba(245, 158, 11, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important; }",
+      "watermarkText": "Solar Amber · by AEmbers",
+      "homepage": "https://github.com/AEmbers/gemineko-hive"
+    }
+  ]
+}
