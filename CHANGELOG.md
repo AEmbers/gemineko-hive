@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.2] - 2026-11-27
+
+### Fixed & Changed
+- **彻底根治深/浅色对话区底部极光横向硬切边**：
+  - 透明化滚动区底端原生 `48px` 实色遮罩条（`[data-testid="conversation-view"] div.absolute.bottom-0.z-10.pointer-events-none:empty`），改为 `[data-testid="autoscroll-viewport"]` 上下双向透明渐隐 `mask-image` 透出下方连续极光；
+  - 为 `#gemineko-conv-aurora` 增加顶部平滑羽化遮罩，并使用 `[id="antigravity.agentSidePanelInputBox"]` 稳定透明化输入框外层黑底壳，物理级消除横切黑带；
+- **浅色 `optical-neko` 纯白焦点对比与流动炫彩重构（深色主题保持高分暗夜质感）**：
+  - 浅色模式下画布全面回归纯粹雪白 `#FFFFFF`（同步覆写 `--background` / `--content` / `--card`）、侧栏回归清爽冷银白 `#F4F6FA`，大面积纯白留白衬托各区域单一高色差炫彩流动光学焦点；
+  - 底部极光收拢至 `38%` 化作双层异步漂移高透炫彩极光浪（`gkAuroraFlowDriftA` / `gkAuroraFlowDriftB`，运行态 `data-gk-active="1"` 自动提速），输入框/Overview 顶部采用 `1.5px` 流动棱镜光丝（`gkPrismHairlineFlow`），侧栏选中项左侧配 `3px` 垂直流动棱镜光针（`gkPrismVerticalFlow`）；
+- **两处官方 Brand Logo 全量替换 + 首页问候补全**：
+  - 左上角 `[data-testid="app-icon-new-conversation-button"]` 替换为《基米窝》发光炫彩猫爪星芒宝石徽章；
+  - 空白首页中央 `.home-greeting-mark` 替换为 `84×84` 旋转炫彩猫耳星环水晶徽标，`host-i18n-runtime.mjs` 补齐 `Hey <name>, what should we build today?` 等首页问候句式并赋予流动渐变标题；
+- **修复侧边栏戳一戳气泡被左侧边界裁切**：
+  - `src/theme/gemineko-runtime.js` `spawnBubbleAt` 改为挂载后按 `offsetWidth` / `offsetHeight` 与视口宽高比精准夹紧，`.gn-float-bubble` 支持安全换行不越界。
+
 ## [0.6.1] - 2026-11-27
 
 ### Changed

@@ -494,6 +494,8 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(translateHostText('5 files changed', 'zh'), '5 个文件已变更');
   assert.equal(translateHostText('Ask anything, @ to mention, / for actions', 'zh'), '随便问点什么，@ 提及文件，/ 呼出指令');
   assert.equal(translateHostText('Welcome back, qilin. Where should we pick up?', 'neko-zh'), '欢迎回窝，qilin！今天想从哪开工喵？');
+  assert.equal(translateHostText('Hey qilin, what should we build today?', 'neko-zh'), '嗨 qilin，今天带哈基米一起造点什么喵？✦');
+  assert.equal(translateHostText("Good to see you, qilin. What's next?", 'neko-zh'), '见到你真开心，qilin 喵！接下来干点啥？✦');
   assert.equal(translateHostText('Interface Layout', 'zh'), '界面布局');
   assert.equal(translateHostText('Configure agent execution, queued message delivery, and permissions.', 'zh'), '配置智能体执行策略、排队消息投递方式及权限控制。');
   assert.equal(translateHostText('Send Immediately', 'zh'), '立即发送');
@@ -616,6 +618,11 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /optical-neko/);
     assert.match(cdpScript, /--gk-optical-hairline/);
     assert.match(cdpScript, /gkAuroraHorizonBreath/);
+    assert.match(cdpScript, /gkAuroraFlowDriftA/);
+    assert.match(cdpScript, /gkPrismHairlineFlow/);
+    assert.match(cdpScript, /app-icon-new-conversation-button/);
+    assert.match(cdpScript, /home-greeting-mark/);
+    assert.match(cdpScript, /autoscroll-viewport/);
     assert.match(cdpScript, /--gk-rx/);
     assert.match(cdpScript, /gk-ask-thought-bubble/);
     assert.match(cdpScript, /gk-ask-ponder-img/);
@@ -672,6 +679,7 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(bundleContent, /主题工坊|全量汉化工坊/);
     assert.match(bundleContent, /gemineko-sidecar-shell/);
     assert.match(bundleContent, /guardLoadingSkeleton/);
+    assert.match(bundleContent, /offsetWidth/);
 
     // Bug #1 回归验证：缺失动作精灵不返回 404，安全回退 <role>-thinking.png
     const fallbackSprite = await srv.inject({ url: '/gemineko-sprites/gpt-unknown.png' });

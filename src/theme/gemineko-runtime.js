@@ -477,9 +477,18 @@ export function bootGeminekoHive() {
     const el = document.createElement('div');
     el.className = 'gn-float-bubble';
     el.textContent = text;
-    el.style.left = `${Math.max(70, Math.min(window.innerWidth - 70, x))}px`;
-    el.style.top = `${Math.max(40, Math.min(window.innerHeight - 40, y))}px`;
     document.body.appendChild(el);
+    const vw = window.innerWidth || 400;
+    const vh = window.innerHeight || 600;
+    const bw = Math.min(vw - 20, el.offsetWidth || 200);
+    const bh = el.offsetHeight || 34;
+    const half = Math.ceil(bw / 2);
+    const minLeft = Math.min(vw - 10, half + 10);
+    const maxLeft = Math.max(minLeft, vw - half - 10);
+    const safeLeft = Math.max(minLeft, Math.min(maxLeft, x));
+    const safeTop = Math.max(bh + 12, Math.min(vh - 16, y));
+    el.style.left = `${safeLeft}px`;
+    el.style.top = `${safeTop}px`;
     setTimeout(() => el.remove(), 2350);
   }
 

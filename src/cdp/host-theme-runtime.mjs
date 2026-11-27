@@ -178,6 +178,51 @@ function buildPawSpinnerSvgMap() {
   return out;
 }
 
+/** 左上角《基米窝》纯白发光猫爪×星芒矢量徽标（叠加在流动炫彩宝石底座之上） */
+function buildTopBrandPawUri() {
+  const svg = [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">',
+    '<path d="M12 12.2c-2.6 0-4.6 1.75-4.6 3.9 0 1.45 1.15 2.45 2.7 2.45.78 0 1.38-.22 1.9-.22s1.12.22 1.9.22c1.55 0 2.7-1 2.7-2.45 0-2.15-2-3.9-4.6-3.9Z" fill="#ffffff"/>',
+    '<circle cx="6.7" cy="10.8" r="1.45" fill="#ffffff"/>',
+    '<circle cx="9.9" cy="8.5" r="1.55" fill="#ffffff"/>',
+    '<circle cx="14.1" cy="8.5" r="1.55" fill="#ffffff"/>',
+    '<circle cx="17.3" cy="10.8" r="1.45" fill="#ffffff"/>',
+    '<path d="M19.2 2.4L19.85 4.35L21.8 5L19.85 5.65L19.2 7.6L18.55 5.65L16.6 5L18.55 4.35Z" fill="#FFFBEB"/>',
+    '</svg>',
+  ].join('');
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+}
+
+/** 空白首页正中央 64×64 炫彩猫耳×星芒肉垫水晶徽标 */
+function buildHomeBrandCatUri() {
+  const svg = [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">',
+    '<defs>',
+    '<linearGradient id="gkhg" x1="6" y1="6" x2="58" y2="58" gradientUnits="userSpaceOnUse">',
+    '<stop offset="0%" stop-color="#38BDF8"/>',
+    '<stop offset="36%" stop-color="#8B5CF6"/>',
+    '<stop offset="72%" stop-color="#EC4899"/>',
+    '<stop offset="100%" stop-color="#F59E0B"/>',
+    '</linearGradient>',
+    '<linearGradient id="gkhc" x1="16" y1="22" x2="48" y2="52" gradientUnits="userSpaceOnUse">',
+    '<stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.96"/>',
+    '<stop offset="100%" stop-color="#E0E7FF" stop-opacity="0.88"/>',
+    '</linearGradient>',
+    '</defs>',
+    '<path d="M14 27L17.5 11.5C18.1 9.1 20.9 8.4 22.6 10.1L29.5 17.2C31.1 16.9 32.9 16.9 34.5 17.2L41.4 10.1C43.1 8.4 45.9 9.1 46.5 11.5L50 27C52.6 31.2 53.6 36.2 51.8 41.2C49.2 48.3 41.4 53 32 53C22.6 53 14.8 48.3 12.2 41.2C10.4 36.2 11.4 31.2 14 27Z" fill="url(#gkhg)" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round"/>',
+    '<path d="M20.2 21.5L21.5 14.5L26.2 19.3" fill="#FDF2F8" fill-opacity="0.72"/>',
+    '<path d="M43.8 21.5L42.5 14.5L37.8 19.3" fill="#E0F2FE" fill-opacity="0.72"/>',
+    '<ellipse cx="32" cy="39.2" rx="7.6" ry="5.6" fill="url(#gkhc)"/>',
+    '<circle cx="22.6" cy="32.2" r="2.3" fill="#FFFFFF"/>',
+    '<circle cx="28.6" cy="29.0" r="2.45" fill="#FFFFFF"/>',
+    '<circle cx="35.4" cy="29.0" r="2.45" fill="#FFFFFF"/>',
+    '<circle cx="41.4" cy="32.2" r="2.3" fill="#FFFFFF"/>',
+    '<path d="M51 8.5L52.2 12.1L55.8 13.3L52.2 14.5L51 18.1L49.8 14.5L46.2 13.3L49.8 12.1Z" fill="#F59E0B"/>',
+    '</svg>',
+  ].join('');
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+}
+
 /**
  * 构造在宿主 Renderer 浏览器上下文执行的主题、全组件重绘与联动彩蛋代码片段（定义 initHostThemeSuite）。
  * @returns {string}
@@ -190,6 +235,8 @@ export function buildHostThemeRuntimeSnippet() {
   const roleCrestsJson = JSON.stringify(buildRoleCrestSvgMap());
   const roleSpinnersJson = JSON.stringify(buildRoleSpinnerSvgMap());
   const pawSpinnersJson = JSON.stringify(buildPawSpinnerSvgMap());
+  const topBrandPawJson = JSON.stringify(buildTopBrandPawUri());
+  const homeBrandCatJson = JSON.stringify(buildHomeBrandCatUri());
 
   return `
   function initHostThemeSuite(ctx) {
@@ -200,6 +247,8 @@ export function buildHostThemeRuntimeSnippet() {
     const ROLE_CREST_SVGS = ${roleCrestsJson};
     const ROLE_SPINNERS = ${roleSpinnersJson};
     const PAW_SPINNERS = ${pawSpinnersJson};
+    const TOP_BRAND_PAW_URI = ${topBrandPawJson};
+    const HOME_BRAND_CAT_URI = ${homeBrandCatJson};
     const THEME_STYLE_ID = 'gemineko-host-theme-v5';
     const WP_LAYER_ID = 'gemineko-wallpaper-layer';
     const AURORA_HOST_ID = 'gemineko-conv-aurora';
@@ -1352,8 +1401,171 @@ pre.gk-code-collapsed {
 }
 #\${CTX_MENU_ID} button:hover { background: var(--onyx-selected); }
 
-/* === 9. optical-neko 光学高定模式：超长多阶渐隐光学层 × 鼠标跟随 6 阶棱镜色散光边 × 地平线柔焦极光 === */
+/* === 9. optical-neko 光学高定模式：纯白焦点对比 × 流动炫彩光效 × 横切黑带根治 × Brand Logo 主题化 === */
+@keyframes gkPrismHairlineFlow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 260% 50%; }
+}
+@keyframes gkPrismVerticalFlow {
+  0% { background-position: 50% 0%; }
+  100% { background-position: 50% 240%; }
+}
+@keyframes gkHomeRingSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes gkHomeLogoFloat {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-4px) scale(1.03); }
+}
+@keyframes gkAuroraFlowDriftA {
+  0%, 100% { transform: translate3d(-4%, 2%, 0) scale(0.96, 1.0); filter: blur(36px) saturate(145%) hue-rotate(-8deg); }
+  50% { transform: translate3d(5%, -3%, 0) scale(1.06, 1.08); filter: blur(38px) saturate(155%) hue-rotate(14deg); }
+}
+@keyframes gkAuroraFlowDriftB {
+  0%, 100% { transform: translate3d(4%, 1%, 0) scale(1.04, 0.96); opacity: 0.78; }
+  50% { transform: translate3d(-5%, -2%, 0) scale(0.95, 1.08); opacity: 1; }
+}
+
+/* 全局：彻底根治深/浅色下底部极光的横向硬切边（去 48px 实色假遮罩、加滚动双向淡出与极光顶部羽化） */
+html[data-gk-theme]:not([data-gk-intensity="minimal"]):not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) [data-testid="conversation-view"] div.absolute.bottom-0.z-10.pointer-events-none:empty {
+  background: transparent !important;
+  background-image: none !important;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]):not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) [data-testid="autoscroll-viewport"] {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, #000 28px, #000 calc(100% - 26px), transparent 100%) !important;
+  mask-image: linear-gradient(to bottom, transparent 0px, #000 28px, #000 calc(100% - 26px), transparent 100%) !important;
+}
+html[data-gk-theme] [id="antigravity.agentSidePanelInputBox"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+html[data-gk-theme] #\${AURORA_HOST_ID} {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.24) 22%, #000 52%, #000 100%) !important;
+  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.24) 22%, #000 52%, #000 100%) !important;
+}
+
+/* 焦点 1：左上角 Antigravity 小 A 全量替换为《基米窝》发光炫彩猫爪星芒宝石徽章 */
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"] {
+  position: relative !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  padding: 0 !important;
+  margin: 0 6px 0 8px !important;
+  border-radius: 9px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+  transition: transform 0.22s var(--gk-ease-spring), filter 0.2s ease !important;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"] > svg {
+  display: none !important;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #0EA5E9 0%, #6366F1 32%, #A855F7 56%, #EC4899 78%, #F59E0B 100%);
+  background-size: 220% 220%;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 4px 14px -2px rgba(139, 92, 246, 0.45), 0 0 10px rgba(14, 165, 233, 0.28);
+  animation: gkPrismHairlineFlow 7s linear infinite;
+  pointer-events: none;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"]::after {
+  content: "";
+  position: relative;
+  width: 19px;
+  height: 19px;
+  background-image: \${TOP_BRAND_PAW_URI};
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  filter: drop-shadow(0 1px 3px rgba(15, 23, 42, 0.32));
+  pointer-events: none;
+  z-index: 1;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"]:hover {
+  transform: scale(1.08) rotate(-4deg) !important;
+}
+
+/* 焦点 3：空白首页中央大 A 全量替换为 84×84 旋转炫彩猫耳星环水晶徽标 + 流动渐变问候 */
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] .home-greeting-mark {
+  position: relative !important;
+  width: 84px !important;
+  height: 84px !important;
+  min-width: 84px !important;
+  min-height: 84px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto 14px !important;
+  background: transparent !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+  overflow: visible !important;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] .home-greeting-mark > *,
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] .home-greeting-mark svg {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] .home-greeting-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: conic-gradient(from 0deg, #38BDF8, #6366F1, #A855F7, #EC4899, #F59E0B, #22D3EE, #38BDF8);
+  -webkit-mask-image: radial-gradient(circle, transparent 58%, #000 61%, #000 69%, transparent 72%);
+  mask-image: radial-gradient(circle, transparent 58%, #000 61%, #000 69%, transparent 72%);
+  filter: drop-shadow(0 0 12px rgba(139, 92, 246, 0.36));
+  animation: gkHomeRingSpin 10s linear infinite;
+  pointer-events: none;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] .home-greeting-mark::after {
+  content: "";
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  background-image: \${HOME_BRAND_CAT_URI};
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  filter: drop-shadow(0 8px 22px rgba(139, 92, 246, 0.34)) drop-shadow(0 2px 6px rgba(14, 165, 233, 0.24));
+  animation: gkHomeLogoFloat 4.2s ease-in-out infinite;
+  pointer-events: none;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1) {
+  background: linear-gradient(110deg, #1E1B4B 0%, #4F46E5 26%, #9333EA 50%, #DB2777 74%, #0284C7 100%) !important;
+  background-size: 240% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  animation: gkPrismHairlineFlow 9s linear infinite;
+}
+html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1) {
+  background: linear-gradient(110deg, #F8FAFC 0%, #7DD3FC 26%, #C4B5FD 52%, #F9A8D4 76%, #FDE68A 100%) !important;
+  background-size: 240% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
 html[data-gk-theme][data-gk-intensity="optical-neko"] {
+  --gk-optical-prism-flow: linear-gradient(
+    90deg,
+    #38BDF8 0%,
+    #6366F1 18%,
+    #A855F7 36%,
+    #EC4899 54%,
+    #F59E0B 72%,
+    #22D3EE 88%,
+    #38BDF8 100%
+  );
   --gk-optical-hairline: linear-gradient(
     90deg,
     transparent 0%,
@@ -1375,18 +1587,25 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] {
   );
 }
 html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] {
-  --gk-optical-canvas: #F5F8FC;
-  --gk-optical-sidebar: #EAF0F8;
-  --gk-optical-titlebar: #E6EDF7;
-  --gk-optical-card-fill: rgba(255, 255, 255, 0.94);
-  --gk-optical-glass-fill: rgba(252, 253, 255, 0.90);
-  --gk-optical-sheen: linear-gradient(176deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.76) 38%, rgba(239, 245, 254, 0.52) 100%);
-  --gk-optical-border-top: rgba(255, 255, 255, 0.96);
-  --gk-optical-border-base: rgba(15, 23, 42, 0.085);
-  --gk-optical-shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 1px 2px rgba(15, 23, 42, 0.04), 0 14px 34px -12px rgba(30, 58, 138, 0.11);
-  --gk-optical-shadow-float: inset 0 1px 0 rgba(255, 255, 255, 0.98), 0 2px 6px rgba(15, 23, 42, 0.05), 0 24px 56px -18px rgba(15, 23, 42, 0.18);
+  --background: #FFFFFF !important;
+  --content: #FFFFFF !important;
+  --body-background: #FFFFFF !important;
+  --shell: #FFFFFF !important;
+  --sidebar: #F4F6FA !important;
+  --shell-canvas: #F4F6FA !important;
+  --card: #FFFFFF !important;
+  --gk-optical-canvas: #FFFFFF;
+  --gk-optical-sidebar: #F4F6FA;
+  --gk-optical-titlebar: #F6F8FB;
+  --gk-optical-card-fill: #FFFFFF;
+  --gk-optical-glass-fill: rgba(255, 255, 255, 0.92);
+  --gk-optical-sheen: linear-gradient(178deg, rgba(255, 255, 255, 1) 0%, rgba(252, 253, 255, 0.88) 46%, rgba(246, 249, 255, 0.72) 100%);
+  --gk-optical-border-top: rgba(255, 255, 255, 0.98);
+  --gk-optical-border-base: rgba(15, 23, 42, 0.08);
+  --gk-optical-shadow-card: inset 0 1px 0 #FFFFFF, 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 26px -12px rgba(15, 23, 42, 0.09);
+  --gk-optical-shadow-float: inset 0 1px 0 #FFFFFF, 0 2px 6px rgba(15, 23, 42, 0.05), 0 22px 52px -18px rgba(30, 58, 138, 0.14);
   --gk-optical-rim-core: rgba(255, 255, 255, 0.98);
-  --gk-optical-specular-spot: rgba(255, 255, 255, 0.55);
+  --gk-optical-specular-spot: rgba(255, 255, 255, 0.72);
 }
 html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] {
   --gk-optical-canvas: #0D0F14;
@@ -1403,16 +1622,20 @@ html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] {
   --gk-optical-specular-spot: rgba(232, 242, 255, 0.11);
 }
 
-/* 中性高通透表面层次（去掉粉紫油腻染色，严格排除 Browser Hole） */
+/* 中性高通透表面层次（浅色回归纯白×冷银白，严格排除 Browser Hole） */
 html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-wallpaper="on"]) > body:not([data-has-browser-hole="true"]),
-html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-wallpaper="on"]) :is(.agy-shell, .agy-sheet, [data-testid="sidecar-iframe-slot"], iframe[data-testid="sidecar-iframe"], [data-testid="conversation-view"], .agy-home):not([data-has-browser-hole="true"]) {
+html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) :is(.agy-shell, .agy-sheet, [data-testid="sidecar-iframe-slot"], iframe[data-testid="sidecar-iframe"], [data-testid="conversation-view"], .agy-home):not([data-has-browser-hole="true"]),
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-focus="1"]:not([data-gk-wallpaper="on"]) :is(.agy-shell, .agy-sheet, [data-testid="sidecar-iframe-slot"], iframe[data-testid="sidecar-iframe"], [data-testid="conversation-view"], .agy-home):not([data-has-browser-hole="true"]) {
   background-color: var(--gk-optical-canvas) !important;
   background-image: none !important;
 }
 html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-wallpaper="on"]) :is(.bg-sidebar, aside.bg-sidebar, div.bg-sidebar, [class*="bg-sidebar"]):not([data-has-browser-hole="true"]) {
   background-color: var(--gk-optical-sidebar) !important;
 }
-html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) :is(aside.bg-sidebar, div.h-full.bg-sidebar):not([data-has-browser-hole="true"]) {
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"]:not([data-gk-wallpaper="on"]) :is(aside.bg-sidebar, div.h-full.bg-sidebar):not([data-has-browser-hole="true"]) {
+  background-image: none !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) :is(aside.bg-sidebar, div.h-full.bg-sidebar):not([data-has-browser-hole="true"]) {
   background-image:
     linear-gradient(
       180deg,
@@ -1435,27 +1658,39 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="title-menu-b
   border-bottom: 1px solid var(--gk-optical-border-base) !important;
 }
 html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="pane-titlebar-toolbar"] {
-  background: color-mix(in srgb, var(--gk-optical-canvas) 92%, transparent) !important;
+  background: color-mix(in srgb, var(--gk-optical-canvas) 94%, transparent) !important;
   border-bottom: 1px solid var(--gk-optical-border-base) !important;
 }
 
-/* 超长 7 阶两端渐隐棱镜光丝（取代生硬 2.5px 彩虹实线） */
-html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="title-menu-bar"]::before {
+/* 顶栏收敛避免分散注意力，焦点光丝集中到输入框与悬浮卡并持续流动 */
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] [data-testid="title-menu-bar"]::before {
+  opacity: 0 !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] [data-testid="title-menu-bar"]::before {
   height: 1px !important;
   background: var(--gk-optical-hairline) !important;
   opacity: 0.95 !important;
 }
 html[data-gk-theme][data-gk-intensity="optical-neko"] .surface-composer-card::before,
 html[data-gk-theme][data-gk-intensity="optical-neko"] div:has(> [data-testid="overview-panel"])::before {
-  left: 10% !important;
-  right: 10% !important;
-  height: 1px !important;
-  background: var(--gk-optical-hairline) !important;
+  left: 8% !important;
+  right: 8% !important;
+  height: 1.5px !important;
+  background: var(--gk-optical-prism-flow) !important;
+  background-size: 260% 100% !important;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%) !important;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%) !important;
   box-shadow: 0 0 12px color-mix(in srgb, var(--gk-role-primary) 34%, transparent) !important;
-  opacity: 0.92 !important;
+  opacity: 0.95 !important;
+  animation: gkPrismHairlineFlow 5.5s linear infinite;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-active="1"] .surface-composer-card::before,
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-active="1"] div:has(> [data-testid="overview-panel"])::before {
+  animation-duration: 2.4s !important;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--gk-role-accent2) 48%, transparent) !important;
 }
 
-/* 「开启新喵聊」水晶玻璃按钮（彻底去荧光紫大色块，支持鼠标跟随棱镜边框） */
+/* 「开启新喵聊」水晶玻璃按钮 */
 html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="new-conversation-button"] {
   color: var(--foreground) !important;
   border: 1px solid transparent !important;
@@ -1500,18 +1735,18 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="overview-pan
   background: linear-gradient(180deg, color-mix(in srgb, var(--gk-role-primary) 5%, transparent) 0%, transparent 100%) !important;
 }
 html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-focus="1"]) div:has(> [data-testid="overview-panel"])::after {
-  opacity: 0.68 !important;
+  opacity: 0.72 !important;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.92) 0%,
-    color-mix(in srgb, var(--gk-role-primary) 72%, #ffffff) 45%,
-    color-mix(in srgb, var(--gk-role-accent2) 55%, transparent) 100%
+    rgba(255, 255, 255, 0.94) 0%,
+    color-mix(in srgb, var(--gk-role-primary) 76%, #ffffff) 45%,
+    color-mix(in srgb, var(--gk-role-accent2) 60%, transparent) 100%
   ) !important;
   filter: drop-shadow(0 -2px 8px color-mix(in srgb, var(--gk-role-primary) 38%, transparent)) !important;
 }
 
 /* 输入框玻璃底座 + 鼠标跟随 300px 棱镜色散边框 */
-html[data-gk-theme][data-gk-intensity="optical-neko"] #antigravity\\.agentSidePanelInputBox > .surface-composer-card,
+html[data-gk-theme][data-gk-intensity="optical-neko"] [id="antigravity.agentSidePanelInputBox"] > .surface-composer-card,
 html[data-gk-theme][data-gk-intensity="optical-neko"] .surface-composer-card {
   border: 1px solid transparent !important;
   background-color: transparent !important;
@@ -1525,7 +1760,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] .surface-composer-card {
   backdrop-filter: blur(20px) saturate(140%) !important;
   box-shadow: var(--gk-optical-shadow-float) !important;
 }
-html[data-gk-theme][data-gk-intensity="optical-neko"] #antigravity\\.agentSidePanelInputBox:focus-within > .surface-composer-card,
+html[data-gk-theme][data-gk-intensity="optical-neko"] [id="antigravity.agentSidePanelInputBox"]:focus-within > .surface-composer-card,
 html[data-gk-theme][data-gk-intensity="optical-neko"] .surface-composer-card:focus-within {
   border-color: transparent !important;
   box-shadow:
@@ -1539,12 +1774,12 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="model-se
   box-shadow: inset 0 1px 0 var(--gk-optical-border-top) !important;
 }
 
-/* 用户消息气泡 & 侧栏选中项（去硬紫竖条与大块粉紫底，回归通透玻璃 + 棱镜折射细边） */
+/* 用户消息气泡 & 侧栏选中项（焦点 2：纯白侧栏选中卡配左侧 3px 垂直流动炫彩棱镜光针） */
 html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="user-message-bubble"], .agy-user-bubble) {
   border: 1px solid transparent !important;
   background-color: transparent !important;
   background-image:
-    linear-gradient(120deg, color-mix(in srgb, var(--gk-role-primary) 6%, transparent) 0%, color-mix(in srgb, var(--gk-role-accent2) 3%, transparent) 42%, transparent 82%),
+    linear-gradient(120deg, color-mix(in srgb, var(--gk-role-primary) 5%, transparent) 0%, color-mix(in srgb, var(--gk-role-accent2) 2.5%, transparent) 42%, transparent 82%),
     linear-gradient(var(--gk-optical-card-fill), var(--gk-optical-card-fill)),
     var(--gk-optical-rim-grad),
     linear-gradient(180deg, var(--gk-optical-border-top) 0%, var(--gk-optical-border-base) 42%, var(--gk-optical-border-base) 100%) !important;
@@ -1559,7 +1794,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="conversa
   border: 1px solid transparent !important;
   background-color: transparent !important;
   background-image:
-    linear-gradient(120deg, color-mix(in srgb, var(--gk-role-primary) 8%, transparent) 0%, color-mix(in srgb, var(--gk-role-accent2) 4%, transparent) 44%, transparent 84%),
+    linear-gradient(120deg, color-mix(in srgb, var(--gk-role-primary) 6%, transparent) 0%, color-mix(in srgb, var(--gk-role-accent2) 3%, transparent) 44%, transparent 84%),
     linear-gradient(var(--gk-optical-card-fill), var(--gk-optical-card-fill)),
     var(--gk-optical-rim-grad),
     linear-gradient(180deg, var(--gk-optical-border-top) 0%, var(--gk-optical-border-base) 42%, var(--gk-optical-border-base) 100%) !important;
@@ -1567,8 +1802,22 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="conversa
   background-clip: padding-box, padding-box, border-box, border-box !important;
   box-shadow: var(--gk-optical-shadow-card) !important;
 }
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row)[data-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 18%;
+  bottom: 18%;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #38BDF8 0%, #6366F1 26%, #A855F7 52%, #EC4899 76%, #F59E0B 92%, #38BDF8 100%);
+  background-size: 100% 240%;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.45);
+  animation: gkPrismVerticalFlow 4.6s linear infinite;
+  pointer-events: none;
+}
 html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row):hover:not([data-selected="true"]) {
-  background-color: color-mix(in srgb, var(--gk-role-primary) 6%, var(--gk-optical-card-fill)) !important;
+  background-color: color-mix(in srgb, var(--gk-role-primary) 5%, var(--gk-optical-card-fill)) !important;
 }
 html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="project-header"] {
   background: transparent !important;
@@ -1580,7 +1829,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="project-head
   background: linear-gradient(180deg, transparent 0%, var(--gk-role-primary) 50%, transparent 100%) !important;
 }
 
-/* 底部地平线 6 阶超长平滑衰减弥散极光（#gemineko-conv-aurora） */
+/* 底部地平线极光：深色保留高分暗夜极光（已靠顶部 mask 消除硬线），浅色重构为纯白下的高色差流动炫彩极光浪 */
 @keyframes gkAuroraHorizonBreath {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.92; }
   50% { transform: translate3d(0, -1.5%, 0) scale(1.03); opacity: 1; }
@@ -1588,15 +1837,6 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="project-head
 html[data-gk-theme][data-gk-intensity="optical-neko"] #\${AURORA_HOST_ID} {
   height: 46% !important;
   overflow: hidden !important;
-  background: linear-gradient(
-    to top,
-    color-mix(in srgb, var(--gk-role-primary) 14%, transparent) 0%,
-    color-mix(in srgb, var(--gk-role-accent2) 9%, transparent) 14%,
-    color-mix(in srgb, var(--gk-role-accent3) 5%, transparent) 32%,
-    color-mix(in srgb, var(--gk-role-primary) 2%, transparent) 54%,
-    color-mix(in srgb, var(--gk-role-accent2) 0.5%, transparent) 76%,
-    transparent 100%
-  ) !important;
   opacity: calc(var(--gk-ambient-alpha, 0.85) * 0.98);
 }
 html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] #\${AURORA_HOST_ID} {
@@ -1610,7 +1850,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] #\$
     transparent 100%
   ) !important;
 }
-html[data-gk-theme][data-gk-intensity="optical-neko"] #\${AURORA_HOST_ID}::before {
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] #\${AURORA_HOST_ID}::before {
   content: "";
   position: absolute;
   inset: 10% -12% -20% -12%;
@@ -1642,7 +1882,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] #\${AURORA_HOST_ID}::befor
     );
   animation: gkAuroraHorizonBreath 9s ease-in-out infinite;
 }
-html[data-gk-theme][data-gk-intensity="optical-neko"] #\${AURORA_HOST_ID}::after {
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] #\${AURORA_HOST_ID}::after {
   content: "";
   position: absolute;
   inset: auto 0 0 0;
@@ -1657,7 +1897,89 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] #\${AURORA_HOST_ID}::after
     transparent 100%
   );
 }
-html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [data-gk-motion="off"]) #\${AURORA_HOST_ID}::before {
+
+/* 焦点 4（浅色纯白专用）：收拢至底部 38%，彻底无灰脏，以高色差流动双浪极光衬托纯白画布 */
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] #\${AURORA_HOST_ID} {
+  height: 38% !important;
+  background: transparent !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] #\${AURORA_HOST_ID}::before {
+  content: "";
+  position: absolute;
+  inset: 14% -14% -18% -14%;
+  pointer-events: none;
+  filter: blur(36px) saturate(145%);
+  background:
+    radial-gradient(
+      44% 82% at 18% 96%,
+      rgba(14, 165, 233, 0.40) 0%,
+      rgba(56, 189, 248, 0.24) 28%,
+      rgba(14, 165, 233, 0.08) 56%,
+      transparent 82%
+    ),
+    radial-gradient(
+      46% 84% at 82% 96%,
+      rgba(236, 72, 153, 0.36) 0%,
+      rgba(244, 114, 182, 0.21) 28%,
+      rgba(236, 72, 153, 0.07) 56%,
+      transparent 82%
+    ),
+    radial-gradient(
+      42% 76% at 54% 92%,
+      rgba(139, 92, 246, 0.34) 0%,
+      rgba(168, 85, 247, 0.18) 32%,
+      rgba(139, 92, 246, 0.05) 60%,
+      transparent 84%
+    );
+  animation: gkAuroraFlowDriftA 7.2s ease-in-out infinite;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] #\${AURORA_HOST_ID}::after {
+  content: "";
+  position: absolute;
+  inset: auto -8% -8% -8%;
+  height: 58%;
+  pointer-events: none;
+  filter: blur(26px) saturate(135%);
+  background:
+    radial-gradient(
+      38% 68% at 64% 96%,
+      rgba(245, 158, 11, 0.30) 0%,
+      rgba(251, 191, 36, 0.16) 32%,
+      transparent 76%
+    ),
+    radial-gradient(
+      42% 64% at 38% 96%,
+      rgba(34, 211, 238, 0.30) 0%,
+      rgba(56, 189, 248, 0.14) 36%,
+      transparent 78%
+    ),
+    radial-gradient(
+      52% 48% at 50% 100%,
+      rgba(255, 255, 255, 0.78) 0%,
+      rgba(255, 255, 255, 0.25) 45%,
+      transparent 82%
+    );
+  animation: gkAuroraFlowDriftB 5.8s ease-in-out infinite;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"][data-gk-active="1"] #\${AURORA_HOST_ID}::before {
+  animation-duration: 3.6s !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"][data-gk-active="1"] #\${AURORA_HOST_ID}::after {
+  animation-duration: 3.0s !important;
+}
+
+/* 专注模式 & 静态动效统一关闭全量流光动画 */
+html[data-gk-theme]:is([data-gk-focus="1"], [data-gk-motion="off"]) :is(
+  #\${AURORA_HOST_ID}::before,
+  #\${AURORA_HOST_ID}::after,
+  .surface-composer-card::before,
+  div:has(> [data-testid="overview-panel"])::before,
+  [data-testid="app-icon-new-conversation-button"]::before,
+  [data-testid="conversation-row-sidebar"][data-selected="true"]::after,
+  .agy-home [data-testid="home-greeting"] .home-greeting-mark::before,
+  .agy-home [data-testid="home-greeting"] .home-greeting-mark::after,
+  .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1)
+) {
   animation: none !important;
 }
 html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [data-gk-wallpaper="on"]) #\${AURORA_HOST_ID} {
@@ -1678,7 +2000,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       const root = document.documentElement;
       if (!root) return;
       if (!cfg.enabled) {
-        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
+        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
           root.removeAttribute(attr);
         }
         for (const id of [THEME_STYLE_ID, AURORA_HOST_ID, HOME_STAGE_ID, WATERMARK_ID]) {
@@ -1707,6 +2029,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       root.setAttribute('data-gk-radius', cfg.cornerRadius || 'soft');
       root.setAttribute('data-gk-motion', cfg.motionLevel || 'standard');
       root.setAttribute('data-gk-focus', cfg.focusMode ? '1' : '0');
+      root.setAttribute('data-gk-active', activity?.active ? '1' : '0');
       root.setAttribute('data-gk-smooth', cfg.workbench?.smoothScroll !== false && getMotionEnabled() ? '1' : '0');
       root.setAttribute('data-gk-accent-on', cfg.accentMode === 'off' ? '0' : '1');
       root.setAttribute('data-gk-wallpaper', cfg.wallpaper?.mode && cfg.wallpaper.mode !== 'off' ? 'on' : 'off');
@@ -2892,7 +3215,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       }
       const root = document.documentElement;
       if (root) {
-        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
+        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
           root.removeAttribute(attr);
         }
         for (const prop of ['--gk-role-primary','--gk-role-accent2','--gk-role-accent3','--gk-role-glow','--gk-role-gradient','--gk-role-spark','--gk-role-tint','--gk-catnest-pattern','--gk-spinner-role-svg','--gk-spinner-paw-svg','--gk-aurora-1','--gk-aurora-2','--gk-aurora-3','--gk-ambient-alpha','--gk-watermark-opacity']) {

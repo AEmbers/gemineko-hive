@@ -299,6 +299,9 @@ export const HOST_I18N_EXACT_ZH = {
   Import: '导入',
   Backup: '备份',
   Restore: '恢复',
+  'What should we build today?': '今天想构建什么？',
+  'What can I help with?': '有什么我可以帮你的？',
+  'Ready when you are.': '准备就绪，随时可以开始。',
 };
 
 /** 哈基米萌系中文精确覆盖词条（在标准中文基础上做二次元猫窝趣味化） */
@@ -363,12 +366,21 @@ export const HOST_I18N_EXACT_NEKO = {
   'Knowledge Work': '轻量知识喵',
   'Software Engineering': '全能工程喵',
   'Send Immediately': '立刻发喵',
+  'What should we build today?': '今天想带哈基米造点什么喵？✦',
+  'What can I help with?': '今天想让猫窝帮你搞定什么喵？',
+  'Ready when you are.': '哈基米已蹲好待命，随时开工喵！',
 };
 
 /** 动态正则模板定义（以字面串数组存放，便于无损耗注入与直接单测） */
 export const HOST_I18N_PATTERN_SPECS = [
   { id: 'welcome-back-full', source: '^Welcome back,\\s*(.+?)\\.\\s*Where should we pick up\\?$', flags: 'i', zh: '欢迎回来，$1，我们从哪里继续？', neko: '欢迎回窝，$1！今天想从哪开工喵？' },
   { id: 'welcome-back-short', source: '^Welcome back,\\s*(.+?)!?$', flags: 'i', zh: '欢迎回来，$1！', neko: '欢迎回窝，$1 喵！' },
+  { id: 'hey-build-today', source: '^Hey\\s+(.+?),\\s*what should we build today\\?$', flags: 'i', zh: '你好，$1，今天想构建什么？', neko: '嗨 $1，今天带哈基米一起造点什么喵？✦' },
+  { id: 'hey-what-general', source: '^Hey\\s+(.+?),\\s*what(?:\\s+are\\s+we|\\s+can\\s+I|\\s+would\\s+you\\s+like\\s+to)\\s+(.+?)\\?$', flags: 'i', zh: '你好，$1，今天打算做什么？', neko: '嗨 $1，今天想让基米窝帮你搞定什么喵？✦' },
+  { id: 'hi-what-general', source: '^Hi\\s+(.+?),\\s*what\\s+(.+?)\\?$', flags: 'i', zh: '你好，$1，今天要做什么？', neko: '喵呜 $1，今天先从哪里开工呀？✦' },
+  { id: 'good-to-see-you-next', source: "^Good to see you,\\s*(.+?)\\.\\s*What's next\\?$", flags: 'i', zh: '很高兴见到你，$1，接下来做什么？', neko: '见到你真开心，$1 喵！接下来干点啥？✦' },
+  { id: 'good-to-see-you', source: '^Good to see you,\\s*(.+?)[.!?]?$', flags: 'i', zh: '很高兴见到你，$1！', neko: '见到你真开心，$1 喵！✦' },
+  { id: 'good-time-greeting', source: '^(?:Good\\s+(?:morning|afternoon|evening)),\\s*(.+?)[.!?]?$', flags: 'i', zh: '你好，$1！', neko: '哈基米向你问好，$1 喵！✦' },
   { id: 'worked-for', source: '^Worked for\\s+(.+)$', flags: 'i', zh: '已工作 $1', neko: '猫猫打工 $1' },
   { id: 'thought-for', source: '^Thought for\\s+(.+)$', flags: 'i', zh: '已思考 $1', neko: '转猫脑 $1' },
   { id: 'thinking-for', source: '^Thinking for\\s+(.+)$', flags: 'i', zh: '思考中 $1', neko: '猫脑运转 $1' },
