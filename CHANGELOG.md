@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.4] - 2026-11-27
+
+### Changed
+- **首页主视觉与左上角 Brand Logo 升级为「立体多切面炫彩猫耳星钻（✦）」**：
+  - 移除旧版“正圆圈包猫爪”与“方底盒白猫爪”样式，以 Gemini 凹弧四角星钻 `✦` 为主骨重构 `buildHomeBrandCatUri`（120×120 珠宝级 8 切面冰青→蓝→紫→樱粉→香槟金折射切面 + 晶透猫耳尖 + 斜向轻盈星轨 + 伴生碎星）与 `buildTopBrandPawUri`（24×24 精简星钻）；
+  - `#gemineko-home-emblem` 升级为 `96×96`，加入随星钻轮廓精准裁剪的斜向镜面扫光（`gkGemSheenSweep`）、错相闪烁伴生碎星（`gkStarTwinkle`）及点击瞬间绽放撒星微粒彩蛋（`is-sparkling`）。
+
 ## [0.6.3] - 2026-11-27
 
 ### Fixed & Refined

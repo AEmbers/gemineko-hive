@@ -178,46 +178,73 @@ function buildPawSpinnerSvgMap() {
   return out;
 }
 
-/** 左上角《基米窝》纯白发光猫爪×星芒矢量徽标（叠加在流动炫彩宝石底座之上） */
+/** 左上角《基米窝》精简版 4 切面炫彩猫耳星钻（✦）SVG data URI */
 function buildTopBrandPawUri() {
   const svg = [
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">',
-    '<path d="M12 12.2c-2.6 0-4.6 1.75-4.6 3.9 0 1.45 1.15 2.45 2.7 2.45.78 0 1.38-.22 1.9-.22s1.12.22 1.9.22c1.55 0 2.7-1 2.7-2.45 0-2.15-2-3.9-4.6-3.9Z" fill="#ffffff"/>',
-    '<circle cx="6.7" cy="10.8" r="1.45" fill="#ffffff"/>',
-    '<circle cx="9.9" cy="8.5" r="1.55" fill="#ffffff"/>',
-    '<circle cx="14.1" cy="8.5" r="1.55" fill="#ffffff"/>',
-    '<circle cx="17.3" cy="10.8" r="1.45" fill="#ffffff"/>',
-    '<path d="M19.2 2.4L19.85 4.35L21.8 5L19.85 5.65L19.2 7.6L18.55 5.65L16.6 5L18.55 4.35Z" fill="#FFFBEB"/>',
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" fill="none">',
+    '<defs>',
+    '<linearGradient id="gkt1" x1="4" y1="6" x2="18" y2="18" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#E0F2FE"/><stop offset="100%" stop-color="#38BDF8"/></linearGradient>',
+    '<linearGradient id="gkt2" x1="18" y1="4" x2="32" y2="18" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#60A5FA"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient>',
+    '<linearGradient id="gkt3" x1="4" y1="18" x2="18" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#A855F7"/><stop offset="100%" stop-color="#EC4899"/></linearGradient>',
+    '<linearGradient id="gkt4" x1="18" y1="18" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#F43F5E"/><stop offset="100%" stop-color="#FBBF24"/></linearGradient>',
+    '</defs>',
+    '<path d="M10.5 14Q7 8.5 8 4.8Q12 5.5 15.5 9.2Z" fill="url(#gkt1)" fill-opacity="0.88" stroke="#FFFFFF" stroke-width="0.9"/>',
+    '<path d="M25.5 14Q29 8.5 28 4.8Q24 5.5 20.5 9.2Z" fill="url(#gkt2)" fill-opacity="0.88" stroke="#FFFFFF" stroke-width="0.9"/>',
+    '<path d="M3.5 18Q15 15 18 3.5L18 18Z" fill="url(#gkt1)"/>',
+    '<path d="M18 3.5Q21 15 32.5 18L18 18Z" fill="url(#gkt2)"/>',
+    '<path d="M3.5 18Q15 21 18 32.5L18 18Z" fill="url(#gkt3)"/>',
+    '<path d="M32.5 18Q21 21 18 32.5L18 18Z" fill="url(#gkt4)"/>',
+    '<path d="M18 3.5Q21 15 32.5 18Q21 21 18 32.5Q15 21 3.5 18Q15 15 18 3.5Z" stroke="#FFFFFF" stroke-opacity="0.85" stroke-width="0.9"/>',
+    '<path d="M18 9L19.4 16.6L27 18L19.4 19.4L18 27L16.6 19.4L9 18L16.6 16.6Z" fill="#FFFFFF" fill-opacity="0.72"/>',
+    '<path d="M30.2 5.2L30.8 7.2L32.8 7.8L30.8 8.4L30.2 10.4L29.6 8.4L27.6 7.8L29.6 7.2Z" fill="#FBBF24"/>',
     '</svg>',
   ].join('');
   return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
 }
 
-/** 空白首页正中央 64×64 炫彩猫耳×星芒肉垫水晶徽标 */
+/** 空白首页正中央 120×120 珠宝级 8 切面立体炫彩哈基米猫耳星钻（✦）SVG data URI */
 function buildHomeBrandCatUri() {
   const svg = [
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">',
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">',
     '<defs>',
-    '<linearGradient id="gkhg" x1="6" y1="6" x2="58" y2="58" gradientUnits="userSpaceOnUse">',
-    '<stop offset="0%" stop-color="#38BDF8"/>',
-    '<stop offset="36%" stop-color="#8B5CF6"/>',
-    '<stop offset="72%" stop-color="#EC4899"/>',
-    '<stop offset="100%" stop-color="#F59E0B"/>',
+    '<linearGradient id="gkorb" x1="14" y1="86" x2="106" y2="34" gradientUnits="userSpaceOnUse">',
+    '<stop offset="0%" stop-color="#38BDF8" stop-opacity="0"/>',
+    '<stop offset="28%" stop-color="#38BDF8" stop-opacity="0.68"/>',
+    '<stop offset="56%" stop-color="#A855F7" stop-opacity="0.72"/>',
+    '<stop offset="82%" stop-color="#EC4899" stop-opacity="0.58"/>',
+    '<stop offset="100%" stop-color="#FBBF24" stop-opacity="0"/>',
     '</linearGradient>',
-    '<linearGradient id="gkhc" x1="16" y1="22" x2="48" y2="52" gradientUnits="userSpaceOnUse">',
-    '<stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.96"/>',
-    '<stop offset="100%" stop-color="#E0E7FF" stop-opacity="0.88"/>',
-    '</linearGradient>',
+    '<linearGradient id="gkel" x1="25" y1="16" x2="50" y2="46" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#E0F2FE"/><stop offset="55%" stop-color="#38BDF8"/><stop offset="100%" stop-color="#818CF8"/></linearGradient>',
+    '<linearGradient id="gker" x1="95" y1="16" x2="70" y2="46" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FCE7F3"/><stop offset="52%" stop-color="#A855F7"/><stop offset="100%" stop-color="#EC4899"/></linearGradient>',
+    '<linearGradient id="gkf1" x1="12" y1="60" x2="60" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="45%" stop-color="#BAE6FD"/><stop offset="100%" stop-color="#38BDF8"/></linearGradient>',
+    '<linearGradient id="gkf2" x1="60" y1="12" x2="60" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#E0F2FE"/><stop offset="65%" stop-color="#38BDF8"/><stop offset="100%" stop-color="#0EA5E9"/></linearGradient>',
+    '<linearGradient id="gkf3" x1="60" y1="12" x2="76" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#93C5FD"/><stop offset="55%" stop-color="#6366F1"/><stop offset="100%" stop-color="#4F46E5"/></linearGradient>',
+    '<linearGradient id="gkf4" x1="60" y1="60" x2="108" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7C3AED"/><stop offset="55%" stop-color="#A855F7"/><stop offset="100%" stop-color="#DDD6FE"/></linearGradient>',
+    '<linearGradient id="gkf5" x1="12" y1="60" x2="60" y2="76" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#8B5CF6"/><stop offset="55%" stop-color="#D946EF"/><stop offset="100%" stop-color="#EC4899"/></linearGradient>',
+    '<linearGradient id="gkf6" x1="44" y1="60" x2="60" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#EC4899"/><stop offset="60%" stop-color="#F472B6"/><stop offset="100%" stop-color="#FCE7F3"/></linearGradient>',
+    '<linearGradient id="gkf7" x1="60" y1="60" x2="108" y2="76" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#E11D48"/><stop offset="58%" stop-color="#F43F5E"/><stop offset="100%" stop-color="#FB923C"/></linearGradient>',
+    '<linearGradient id="gkf8" x1="60" y1="60" x2="76" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#F59E0B"/><stop offset="55%" stop-color="#FBBF24"/><stop offset="100%" stop-color="#FEF3C7"/></linearGradient>',
     '</defs>',
-    '<path d="M14 27L17.5 11.5C18.1 9.1 20.9 8.4 22.6 10.1L29.5 17.2C31.1 16.9 32.9 16.9 34.5 17.2L41.4 10.1C43.1 8.4 45.9 9.1 46.5 11.5L50 27C52.6 31.2 53.6 36.2 51.8 41.2C49.2 48.3 41.4 53 32 53C22.6 53 14.8 48.3 12.2 41.2C10.4 36.2 11.4 31.2 14 27Z" fill="url(#gkhg)" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round"/>',
-    '<path d="M20.2 21.5L21.5 14.5L26.2 19.3" fill="#FDF2F8" fill-opacity="0.72"/>',
-    '<path d="M43.8 21.5L42.5 14.5L37.8 19.3" fill="#E0F2FE" fill-opacity="0.72"/>',
-    '<ellipse cx="32" cy="39.2" rx="7.6" ry="5.6" fill="url(#gkhc)"/>',
-    '<circle cx="22.6" cy="32.2" r="2.3" fill="#FFFFFF"/>',
-    '<circle cx="28.6" cy="29.0" r="2.45" fill="#FFFFFF"/>',
-    '<circle cx="35.4" cy="29.0" r="2.45" fill="#FFFFFF"/>',
-    '<circle cx="41.4" cy="32.2" r="2.3" fill="#FFFFFF"/>',
-    '<path d="M51 8.5L52.2 12.1L55.8 13.3L52.2 14.5L51 18.1L49.8 14.5L46.2 13.3L49.8 12.1Z" fill="#F59E0B"/>',
+    '<path d="M18 76C14 55 34 33 64 26C91 20 109 30 105 49" stroke="url(#gkorb)" stroke-width="2.2" stroke-linecap="round"/>',
+    '<path d="M36 47Q24 30 27 17Q39 19 51 31Z" fill="url(#gkel)" fill-opacity="0.86" stroke="#FFFFFF" stroke-width="1.35" stroke-linejoin="round"/>',
+    '<path d="M37 42Q30 30 32 22Q39 24 46 31Z" fill="#FFFFFF" fill-opacity="0.46"/>',
+    '<path d="M84 47Q96 30 93 17Q81 19 69 31Z" fill="url(#gker)" fill-opacity="0.86" stroke="#FFFFFF" stroke-width="1.35" stroke-linejoin="round"/>',
+    '<path d="M83 42Q90 30 88 22Q81 24 74 31Z" fill="#FFFFFF" fill-opacity="0.46"/>',
+    '<path d="M12 60Q32 56 44 44L60 60Z" fill="url(#gkf1)"/>',
+    '<path d="M44 44Q56 32 60 12L60 60Z" fill="url(#gkf2)"/>',
+    '<path d="M60 12Q64 32 76 44L60 60Z" fill="url(#gkf3)"/>',
+    '<path d="M76 44Q88 56 108 60L60 60Z" fill="url(#gkf4)"/>',
+    '<path d="M12 60Q32 64 44 76L60 60Z" fill="url(#gkf5)"/>',
+    '<path d="M44 76Q56 88 60 108L60 60Z" fill="url(#gkf6)"/>',
+    '<path d="M108 60Q88 64 76 76L60 60Z" fill="url(#gkf7)"/>',
+    '<path d="M76 76Q64 88 60 108L60 60Z" fill="url(#gkf8)"/>',
+    '<path d="M60 12V108M12 60H108" stroke="#FFFFFF" stroke-opacity="0.58" stroke-width="1.15"/>',
+    '<path d="M44 44L76 76M76 44L44 76" stroke="#FFFFFF" stroke-opacity="0.34" stroke-width="0.9"/>',
+    '<path d="M60 12Q68 52 108 60Q68 68 60 108Q52 68 12 60Q52 52 60 12Z" stroke="#FFFFFF" stroke-opacity="0.92" stroke-width="1.25" stroke-linejoin="round"/>',
+    '<polygon points="60,51 69,60 60,69 51,60" fill="#FFFFFF" fill-opacity="0.82"/>',
+    '<path d="M97 19L98.7 23.8L103.5 25.5L98.7 27.2L97 32L95.3 27.2L90.5 25.5L95.3 23.8Z" fill="#FBBF24"/>',
+    '<path d="M23 88L24.3 91.7L28 93L24.3 94.3L23 98L21.7 94.3L18 93L21.7 91.7Z" fill="#38BDF8"/>',
+    '<circle cx="24" cy="34" r="1.8" fill="#FFFFFF" fill-opacity="0.9"/>',
     '</svg>',
   ].join('');
   return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
@@ -1419,6 +1446,15 @@ pre.gk-code-collapsed {
   0%, 100% { transform: translateY(0px) scale(1); }
   50% { transform: translateY(-4px) scale(1.03); }
 }
+@keyframes gkGemSheenSweep {
+  0%, 58% { transform: translateX(-145%) rotate(24deg); opacity: 0; }
+  72% { opacity: 0.92; }
+  88%, 100% { transform: translateX(155%) rotate(24deg); opacity: 0; }
+}
+@keyframes gkStarTwinkle {
+  0%, 100% { opacity: 0.45; transform: scale(0.84) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.16) rotate(16deg); }
+}
 @keyframes gkAuroraFlowDriftA {
   0%, 100% { transform: translate3d(-4%, 2%, 0) scale(0.96, 1.0); filter: blur(36px) saturate(145%) hue-rotate(-8deg); }
   50% { transform: translate3d(5%, -3%, 0) scale(1.06, 1.08); filter: blur(38px) saturate(155%) hue-rotate(14deg); }
@@ -1447,7 +1483,7 @@ html[data-gk-theme] #\${AURORA_HOST_ID} {
   mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.24) 22%, #000 52%, #000 100%) !important;
 }
 
-/* 焦点 1：左上角 Antigravity 小 A 全量替换为《基米窝》发光炫彩猫爪星芒宝石徽章 */
+/* 焦点 1：左上角 Antigravity 小 A 替换为精简立体炫彩猫耳星钻（✦） */
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"] {
   position: relative !important;
   width: 28px !important;
@@ -1461,6 +1497,7 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-ne
   align-items: center !important;
   justify-content: center !important;
   overflow: visible !important;
+  background: transparent !important;
   transition: transform 0.22s var(--gk-ease-spring), filter 0.2s ease !important;
 }
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"] > svg {
@@ -1469,42 +1506,45 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-ne
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"]::before {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #0EA5E9 0%, #6366F1 32%, #A855F7 56%, #EC4899 78%, #F59E0B 100%);
-  background-size: 220% 220%;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 4px 14px -2px rgba(139, 92, 246, 0.45), 0 0 10px rgba(14, 165, 233, 0.28);
-  animation: gkPrismHairlineFlow 7s linear infinite;
+  inset: -4px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.36) 0%, rgba(139, 92, 246, 0.28) 42%, rgba(236, 72, 153, 0.16) 68%, transparent 85%);
+  filter: blur(5px);
+  opacity: 0.45;
+  transition: opacity 0.22s ease;
   pointer-events: none;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"]:hover::before {
+  opacity: 0.92;
 }
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"]::after {
   content: "";
   position: relative;
-  width: 19px;
-  height: 19px;
+  width: 24px;
+  height: 24px;
   background-image: \${TOP_BRAND_PAW_URI};
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  filter: drop-shadow(0 1px 3px rgba(15, 23, 42, 0.32));
+  filter: drop-shadow(0 2px 6px rgba(139, 92, 246, 0.34));
   pointer-events: none;
   z-index: 1;
 }
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"]:hover {
-  transform: scale(1.08) rotate(-4deg) !important;
+  transform: scale(1.14) rotate(-6deg) !important;
 }
 
-/* 焦点 3：空白首页中央大 A 全量替换为真实 HTML 节点 #gemineko-home-emblem（炫彩背光晕 + 旋转棱镜环 + 悬浮猫耳水晶徽标 + 流动渐变问候） */
+/* 焦点 3：空白首页中央大 A 全量替换为 96×96 立体多切面炫彩猫耳星钻（✦）+ 镜面斜扫光 + 伴生碎星 */
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home .home-greeting-mark,
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="home-greeting"] .home-greeting-mark {
   display: none !important;
 }
 #\${HOME_EMBLEM_ID} {
   position: relative !important;
-  width: 92px !important;
-  height: 92px !important;
-  min-width: 92px !important;
-  min-height: 92px !important;
+  width: 96px !important;
+  height: 96px !important;
+  min-width: 96px !important;
+  min-height: 96px !important;
   margin: 0 auto 14px !important;
   display: flex !important;
   align-items: center !important;
@@ -1519,41 +1559,81 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="home-greeti
   inset: -26px;
   border-radius: 999px;
   pointer-events: none;
-  filter: blur(22px);
-  opacity: 0.65;
+  filter: blur(24px);
+  opacity: 0.52;
   background:
-    radial-gradient(circle at 30% 35%, rgba(56, 189, 248, 0.55) 0%, transparent 58%),
-    radial-gradient(circle at 72% 40%, rgba(139, 92, 246, 0.52) 0%, transparent 58%),
-    radial-gradient(circle at 52% 75%, rgba(236, 72, 153, 0.45) 0%, rgba(245, 158, 11, 0.24) 42%, transparent 72%);
-  animation: gkAuroraFlowDriftA 7.2s ease-in-out infinite;
+    radial-gradient(circle at 30% 34%, rgba(56, 189, 248, 0.52) 0%, transparent 56%),
+    radial-gradient(circle at 72% 38%, rgba(139, 92, 246, 0.48) 0%, transparent 56%),
+    radial-gradient(circle at 52% 74%, rgba(236, 72, 153, 0.42) 0%, rgba(245, 158, 11, 0.24) 42%, transparent 72%);
+  animation: gkAuroraFlowDriftA 7.5s ease-in-out infinite;
 }
-#\${HOME_EMBLEM_ID} .gk-he-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  pointer-events: none;
-  background: conic-gradient(from 0deg, #38BDF8, #6366F1, #A855F7, #EC4899, #F59E0B, #22D3EE, #38BDF8);
-  -webkit-mask-image: radial-gradient(circle, transparent 58%, #000 61%, #000 69%, transparent 72%);
-  mask-image: radial-gradient(circle, transparent 58%, #000 61%, #000 69%, transparent 72%);
-  filter: drop-shadow(0 0 12px rgba(139, 92, 246, 0.42));
-  animation: gkHomeRingSpin 10s linear infinite;
+html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-halo {
+  opacity: 0.68;
 }
-#\${HOME_EMBLEM_ID} .gk-he-cat {
+#\${HOME_EMBLEM_ID} .gk-he-gem {
   position: relative;
   z-index: 1;
-  width: 66px;
-  height: 66px;
+  width: 96px;
+  height: 96px;
   pointer-events: none;
   background-image: \${HOME_BRAND_CAT_URI};
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  filter: drop-shadow(0 8px 20px rgba(139, 92, 246, 0.36)) drop-shadow(0 2px 6px rgba(14, 165, 233, 0.25));
-  transition: transform 0.2s var(--gk-ease-spring);
-  animation: gkHomeLogoFloat 4.2s ease-in-out infinite;
+  filter: drop-shadow(0 10px 26px rgba(99, 102, 241, 0.28)) drop-shadow(0 3px 10px rgba(236, 72, 153, 0.20));
+  transition: transform 0.24s var(--gk-ease-spring), filter 0.24s ease;
+  animation: gkHomeLogoFloat 4.4s ease-in-out infinite;
+  overflow: hidden;
 }
-#\${HOME_EMBLEM_ID}:hover .gk-he-cat {
-  transform: scale(1.08);
+#\${HOME_EMBLEM_ID} .gk-he-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask-image: \${HOME_BRAND_CAT_URI};
+  mask-image: \${HOME_BRAND_CAT_URI};
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+#\${HOME_EMBLEM_ID} .gk-he-sheen::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  background: linear-gradient(122deg, transparent 36%, rgba(255, 255, 255, 0.78) 49%, rgba(255, 255, 255, 0.92) 50%, rgba(255, 255, 255, 0.72) 51%, transparent 64%);
+  animation: gkGemSheenSweep 4.2s ease-in-out infinite;
+}
+#\${HOME_EMBLEM_ID} .gk-he-spark {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  line-height: 1;
+}
+#\${HOME_EMBLEM_ID} .gk-he-spark-a {
+  top: 4px;
+  right: 2px;
+  font-size: 13px !important;
+  color: #FBBF24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.78);
+  animation: gkStarTwinkle 3.2s ease-in-out infinite;
+}
+#\${HOME_EMBLEM_ID} .gk-he-spark-b {
+  bottom: 6px;
+  left: 4px;
+  font-size: 11px !important;
+  color: #38BDF8;
+  text-shadow: 0 0 9px rgba(56, 189, 248, 0.76);
+  animation: gkStarTwinkle 3.8s ease-in-out 1.4s infinite;
+}
+#\${HOME_EMBLEM_ID}:hover .gk-he-gem {
+  transform: scale(1.08) translateY(-2px);
+  filter: drop-shadow(0 14px 32px rgba(99, 102, 241, 0.36)) drop-shadow(0 4px 14px rgba(236, 72, 153, 0.28));
+}
+#\${HOME_EMBLEM_ID}.is-sparkling .gk-he-gem {
+  transform: scale(1.16) !important;
+  filter: brightness(1.14) drop-shadow(0 0 28px rgba(255, 255, 255, 0.85)) drop-shadow(0 8px 26px rgba(139, 92, 246, 0.45)) !important;
 }
 html[data-gk-theme] .agy-home > :not(#\${AURORA_HOST_ID}):not(#\${WATERMARK_ID}) {
   position: relative;
@@ -1997,8 +2077,9 @@ html[data-gk-theme]:is([data-gk-focus="1"], [data-gk-motion="off"]) :is(
   [data-testid="app-icon-new-conversation-button"]::before,
   [data-testid="conversation-row-sidebar"][data-selected="true"]::after,
   #\${HOME_EMBLEM_ID} .gk-he-halo,
-  #\${HOME_EMBLEM_ID} .gk-he-ring,
-  #\${HOME_EMBLEM_ID} .gk-he-cat,
+  #\${HOME_EMBLEM_ID} .gk-he-gem,
+  #\${HOME_EMBLEM_ID} .gk-he-sheen::before,
+  #\${HOME_EMBLEM_ID} .gk-he-spark,
   .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1)
 ) {
   animation: none !important;
@@ -2142,10 +2223,15 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       if (!emblem) {
         emblem = document.createElement('div');
         emblem.id = HOME_EMBLEM_ID;
-        emblem.title = '点击摸摸基米窝旋转星环徽标 ✨';
-        emblem.innerHTML = '<span class="gk-he-halo"></span><span class="gk-he-ring"></span><span class="gk-he-cat"></span>';
+        emblem.title = '点击摸摸基米窝炫彩猫耳星钻 ✦';
+        emblem.innerHTML = '<span class="gk-he-halo"></span><span class="gk-he-gem"><span class="gk-he-sheen"></span></span><span class="gk-he-spark gk-he-spark-a">✦</span><span class="gk-he-spark gk-he-spark-b">✦</span>';
         emblem.addEventListener('click', (e) => {
           e.stopPropagation();
+          emblem.classList.remove('is-sparkling');
+          void emblem.offsetWidth;
+          emblem.classList.add('is-sparkling');
+          setTimeout(() => emblem.classList.remove('is-sparkling'), 520);
+          spawnStardust(e.clientX, e.clientY, 18, 'confetti');
           onDockPoke(resolveActiveRoleId(ctx.getActivity()), e.clientX, e.clientY);
         });
       }
