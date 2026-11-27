@@ -1147,6 +1147,8 @@ test('13 控件哈基米专属彩蛋目录、水晶拯救跨版本连载、语�
     assert.match(cdpScript, /restoreDockSpinosaurus/, '应具备 3.6s 还原与 unmount 原位还原函数');
     assert.match(cdpScript, /onHomeEmblemTap/, '应注入首页水晶 10 连击触发入口');
     assert.match(cdpScript, /主人，救救我……/, '应包含第 1 章水晶呼救台词');
+    assert.match(cdpScript, /gkEggStyleVer/, '应校验彩蛋样式版本以防止热更新后保留旧版 CSS');
+    assert.match(cdpScript, /getElementById\(STYLE_ID\)\?\.remove\(\)/, 'unmount 应清除旧版彩蛋样式标签');
 
     const audioOk = await srv.inject({ url: '/gemineko-audio/crystal-ch1-help.mp3?v=0.8.2' });
     assert.equal(audioOk.statusCode, 200);

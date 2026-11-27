@@ -22,6 +22,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
   return `
   function initHostEasterEggs(ctx) {
     const STYLE_ID = 'gemineko-host-eggs-style-v1';
+    const STYLE_VERSION = '0.8.2-bubble-fix';
     const TOAST_ID = 'gemineko-egg-unlock-toast';
     const OVERLAY_CLASS = 'gk-egg-temp-fx';
     const CATALOG = ${catalogJson};
@@ -101,9 +102,14 @@ export function buildHostEasterEggsRuntimeSnippet() {
     }
 
     function ensureStyle() {
-      if (document.getElementById(STYLE_ID) || !document.head) return;
-      const st = document.createElement('style');
-      st.id = STYLE_ID;
+      if (!document.head) return;
+      let st = document.getElementById(STYLE_ID);
+      if (st && st.dataset.gkEggStyleVer === STYLE_VERSION) return;
+      if (!st) {
+        st = document.createElement('style');
+        st.id = STYLE_ID;
+      }
+      st.dataset.gkEggStyleVer = STYLE_VERSION;
       st.textContent = \`
 #\${TOAST_ID} {
   position: fixed;
@@ -203,7 +209,8 @@ export function buildHostEasterEggsRuntimeSnippet() {
   border: 1.5px solid rgba(167, 139, 250, 0.72);
   background: linear-gradient(145deg, rgba(19, 24, 52, 0.94), rgba(49, 28, 78, 0.92));
   color: #f5f3ff;
-  box-shadow: 0 16px 38px rgba(59, 130, 246, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  opacity: 1;
+  box-shadow: 0 16px 38px rgba(59, 130, 246, 0.42), 0 0 24px rgba(167, 139, 250, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.28);
   backdrop-filter: blur(14px);
   transform: translate(-50%, -100%);
   animation: gkCrystalBubbleIn 0.36s cubic-bezier(.22,1.3,.36,1) forwards;
@@ -500,7 +507,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
   100% { opacity: 0; }
 }
       \`;
-      document.head.appendChild(st);
+      if (!st.isConnected) document.head.appendChild(st);
     }
 
     function playEggSfx(kind, step = 0) {
@@ -833,7 +840,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
         const bubble = document.createElement('div');
         bubble.className = 'gk-egg-crystal-bubble ' + OVERLAY_CLASS;
         bubble.style.left = cx + 'px';
-        bubble.style.top = Math.max(76, cy - 8) + 'px';
+        bubble.style.top = Math.max(96, cy - 10) + 'px';
 
         const header = document.createElement('div');
         header.className = 'gk-egg-crystal-ch';
@@ -1411,6 +1418,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
       restoreDockSpinosaurus();
       restoreWatermarkMaodie();
       document.querySelectorAll('.' + OVERLAY_CLASS + ', #' + TOAST_ID + ', .gk-egg-code-stamp').forEach((n) => n.remove());
+      document.getElementById(STYLE_ID)?.remove();
       document.getElementById('gemineko-dock-minibar')?.classList.remove('gk-egg-rave-mode');
       try { audioCtx?.close?.(); } catch {}
       audioCtx = null;
