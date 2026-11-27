@@ -148,8 +148,8 @@ export function createThemeWorkshopController(deps) {
     root.innerHTML = `
       <div class="gn-ws-head">
         <div>
-          <div class="gn-ws-title">🎨 基米窝 · 原生宿主主题工坊</div>
-          <div class="gn-ws-sub">零侵入热更新宿主配色、5角色动态联动、工作台效率增强与本地壁纸（替代 Obsidian Prism）</div>
+          <div class="gn-ws-title">🎨 基米窝 · 光学玻璃与星空猫窝工坊</div>
+          <div class="gn-ws-sub">5级表面层次 × SVG肉垫星芒暗纹 × 底部角色极光 × 首页5角色彩蛋舞台</div>
         </div>
         <div class="gn-ws-actions">
           <button type="button" class="gn-pill" data-ws-act="toggle-enabled">${c.enabled ? '✅ 宿主主题已开启' : '⚪ 宿主主题已停用'}</button>

@@ -3,9 +3,9 @@
 ## [0.5.0] - 2026-11-27
 
 ### Added
-- **《基米窝》原生 Antigravity 宿主主题工坊（彻底替代已失效的 `obsidian-prism`）**：
-  - 新增 `src/theme/host-theme-config.mjs`，提供 4 套耐看基底主题（`nebula-day` 星云冷白、`cream-paper` 奶油暖纸、`starry-nest` 星空猫窝深色、`carbon-obsidian` 碳晶黑曜深色，支持跟随宿主亮暗）与 5 大角色动态强调色调色板（`neon` / `hydrogen` / `carbon` / `claude` / `gpt`），并实现原子持久化与壁纸路径安全校验（拒绝 UNC、目录穿越与敏感凭据目录）；
-  - 新增 `src/cdp/host-theme-runtime.mjs`，零修改 `app.asar` 通过单一 CDP 通道向 Antigravity 主窗口热注入 `html[data-gk-theme]` 原生 CSS 变量（关闭即 100% 无损复原），提供活跃态输入栏呼吸流光、一键「专注编码 0fps」降噪档与基于 HTTP `206 Range` 的零阻塞动静态壁纸（含失焦自动暂停视频与内置星轨/极光双预设）；
+- **《基米窝》原生 Antigravity 宿主主题工坊（光学玻璃质感 × 哈基米星空猫窝深度融合版）**：
+  - 升级 `src/theme/host-theme-config.mjs` 为 5 级光学玻璃表面体系（覆盖 `--background`/`--sidebar`/`--content`/`--card`/`--glass-highlight`/`--glass-shadow`/`--onyx-*`/`--nux-radius-*` 等宿主变量，显著拉开侧栏/画布/浮卡纵深与角色极光三色晕染）；
+  - 升级 `src/cdp/host-theme-runtime.mjs`：在侧栏与主画布叠加 3%~5% SVG 肉垫爪印（🐾）+ 四角星芒（✦）猫窝暗纹与底部随角色丝滑变色的星云极光晕染（`#gemineko-conv-aurora`）；对 `.surface-composer-card`、`[data-testid="user-message-bubble"]`、`[data-testid="thinking-collapsible-trigger"]`、`[data-testid="conversation-row-sidebar"]`、文件变更卡、Artifact 卡、弹窗菜单及细滚动条进行组件级光学精修（含顶边星虹折射光条、发送 `✦/🐾` 微粒、侧栏发光 `✦`、展开星轨渐变竖线与弹簧微动效）；并在新对话空白页加入 `#gemineko-home-stage` 5 角色 Q 版 APNG 迎宾彩蛋舞台（严格避让 Browser Hole 与专注编码 0fps 降噪）；
   - 新增 **5 角色原生联动与全窗口彩蛋**：切模型极光扫屏、工具报错（`activity-tracker.mjs` `hasError`）触发「哈气」微抖+气泡、长任务完成柔光星尘礼花、摸头累计亲密值与专属吐槽台词、3 秒连击 5 次触发 **「捅了基米窝！」全员 5 只 APNG 巡游**并与侧边栏双向同步、深夜（23:00–05:00）猫窝小夜灯与温柔提醒、`Ctrl+Shift+M` / Konami 触发「爪印星尘雨」；
   - 新增 **工作台高频效率增强**：悬浮猫爪对话大纲（支持搜索过滤、一键滚动跳转高亮）、超长代码块（`>= 32` 行）吸顶顶栏+折叠/展开、非输入区毛玻璃右键快捷菜单（`/btw` 快问、复制路径、`@引用` 填入、主题快切；`Shift+右键` 与输入区直接放行原生）；
   - 在 `hive_board` 侧边栏新增 `src/theme/theme-workshop.js`「🎨 主题工坊」控制台及输入框 Dock `🎨` 迷你快切按钮，调整后通过 `/api/theme/config` 推送宿主 `< 50ms` 热刷新。

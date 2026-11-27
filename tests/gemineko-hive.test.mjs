@@ -435,6 +435,18 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   ]);
   assert.deepEqual(Object.keys(ROLE_PALETTES), ['neon', 'hydrogen', 'carbon', 'claude', 'gpt']);
 
+  // 验证 4 套主题均具备完整 5 级光学表面 Token，且浅色不撞脸纯白
+  for (const preset of Object.values(THEME_PRESETS)) {
+    for (const k of ['--background', '--sidebar', '--card', '--glass-shadow', '--glass-highlight', '--onyx-frame', '--gk-tonal-0', '--gk-pattern-ink']) {
+      assert.ok(preset.vars[k], `${preset.id} 缺少光学变量 ${k}`);
+    }
+    assert.notEqual(preset.vars['--sidebar'], preset.vars['--card'], `${preset.id} 侧栏与卡片需拉开明暗对比`);
+  }
+  assert.notEqual(THEME_PRESETS['nebula-day'].vars['--background'].toUpperCase(), '#FFFFFF');
+  for (const pal of Object.values(ROLE_PALETTES)) {
+    assert.ok(pal.aurora1 && pal.aurora2 && pal.aurora3, `${pal.id} 缺少角色极光色`);
+  }
+
   // 非法壁纸路径拦截：UNC、相对穿越、不支持格式
   assert.equal(validateWallpaperFilePath('\\\\evil-server\\share\\a.png').ok, false);
   assert.equal(validateWallpaperFilePath('relative/a.png').ok, false);
@@ -548,10 +560,18 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.equal(evGet.json().latest.type, 'hive-poke-burst');
     assert.equal(evGet.json().latest.role, 'claude');
 
-    // 验证构建包包含主题工坊且宿主脚本包含 v5 引擎
+    // 验证构建包包含主题工坊且宿主脚本包含 v5 光学玻璃×星空猫窝引擎
     const cdpScript = buildCdpOverlayScript('http://127.0.0.1:19876', '', { sideToken: 'tk' });
     assert.match(cdpScript, /gemineko-host-theme-v5/);
     assert.match(cdpScript, /__GEMINEKO_CDP_OVERLAY_V5__/);
+    assert.match(cdpScript, /--gk-catnest-pattern/);
+    assert.match(cdpScript, /gemineko-conv-aurora/);
+    assert.match(cdpScript, /gemineko-home-stage/);
+    assert.match(cdpScript, /thinking-collapsible-trigger/);
+    assert.match(cdpScript, /conversation-row-sidebar/);
+    assert.match(cdpScript, /user-message-bubble/);
+    assert.match(cdpScript, /surface-composer-card/);
+    assert.match(cdpScript, /overlay-scrollbar-thumb/);
     assert.match(cdpScript, /捅了基米窝/);
 
     const bundleRes = buildGeminekoBundle();
