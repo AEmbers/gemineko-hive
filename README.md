@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="assets/logo.png" width="150" alt="Gemineko Hive Logo" />
+  <img src="assets/sprites/home-star-gem-light.png" width="136" alt="Gemineko Hive Prism Emblem" />
+  &nbsp;&nbsp;
+  <img src="assets/logo.png" width="124" alt="Gemineko Hive Icon" />
 </p>
 
 <h1 align="center">Gemineko Hive · 基米窝 v0.7.0</h1>
