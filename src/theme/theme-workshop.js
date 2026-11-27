@@ -190,10 +190,10 @@ export function createThemeWorkshopController(deps) {
             `).join('')}
           </div>
           <div class="gn-ws-row" style="margin-top:10px;">
-            <span>视觉浓度：</span>
+            <span>视觉模式：</span>
             <select data-ws-field="themeIntensity">
-              <option value="vivid" ${(c.themeIntensity || 'vivid') === 'vivid' ? 'selected' : ''}>浓郁二次元（猫耳/立绘/纹样全开）</option>
-              <option value="balanced" ${c.themeIntensity === 'balanced' ? 'selected' : ''}>均衡日常（清透耐看）</option>
+              <option value="optical-neko" ${(c.themeIntensity === 'optical-neko' || c.themeIntensity === 'balanced' || !c.themeIntensity) ? 'selected' : ''}>光学高定哈基米（默认 · 高透光影×无满屏花纹）</option>
+              <option value="vivid" ${c.themeIntensity === 'vivid' ? 'selected' : ''}>浓郁二次元（全屏角色纹样×旋转纹章）</option>
               <option value="minimal" ${c.themeIntensity === 'minimal' ? 'selected' : ''}>极简专注（仅保留配色层次）</option>
             </select>
           </div>
@@ -230,13 +230,15 @@ export function createThemeWorkshopController(deps) {
         <div class="gn-ws-card">
           <div class="gn-ws-card-title">2. 角落立绘水印与 5 角色联动彩蛋</div>
           <div class="gn-ws-checks">
-            <label><input type="checkbox" data-ws-wm-bool="enabled" ${c.watermark?.enabled !== false ? 'checked' : ''} /> 角落二次元角色立绘 + 旋转矢量纹章</label>
+            <label><input type="checkbox" data-ws-wm-bool="enabled" ${c.watermark?.enabled !== false ? 'checked' : ''} /> 角落二次元角色立绘水印</label>
+            <label><input type="checkbox" data-ws-bool="askStageEnabled" ${c.askStageEnabled !== false ? 'checked' : ''} /> 提问模式抱臂思考+ABCD轮盘舞台</label>
+            <label><input type="checkbox" data-ws-meme="inlineRender" ${c.memes?.inlineRender !== false ? 'checked' : ''} /> 聊天[表情]免改ASAR内联贴纸</label>
+            <label><input type="checkbox" data-ws-meme="autoFinishSticker" ${c.memes?.autoFinishSticker !== false ? 'checked' : ''} /> 长任务收工弹出猫娘贴纸（工作中禁弹）</label>
             <label><input type="checkbox" data-ws-link="roleSwitchAurora" ${c.linkages?.roleSwitchAurora ? 'checked' : ''} /> 切模型极光扫屏</label>
             <label><input type="checkbox" data-ws-link="composerBreathGlow" ${c.linkages?.composerBreathGlow ? 'checked' : ''} /> 思考/运行呼吸流光边框</label>
-            <label><input type="checkbox" data-ws-link="errorHissShake" ${c.linkages?.errorHissShake ? 'checked' : ''} /> 工具报错「哈气」微抖提醒</label>
-            <label><input type="checkbox" data-ws-link="taskFinishConfetti" ${c.linkages?.taskFinishConfetti ? 'checked' : ''} /> 长任务完成星尘礼花</label>
+            <label><input type="checkbox" data-ws-link="errorHissShake" ${c.linkages?.errorHissShake ? 'checked' : ''} /> 工具报错「哈气」微抖</label>
             <label><input type="checkbox" data-ws-link="pokeBurst" ${c.linkages?.pokeBurst ? 'checked' : ''} /> 连击5次「捅了基米窝」全员巡游</label>
-            <label><input type="checkbox" data-ws-link="nightLamp" ${c.linkages?.nightLamp ? 'checked' : ''} /> 深夜猫窝小夜灯（23:00-05:00）</label>
+            <label><input type="checkbox" data-ws-link="nightLamp" ${c.linkages?.nightLamp ? 'checked' : ''} /> 深夜小夜灯（23:00-05:00）</label>
           </div>
           <div class="gn-ws-row" style="margin-top:6px;">
             <span>水印形象：</span>
@@ -256,7 +258,7 @@ export function createThemeWorkshopController(deps) {
           </div>
           <div class="gn-ws-row" style="margin-top:4px;">
             <button type="button" class="gn-pill is-primary" data-ws-egg="hive-poke-burst">💥 立即捅了基米窝</button>
-            <button type="button" class="gn-pill" data-ws-egg="stardust-rain">🐾 炫彩 SVG 爪印雨 (Ctrl+Shift+M)</button>
+            <button type="button" class="gn-pill" data-ws-egg="stardust-rain">🐾 炫彩 SVG 爪印雨 (Ctrl+Shift+P)</button>
           </div>
         </div>
 
@@ -346,6 +348,16 @@ export function createThemeWorkshopController(deps) {
       const field = target.getAttribute('data-ws-field');
       if (field) {
         void savePatch({ [field]: target.value });
+        return;
+      }
+      const boolField = target.getAttribute('data-ws-bool');
+      if (boolField) {
+        void savePatch({ [boolField]: Boolean(target.checked) });
+        return;
+      }
+      const memeKey = target.getAttribute('data-ws-meme');
+      if (memeKey) {
+        void savePatch({ memes: { ...(c.memes || {}), [memeKey]: Boolean(target.checked) } });
         return;
       }
       const i18nKey = target.getAttribute('data-ws-i18n');

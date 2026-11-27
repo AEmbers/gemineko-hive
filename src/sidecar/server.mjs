@@ -334,6 +334,125 @@ export async function createHiveSidecarServer(options = {}) {
   const themeStore = createThemeConfigStore(options.themeConfigPath);
   const themeEvents = { seq: 0, latest: null };
 
+  const MEME_MIME_MAP = {
+    '.webp': 'image/webp',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+  };
+
+  /** 定位本机已安装的 Gemini 猫娘贴纸库（支持单测覆盖 memePackDirs） */
+  function resolveMemePackRoot() {
+    const candidates = Array.isArray(options.memePackDirs) && options.memePackDirs.length
+      ? options.memePackDirs.map((d) => path.resolve(d))
+      : [
+          path.join(os.homedir(), '.gemini', 'meme-packs', 'gemini-neko'),
+          path.join(os.homedir(), '.gemini', 'config', 'plugins', 'jiangnanquan--agy-meme', 'packs', 'gemini-neko'),
+        ];
+    for (const dir of candidates) {
+      if (fs.existsSync(path.join(dir, 'memes.json'))) {
+        return fs.realpathSync(dir);
+      }
+    }
+    return '';
+  }
+
+  function loadMemeCatalog() {
+    const packRoot = resolveMemePackRoot();
+    if (!packRoot) {
+      return { ok: true, available: false, packName: '', count: 0, memes: [] };
+    }
+    try {
+      const raw = JSON.parse(fs.readFileSync(path.join(packRoot, 'memes.json'), 'utf8'));
+      const list = Array.isArray(raw?.memes) ? raw.memes : [];
+      const memes = list
+        .filter((m) => m && typeof m.path === 'string' && typeof m.caption === 'string')
+        .map((m) => {
+          const cleanRel = String(m.path).replace(/\\/g, '/').replace(/^\/+/, '');
+          return {
+            caption: String(m.caption).trim(),
+            tag: String(m.tag || 'daily').trim(),
+            keywords: String(m.keywords || ''),
+            scene: String(m.scene || ''),
+            relPath: cleanRel,
+            url: `${origin}/api/memes/file/${cleanRel.split('/').map(encodeURIComponent).join('/')}`,
+          };
+        });
+      return {
+        ok: true,
+        available: true,
+        packName: String(raw?.manifest?.name || 'Gemini猫娘'),
+        count: memes.length,
+        memes,
+      };
+    } catch {
+      return { ok: true, available: false, packName: '', count: 0, memes: [] };
+    }
+  }
+
+  function handleMemeFileStream(relPathRaw, res) {
+    const packRoot = resolveMemePackRoot();
+    if (!packRoot) {
+      res.writeHead(404, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Meme pack not installed');
+      return;
+    }
+    let decoded = '';
+    try {
+      decoded = decodeURIComponent(String(relPathRaw || ''));
+    } catch {
+      res.writeHead(400, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Bad meme path encoding');
+      return;
+    }
+    const clean = decoded.replace(/\\/g, '/').replace(/^\/+/, '');
+    if (!clean || clean.includes('..') || clean.includes('\0') || /^[a-z]:/i.test(clean)) {
+      res.writeHead(403, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Forbidden meme path');
+      return;
+    }
+    const target = path.resolve(packRoot, clean);
+    if (!target.startsWith(packRoot + path.sep)) {
+      res.writeHead(403, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Forbidden meme path');
+      return;
+    }
+    if (!fs.existsSync(target)) {
+      res.writeHead(404, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Meme file not found');
+      return;
+    }
+    let realTarget = '';
+    try {
+      realTarget = fs.realpathSync(target);
+    } catch {
+      res.writeHead(404, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Meme file inaccessible');
+      return;
+    }
+    if (!realTarget.startsWith(packRoot + path.sep)) {
+      res.writeHead(403, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Forbidden symlink escape');
+      return;
+    }
+    const ext = path.extname(realTarget).toLowerCase();
+    const mime = MEME_MIME_MAP[ext];
+    if (!mime) {
+      res.writeHead(403, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Unsupported meme image format');
+      return;
+    }
+    const st = fs.statSync(realTarget);
+    res.writeHead(200, {
+      ...CORS_HEADERS,
+      'Content-Type': mime,
+      'Content-Length': st.size,
+      'Cache-Control': 'public, max-age=3600',
+    });
+    fs.createReadStream(realTarget).pipe(res);
+  }
+
   /**
    * 弹出本机系统文件选择对话框挑选壁纸或角色水印图片（仅 Windows 支持，超时保护）。
    */
@@ -667,6 +786,16 @@ export async function createHiveSidecarServer(options = {}) {
 
     if (req.method === 'GET' && pathname === '/api/watermark/file') {
       handleWatermarkImageStream(res);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/memes/list') {
+      sendJson(res, 200, loadMemeCatalog());
+      return;
+    }
+
+    if (req.method === 'GET' && pathname.startsWith('/api/memes/file/')) {
+      handleMemeFileStream(pathname.slice('/api/memes/file/'.length), res);
       return;
     }
 

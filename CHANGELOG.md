@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0] - 2026-11-27
+
+### Added & Changed
+- **新版三视觉模式（新默认 `optical-neko` 光学高定哈基米）**：
+  - `src/theme/host-theme-config.mjs` 将视觉模式重构为 `optical-neko`（新默认 · 光学高定哈基米）/ `vivid`（浓郁二次元）/ `minimal`（极简专注），旧值 `balanced` 平滑映射至 `optical-neko`；
+  - `src/cdp/host-theme-runtime.mjs` 的 `optical-neko` 模式借鉴 Obsidian Prism 的大留白与高透光影，移除满屏平铺花纹，以通透毛玻璃、大半径柔散阴影、1px 镜面顶边高光、边缘角色极光雾晕及极简柔焦无环透明立绘呈现“看起来极简却满是哈基米灵魂”的视觉体验。
+- **提问模式 (`ask_question`) 抱臂仰头思考舞台 + 5 枚全新 `*-ponder.png` 动态 APNG**：
+  - 生成并构建 `assets/sprites/{neon,hydrogen,carbon,claude,gpt}-ponder.png`（128×128 RGBA 4 帧无限循环透明 APNG，「双手抱在胸前、微微仰头思考」姿态）；
+  - 活跃 `ask_question` 面板自动隐藏原左下 Dock 避免遮挡，并渲染为「上方问题 / 左下抱臂仰头立绘 + 头顶 `A? B? C? D?` 轮盘高亮气泡（仅 1 项点亮、悬停右侧选项实时锁亮对应字母） / 右下选项」。
+- **表情插件全链路集成（免改 ASAR + 闲聊/收工节奏发贴纸）**：
+  - `src/sidecar/server.mjs` 新增 `/api/memes/list` 与 `/api/memes/file/*`（安全复用本机 `~/.gemini/meme-packs/gemini-neko` 贴纸库并防目录穿越）；
+  - 新建 `src/cdp/host-meme-runtime.mjs`：免改 ASAR 原地将聊天 `[表情: ...]` 渲染为高清透明贴纸，支持长任务收工汇报自动弹贴纸气泡（工作中禁弹）与分类表情拾取面板；同步将爪印雨快捷键调整为 `Ctrl+Shift+P` 彻底避开 `Ctrl+Shift+M` 冲突；
+  - 更新 `rules/AGENTS.md` 明确“一问一答闲聊与最终收工汇报发 1 张表情，工作中途不发”。
+
 ## [0.5.1] - 2026-11-27
 
 ### Added & Changed

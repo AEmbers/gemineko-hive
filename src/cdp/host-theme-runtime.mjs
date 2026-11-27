@@ -382,22 +382,45 @@ html[data-gk-theme] :is(.agy-shell, .agy-sheet, [data-testid="sidecar-iframe-slo
 html[data-gk-theme] :is(.bg-sidebar, aside.bg-sidebar, div.bg-sidebar, [class*="bg-sidebar"]):not([data-has-browser-hole="true"]) {
   background-color: color-mix(in srgb, var(--sidebar) 90%, var(--gk-role-primary, #8b5cf6) 10%) !important;
 }
-html[data-gk-theme]:not([data-gk-intensity="minimal"]):not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) :is(aside.bg-sidebar, div.h-full.bg-sidebar):not([data-has-browser-hole="true"]) {
+html[data-gk-theme]:not([data-gk-intensity="minimal"]):not([data-gk-intensity="optical-neko"]):not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) :is(aside.bg-sidebar, div.h-full.bg-sidebar):not([data-has-browser-hole="true"]) {
   background-image: var(--gk-catnest-pattern), linear-gradient(180deg, var(--gk-role-tint, rgba(99,102,241,0.08)) 0%, transparent 45%, var(--gk-role-tint, rgba(99,102,241,0.06)) 100%) !important;
   background-size: 160px 160px, 100% 100% !important;
   background-repeat: repeat, no-repeat !important;
 }
+html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) :is(aside.bg-sidebar, div.h-full.bg-sidebar):not([data-has-browser-hole="true"]) {
+  background-image:
+    radial-gradient(110% 34% at 15% 0%, color-mix(in srgb, var(--gk-role-primary) 13%, transparent), transparent 72%),
+    radial-gradient(120% 38% at 50% 100%, color-mix(in srgb, var(--gk-role-accent2) 11%, transparent), transparent 75%) !important;
+  background-repeat: no-repeat !important;
+}
 html[data-gk-theme] .bg-sidebar :is([class*="bg-sidebar"], [data-testid="section-header"]) {
   background-image: none !important;
 }
-html[data-gk-theme]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]):not([data-gk-intensity="minimal"]) [data-testid="conversation-view"]:not([data-has-browser-hole="true"]),
-html[data-gk-theme]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]):not([data-gk-intensity="minimal"]) .agy-home:not([data-has-browser-hole="true"]) {
+html[data-gk-theme][data-gk-intensity="vivid"]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) [data-testid="conversation-view"]:not([data-has-browser-hole="true"]),
+html[data-gk-theme][data-gk-intensity="vivid"]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) .agy-home:not([data-has-browser-hole="true"]) {
   position: relative !important;
   isolation: isolate !important;
   background-color: var(--content, var(--background)) !important;
   background-image: var(--gk-catnest-pattern) !important;
   background-size: 160px 160px !important;
   background-repeat: repeat !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) [data-testid="conversation-view"]:not([data-has-browser-hole="true"]),
+html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) .agy-home:not([data-has-browser-hole="true"]) {
+  position: relative !important;
+  isolation: isolate !important;
+  background-color: var(--content, var(--background)) !important;
+  background-image: none !important;
+}
+/* 光学高定：柔和星绒主按钮与通透光影层次 */
+html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="new-conversation-button"] {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--gk-role-primary) 88%, #ffffff 12%), color-mix(in srgb, var(--gk-role-accent2) 82%, var(--gk-role-primary) 18%)) !important;
+  box-shadow: 0 10px 26px -10px var(--gk-role-glow), inset 0 1px 0 rgba(255,255,255,0.58) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] :is(div:has(> [data-testid="overview-panel"]), [data-testid="overview-panel-host-sibling"]) {
+  background: color-mix(in srgb, var(--glass) 88%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 26%, var(--glass-border)) !important;
+  box-shadow: 0 22px 54px -18px rgba(15, 23, 42, 0.22), 0 8px 24px -12px var(--gk-role-glow), inset 0 1px 0 var(--gk-specular) !important;
 }
 html[data-gk-theme][data-gk-wallpaper="on"] body,
 html[data-gk-theme][data-gk-wallpaper="on"] #root,
@@ -615,8 +638,8 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) div:has(> [data-testid="o
   background: var(--gk-role-gradient);
   box-shadow: 0 0 10px var(--gk-role-glow);
 }
-/* Vivid 档下 Overview 顶部双猫耳尖装饰（跟随角色主渐变着色） */
-html[data-gk-theme][data-gk-intensity="vivid"]:not([data-gk-focus="1"]) div:has(> [data-testid="overview-panel"])::after {
+/* Vivid 与 Optical-Neko 档下 Overview 顶部双猫耳尖装饰（跟随角色主渐变着色） */
+html[data-gk-theme]:is([data-gk-intensity="vivid"], [data-gk-intensity="optical-neko"]):not([data-gk-focus="1"]) div:has(> [data-testid="overview-panel"])::after {
   content: "";
   position: absolute;
   top: -11px;
@@ -705,8 +728,26 @@ html[data-gk-theme] [data-testid="conversation-view"] > :not(#\${AURORA_HOST_ID}
   opacity: var(--gk-watermark-opacity, 0.14);
   transition: opacity 0.4s ease, transform 0.5s var(--gk-ease-out);
 }
-html[data-gk-intensity="balanced"] #\${WATERMARK_ID} {
-  opacity: calc(var(--gk-watermark-opacity, 0.14) * 0.72);
+html[data-gk-theme][data-gk-intensity="optical-neko"] #\${WATERMARK_ID} {
+  opacity: calc(var(--gk-watermark-opacity, 0.12) * 0.86);
+  width: 176px;
+  height: 176px;
+  right: 22px;
+  bottom: 118px;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] #\${WATERMARK_ID} .gk-wm-crest {
+  display: none !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] #\${WATERMARK_ID} img.gk-wm-sprite {
+  width: 146px;
+  height: 146px;
+  mask-image: linear-gradient(180deg, #000 70%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent 100%);
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] #\${WATERMARK_ID} .gk-wm-tag {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--gk-role-primary) 22%, transparent);
+  opacity: 0.72;
 }
 html[data-gk-focus="1"] #\${WATERMARK_ID},
 html[data-gk-intensity="minimal"] #\${WATERMARK_ID} {
@@ -1038,6 +1079,109 @@ html[data-gk-smooth="1"] * { scroll-behavior: smooth; }
   border: 1px solid color-mix(in srgb, var(--gk-role-primary) 26%, transparent);
 }
 
+/* === 7.5 提问模式 (ask_question) 主题舞台：上问题 / 左下抱臂仰头思考+ABCD?轮盘气泡 / 右下选项 === */
+html[data-gk-theme] [data-gk-ask-stage="1"] {
+  position: relative !important;
+  border-radius: var(--nux-radius-xl, 18px) !important;
+  background: color-mix(in srgb, var(--glass, rgba(255,255,255,0.92)) 90%, var(--gk-role-primary) 6%) !important;
+  background-image: var(--gk-surface-sheen) !important;
+  backdrop-filter: blur(18px) saturate(145%) !important;
+  border: 1.5px solid color-mix(in srgb, var(--gk-role-primary) 38%, var(--glass-border)) !important;
+  box-shadow: 0 18px 46px -14px var(--gk-role-glow), inset 0 1px 0 var(--gk-specular) !important;
+  padding-top: 6px !important;
+}
+html[data-gk-theme] [data-gk-ask-stage="1"]::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 2.5px;
+  border-radius: 999px;
+  background: var(--gk-role-gradient);
+  pointer-events: none;
+}
+.gk-ask-split-row {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 14px !important;
+  width: 100% !important;
+  margin-top: 6px !important;
+}
+.gk-ask-mascot-col {
+  width: 136px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 4px 2px 2px;
+  user-select: none;
+}
+.gk-ask-thought-bubble {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--gk-popover-bg, var(--card)) 94%, var(--gk-role-primary) 6%);
+  border: 1.5px solid color-mix(in srgb, var(--gk-role-primary) 42%, transparent);
+  box-shadow: 0 8px 20px -8px var(--gk-role-glow), inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.gk-ask-thought-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  border-right: 1.5px solid color-mix(in srgb, var(--gk-role-primary) 42%, transparent);
+  border-bottom: 1.5px solid color-mix(in srgb, var(--gk-role-primary) 42%, transparent);
+}
+.gk-ask-opt-letter {
+  display: inline-flex;
+  align-items: baseline;
+  font-size: 13px !important;
+  font-weight: 800;
+  color: var(--muted-foreground, #64748b);
+  opacity: 0.26;
+  transform: scale(0.92);
+  transition: opacity 0.22s ease, transform 0.22s var(--gk-ease-spring), color 0.22s ease, text-shadow 0.22s ease;
+}
+.gk-ask-opt-letter .gk-ask-q {
+  font-style: normal;
+  font-size: 12px !important;
+  margin-left: 0.5px;
+  display: none;
+}
+.gk-ask-opt-letter.is-lit {
+  opacity: 1 !important;
+  transform: scale(1.22);
+  color: var(--gk-role-primary, #8b5cf6) !important;
+  text-shadow: 0 0 10px var(--gk-role-glow);
+}
+.gk-ask-opt-letter.is-lit .gk-ask-q {
+  display: inline;
+  color: var(--gk-role-accent2, var(--gk-role-primary));
+}
+img.gk-ask-ponder-img {
+  width: 96px !important;
+  height: 96px !important;
+  object-fit: contain !important;
+  background: transparent !important;
+  display: block;
+  filter: drop-shadow(0 6px 14px var(--gk-role-glow));
+}
+.gk-ask-options-col {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
 /* === 8. 壁纸 / 极光 / 发光彩色 SVG 爪印星尘雨 / 气泡 / 大纲 / 右键菜单 === */
 #\${WP_LAYER_ID} { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; display: none; }
 #\${WP_LAYER_ID}.is-visible { display: block; }
@@ -1208,11 +1352,8 @@ pre.gk-code-collapsed {
     }
 
     function resolvePatternUrl(roleId, scheme, intensity) {
-      if (intensity === 'minimal' || cfg.focusMode) return 'none';
+      if (intensity !== 'vivid' || cfg.focusMode) return 'none';
       const patPack = ROLE_PATTERNS[roleId] || ROLE_PATTERNS.neon;
-      if (intensity === 'balanced') {
-        return scheme === 'dark' ? patPack.balancedDark : patPack.balancedLight;
-      }
       return scheme === 'dark' ? patPack.vividDark : patPack.vividLight;
     }
 
@@ -1237,7 +1378,8 @@ pre.gk-code-collapsed {
       const presetObj = THEME_PRESETS[presetId] || THEME_PRESETS['nebula-day'];
       const roleId = resolveActiveRoleId(activity);
       const pal = ROLE_PALETTES[roleId] || ROLE_PALETTES.neon;
-      const intensity = cfg.themeIntensity || 'vivid';
+      const rawInt = cfg.themeIntensity || 'optical-neko';
+      const intensity = rawInt === 'balanced' ? 'optical-neko' : rawInt;
       const spinnerStyle = cfg.spinnerStyle || 'role-motif';
 
       root.setAttribute('data-gk-theme', presetId);
@@ -1272,6 +1414,7 @@ pre.gk-code-collapsed {
       syncConvAurora();
       syncCornerWatermark(activity, roleId);
       syncHomeStage();
+      syncAskQuestionStage(roleId);
       syncWallpaperLayer();
       syncNightLamp();
       syncComposerBreath(activity);
@@ -1370,6 +1513,149 @@ pre.gk-code-collapsed {
       if (tag) {
         const nextTitle = pal.crestTitle || \`\${wmRole.toUpperCase()} · GEMINEKO\`;
         if (tag.textContent !== nextTitle) tag.textContent = nextTitle;
+      }
+    }
+
+    let askStageRef = null;
+    let askRouletteTimer = null;
+    let askHoveredIdx = -1;
+    let askLitIdx = 0;
+
+    function clearAskStage() {
+      if (askRouletteTimer) {
+        clearInterval(askRouletteTimer);
+        askRouletteTimer = null;
+      }
+      if (askStageRef && askStageRef.isConnected) {
+        askStageRef.removeAttribute('data-gk-ask-stage');
+        const col = askStageRef.querySelector('.gk-ask-mascot-col');
+        if (col) col.remove();
+        askStageRef.querySelectorAll('.gk-ask-split-row').forEach((row) => {
+          row.classList.remove('gk-ask-split-row');
+        });
+        askStageRef.querySelectorAll('.gk-ask-options-col').forEach((oc) => {
+          oc.classList.remove('gk-ask-options-col');
+        });
+      }
+      askStageRef = null;
+      askHoveredIdx = -1;
+    }
+
+    function findActiveAskQuestionPanel() {
+      const explicit = document.querySelector('[data-testid*="ask-question"]:not([data-testid*="readonly"]), [data-testid="question-panel"]');
+      if (explicit && explicit.offsetHeight > 40) return explicit;
+      const box = document.getElementById('antigravity.agentSidePanelInputBox');
+      const scope = document.querySelector('[data-testid="conversation-view"]') || document.body;
+      if (!scope) return null;
+      const candGroups = scope.querySelectorAll('[role="radiogroup"], [data-testid*="question"]');
+      for (const g of candGroups) {
+        if (g.closest('[data-testid*="readonly"], #gemineko-home-stage, #gemineko-cdp-composer-dock')) continue;
+        const r = g.getBoundingClientRect();
+        if (r.width < 180 || r.height < 48) continue;
+        if (box && r.top > box.getBoundingClientRect().bottom) continue;
+        const btns = g.querySelectorAll('button, [role="radio"], [role="option"]');
+        if (btns.length >= 2) {
+          return g.closest('form, section, [class*="card"], [class*="border"]') || g.parentElement || g;
+        }
+      }
+      return null;
+    }
+
+    function updateAskBubbleLit(bubble, count) {
+      if (!bubble) return;
+      const idx = askHoveredIdx >= 0 && askHoveredIdx < count ? askHoveredIdx : (askLitIdx % Math.max(1, count));
+      bubble.querySelectorAll('.gk-ask-opt-letter').forEach((el, i) => {
+        el.classList.toggle('is-lit', i === idx);
+      });
+    }
+
+    function syncAskQuestionStage(roleId) {
+      if (!cfg.enabled || cfg.askStageEnabled === false) {
+        clearAskStage();
+        return;
+      }
+      const panel = findActiveAskQuestionPanel();
+      if (!panel) {
+        clearAskStage();
+        return;
+      }
+
+      const activeRole = ROLE_PALETTES[roleId] ? roleId : 'neon';
+      const optList = panel.querySelector('[role="radiogroup"]')
+        || [...panel.children].find((ch) => ch.querySelectorAll('button, [role="radio"], [role="option"]').length >= 2);
+      if (!optList || !optList.parentElement) return;
+
+      const optItems = [...optList.querySelectorAll('button, [role="radio"], [role="option"]')]
+        .filter((b) => !/^(?:submit|skip|cancel|提交|跳过|取消)$/i.test((b.textContent || '').trim()))
+        .slice(0, 6);
+      const optCount = Math.max(2, Math.min(6, optItems.length || 4));
+      const splitParent = optList.parentElement;
+
+      if (askStageRef !== panel) {
+        clearAskStage();
+        askStageRef = panel;
+        panel.setAttribute('data-gk-ask-stage', '1');
+        splitParent.classList.add('gk-ask-split-row');
+        optList.classList.add('gk-ask-options-col');
+
+        const mascotCol = document.createElement('div');
+        mascotCol.className = 'gk-ask-mascot-col';
+        const letters = 'ABCDEF'.slice(0, optCount).split('');
+        mascotCol.innerHTML = \`
+          <div class="gk-ask-thought-bubble">
+            \${letters.map((ch, i) => \`<span class="gk-ask-opt-letter \${i === 0 ? 'is-lit' : ''}" data-idx="\${i}">\${ch}<em class="gk-ask-q">?</em></span>\`).join('')}
+          </div>
+          <img class="gk-ask-ponder-img" alt="pondering" />
+        \`;
+        splitParent.insertBefore(mascotCol, optList);
+
+        optItems.forEach((btn, idx) => {
+          if (btn.dataset.gkAskHover === '1') return;
+          btn.dataset.gkAskHover = '1';
+          btn.addEventListener('mouseenter', () => {
+            askHoveredIdx = idx;
+            updateAskBubbleLit(mascotCol.querySelector('.gk-ask-thought-bubble'), optCount);
+          });
+          btn.addEventListener('mouseleave', () => {
+            askHoveredIdx = -1;
+            updateAskBubbleLit(mascotCol.querySelector('.gk-ask-thought-bubble'), optCount);
+          });
+        });
+
+        askRouletteTimer = setInterval(() => {
+          if (!askStageRef || !askStageRef.isConnected) {
+            clearAskStage();
+            return;
+          }
+          if (askHoveredIdx < 0 && getMotionEnabled()) {
+            askLitIdx = (askLitIdx + 1) % optCount;
+            updateAskBubbleLit(askStageRef.querySelector('.gk-ask-thought-bubble'), optCount);
+          }
+        }, 950);
+      }
+
+      const img = panel.querySelector('img.gk-ask-ponder-img');
+      if (img) {
+        const ponderUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-ponder.png?v=0.6.0\`;
+        const askingUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-asking.png?v=0.6.0\`;
+        if (img.dataset.gkErrBound !== '1') {
+          img.dataset.gkErrBound = '1';
+          img.addEventListener('error', () => {
+            if (img.dataset.gkFb === '2') return;
+            if (img.dataset.gkFb === '1') {
+              img.dataset.gkFb = '2';
+              img.src = \`\${ctx.server}/gemineko-sprites/\${activeRole}-thinking.png?v=0.6.0\`;
+            } else {
+              img.dataset.gkFb = '1';
+              img.src = askingUrl;
+            }
+          });
+        }
+        if (img.getAttribute('data-src') !== ponderUrl) {
+          img.dataset.gkFb = '0';
+          img.setAttribute('data-src', ponderUrl);
+          img.src = ponderUrl;
+        }
       }
     }
 
@@ -1752,6 +2038,9 @@ pre.gk-code-collapsed {
           const dock = document.getElementById(ctx.dockId);
           const rect = dock ? dock.getBoundingClientRect() : { left: window.innerWidth * 0.4, top: window.innerHeight - 120 };
           spawnStardust(rect.left + 80, rect.top, 20, 'confetti');
+          if (cfg.memes?.enabled !== false && cfg.memes?.autoFinishSticker !== false) {
+            ctx.onLongTaskFinished?.(nextRole);
+          }
         }
       }
       lastActive = isActive;
@@ -1792,10 +2081,10 @@ pre.gk-code-collapsed {
           <button class="gk-mini-chip" data-preset="starry-nest">星空猫窝</button>
           <button class="gk-mini-chip" data-preset="carbon-obsidian">碳晶黑曜</button>
         </div>
-        <div class="gk-mini-label">二次元浓度：</div>
+        <div class="gk-mini-label">视觉模式：</div>
         <div class="gk-mini-row">
+          <button class="gk-mini-chip" data-intensity="optical-neko">光学高定</button>
           <button class="gk-mini-chip" data-intensity="vivid">浓郁二次元</button>
-          <button class="gk-mini-chip" data-intensity="balanced">均衡日常</button>
           <button class="gk-mini-chip" data-intensity="minimal">极简专注</button>
         </div>
         <div class="gk-mini-label">运行加载动效：</div>
@@ -1813,6 +2102,7 @@ pre.gk-code-collapsed {
           <button class="gk-mini-chip" data-i18n="off">English</button>
         </div>
         <div class="gk-mini-row" style="margin-top:2px;">
+          <button class="gk-mini-chip" data-act="meme-picker">😸 表情库</button>
           <button class="gk-mini-chip" data-act="toggle-focus">专注 0fps</button>
           <button class="gk-mini-chip" data-act="rain">🐾 爪印雨</button>
           <button class="gk-mini-chip" data-act="burst">💥 捅基米窝</button>
@@ -1854,6 +2144,9 @@ pre.gk-code-collapsed {
         } else if (act === 'burst') {
           triggerHiveParadeBurst(lastRole || 'neon', 'host');
           bar.classList.remove('is-open');
+        } else if (act === 'meme-picker') {
+          bar.classList.remove('is-open');
+          ctx.openMemePicker?.(bar);
         } else if (act === 'open-workshop') {
           postEvent({ type: 'open-workshop', role: lastRole || 'neon', source: 'host' });
           showSpeechBubble('已通知侧边栏「基米窝 → 主题工坊」✨', 2200);
@@ -1871,7 +2164,8 @@ pre.gk-code-collapsed {
         b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-preset') === cfg.preset);
       });
       bar.querySelectorAll('[data-intensity]').forEach((b) => {
-        b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-intensity') === (cfg.themeIntensity || 'vivid'));
+        const curInt = cfg.themeIntensity === 'balanced' ? 'optical-neko' : (cfg.themeIntensity || 'optical-neko');
+        b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-intensity') === curInt);
       });
       bar.querySelectorAll('[data-spinner]').forEach((b) => {
         b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-spinner') === (cfg.spinnerStyle || 'role-motif'));
@@ -2101,7 +2395,7 @@ pre.gk-code-collapsed {
           spawnSendSparks();
         }
       }
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && String(e.key || '').toLowerCase() === 'm') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && String(e.key || '').toLowerCase() === 'p') {
         e.preventDefault();
         spawnStardust(window.innerWidth / 2, 0, 34, 'paw');
         showSpeechBubble('🐾 炫彩爪印星尘雨降临基米窝！', 2200);
@@ -2155,6 +2449,7 @@ pre.gk-code-collapsed {
           syncConvAurora();
           syncCornerWatermark(ctx.getActivity(), resolveActiveRoleId(ctx.getActivity()));
           syncHomeStage();
+          syncAskQuestionStage(resolveActiveRoleId(ctx.getActivity()));
         }
       }
     }, 1200);
@@ -2172,11 +2467,12 @@ pre.gk-code-collapsed {
     applyConfig(cfg);
     decorateLongCodeBlocks();
 
-    const api = { applyConfig, onActivityUpdate, onDockPoke, triggerEvent, toggleMiniBar, unmount };
+    const api = { applyConfig, onActivityUpdate, onDockPoke, triggerEvent, toggleMiniBar, syncAskQuestionStage, unmount };
     window.__GEMINEKO_THEME_API__ = api;
 
     function unmount() {
       stopped = true;
+      clearAskStage();
       if (schemeObserver) schemeObserver.disconnect();
       if (workbenchTimer) clearInterval(workbenchTimer);
       if (nightTimer) clearInterval(nightTimer);

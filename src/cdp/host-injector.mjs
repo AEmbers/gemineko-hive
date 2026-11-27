@@ -10,6 +10,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildHostI18nRuntimeSnippet } from './host-i18n-runtime.mjs';
+import { buildHostMemeRuntimeSnippet } from './host-meme-runtime.mjs';
 import { buildHostThemeRuntimeSnippet } from './host-theme-runtime.mjs';
 
 const DEFAULT_DEBUG_PORT = 19222;
@@ -147,6 +148,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   const themeCfgJson = JSON.stringify(options?.themeConfig || null);
   const themeSnippet = buildHostThemeRuntimeSnippet();
   const i18nSnippet = buildHostI18nRuntimeSnippet();
+  const memeSnippet = buildHostMemeRuntimeSnippet();
   return `(() => {
   const SERVER = ${baseJson};
   const LOGO_URI = ${logoJson};
@@ -594,7 +596,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       return;
     }
 
-    // 空白首页存在 5 角色迎宾舞台时自动隐藏左上沿小猫 Dock，避免相互遮挡
+    // 空白首页迎宾舞台或活跃 ask_question 提问舞台出现时自动隐藏左上沿小猫 Dock，消除重叠
     const homeStage = document.getElementById('gemineko-home-stage');
     if (homeStage && homeStage.isConnected) {
       const hr = homeStage.getBoundingClientRect();
@@ -602,6 +604,11 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         dock.classList.add('is-hidden');
         return;
       }
+    }
+    const askStage = document.querySelector('[data-gk-ask-stage="1"]');
+    if (askStage && askStage.isConnected && askStage.offsetHeight > 40) {
+      dock.classList.add('is-hidden');
+      return;
     }
 
     const r = anchor.getBoundingClientRect();
@@ -844,9 +851,15 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   };
 
   ${i18nSnippet}
+  ${memeSnippet}
   ${themeSnippet}
 
   const i18nEngine = initHostI18nEngine(INITIAL_THEME_CONFIG);
+  const memeEngine = initHostMemeEngine({
+    server: SERVER,
+    dockId: DOCK_ID,
+    initialConfig: INITIAL_THEME_CONFIG,
+  });
   const themeSuite = initHostThemeSuite({
     server: SERVER,
     token: SIDE_TOKEN,
@@ -855,8 +868,11 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     initialConfig: INITIAL_THEME_CONFIG,
     onConfigApplied: (nextCfg) => {
       i18nEngine?.applyConfig?.(nextCfg);
+      memeEngine?.applyConfig?.(nextCfg);
       renderDockState();
     },
+    onLongTaskFinished: () => memeEngine?.triggerFinishSticker?.(),
+    openMemePicker: (anchorEl) => memeEngine?.toggleMemePicker?.(anchorEl),
   });
   fetch(\`\${SERVER}/api/theme/config\`)
     .then((r) => (r.ok ? r.json() : null))
@@ -884,6 +900,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   window.__GEMINEKO_CDP_OVERLAY_V3__ = true;
   window.__GEMINEKO_CDP_OVERLAY_V5__ = true;
   window.__GEMINEKO_CDP_OVERLAY_V6__ = true;
+  window.__GEMINEKO_CDP_OVERLAY_V7__ = true;
   window.__GEMINEKO_CDP_UNMOUNT__ = () => {
     stopped = true;
     if (pollTimer) clearTimeout(pollTimer);
@@ -894,6 +911,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     window.removeEventListener('scroll', onViewportChange, true);
     window.removeEventListener('popstate', onUrlCheck);
     i18nEngine?.unmount?.();
+    memeEngine?.unmount?.();
     themeSuite?.unmount?.();
     cleanupLegacyNodes();
     const dock = document.getElementById(DOCK_ID);
@@ -904,6 +922,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     window.__GEMINEKO_CDP_OVERLAY_V3__ = false;
     window.__GEMINEKO_CDP_OVERLAY_V5__ = false;
     window.__GEMINEKO_CDP_OVERLAY_V6__ = false;
+    window.__GEMINEKO_CDP_OVERLAY_V7__ = false;
   };
 })();`;
 }
@@ -1089,7 +1108,7 @@ export class CdpHostInjector {
    */
   async verifyAndReinject() {
     if (!this.enabled || !this.ws || this.ws.readyState !== 1) return;
-    const alive = await this.evaluateOnTarget('Boolean(window.__GEMINEKO_CDP_OVERLAY_V6__)', true);
+    const alive = await this.evaluateOnTarget('Boolean(window.__GEMINEKO_CDP_OVERLAY_V7__)', true);
     if (alive === false) {
       const script = buildCdpOverlayScript(this.serverBaseUrl, this.logoDataUri, {
         sideToken: this.sideToken,

@@ -16,6 +16,7 @@ import {
 import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../src/native-patcher.mjs';
 import { translateHostText } from '../src/cdp/host-i18n-runtime.mjs';
 import { buildCdpOverlayScript, formatDockModelDisplay } from '../src/cdp/host-injector.mjs';
+import { parseMemeCaptionFromText } from '../src/cdp/host-meme-runtime.mjs';
 import { createHiveSidecarServer } from '../src/sidecar/server.mjs';
 import { resolveMemeNickname } from '../src/theme/nicknames.js';
 import {
@@ -117,9 +118,9 @@ function createFakeSwarmSandbox() {
   return { root, swarmDir, origIndex, origMain, origLogoSvg, logoSvgPath: path.join(assetsDir, 'logo.svg'), appDataDir, convDir, convId };
 }
 
-test('30 张角色×动作 128x128 PNG 立绘全部就绪且具备 RGBA 透明通道', () => {
+test('35 张角色×动作 128x128 PNG 立绘全部就绪且具备 RGBA 透明通道（含抱臂仰头思考 ponder）', () => {
   const roles = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'];
-  const actions = ['thinking', 'reading', 'editing', 'running', 'asking', 'idle'];
+  const actions = ['thinking', 'reading', 'editing', 'running', 'asking', 'ponder', 'idle'];
   const spritesDir = path.join(REPO_ROOT, 'assets', 'sprites');
 
   for (const role of roles) {
@@ -462,8 +463,13 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(validateWatermarkImagePath(samplePng).ok, true);
   assert.equal(validateWatermarkImagePath('\\\\evil-server\\share\\wm.png').ok, false);
 
-  // 验证 v0.5.1 开箱默认值：浓郁二次元 + 角色星徽旋转指示器 + 角落立绘水印 + 自动跟随系统语言(中文萌系)
-  assert.equal(DEFAULT_HOST_THEME_CONFIG.themeIntensity, 'vivid');
+  // 验证 v0.6.0 开箱默认值：光学高定哈基米 + 角色星徽旋转指示器 + 提问抱臂思考舞台 + 猫娘表情全链路
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.themeIntensity, 'optical-neko');
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.askStageEnabled, true);
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.memes.enabled, true);
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.memes.inlineRender, true);
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.memes.autoFinishSticker, true);
+  assert.equal(sanitizeHostThemeConfig({ themeIntensity: 'balanced' }).themeIntensity, 'optical-neko');
   assert.equal(DEFAULT_HOST_THEME_CONFIG.spinnerStyle, 'role-motif');
   assert.equal(DEFAULT_HOST_THEME_CONFIG.watermark.enabled, true);
   assert.equal(DEFAULT_HOST_THEME_CONFIG.watermark.role, 'follow-role');
@@ -473,6 +479,9 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(ROLE_PALETTES.neon.crestTitle, 'NEON · GEMINEKO');
   assert.equal(sanitizeHostThemeConfig({ spinnerStyle: 'invalid' }).spinnerStyle, 'role-motif');
   assert.equal(sanitizeHostThemeConfig({ spinnerStyle: 'paw-bounce' }).spinnerStyle, 'paw-bounce');
+  assert.equal(parseMemeCaptionFromText('[表情: 测试全绿通过]'), '测试全绿通过');
+  assert.equal(parseMemeCaptionFromText('普通文本不含贴纸'), null);
+  assert.equal(resolveSpriteFile('hydrogen', 'ponder'), 'hydrogen-ponder.png');
 
   // 验证内置宿主全量汉化双语模式并保留 Antigravity 品牌词
   assert.equal(translateHostText('Antigravity', 'neko-zh'), null);
@@ -600,10 +609,15 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.equal(evGet.json().latest.type, 'hive-poke-burst');
     assert.equal(evGet.json().latest.role, 'claude');
 
-    // 验证构建包包含主题工坊且宿主脚本包含 v5/v6 全量二次元皮肤、Overview 重绘、水印与内置汉化引擎
+    // 验证构建包包含主题工坊且宿主脚本包含 v7 光学高定皮肤、提问轮盘舞台、表情集成与内置汉化引擎
     const cdpScript = buildCdpOverlayScript('http://127.0.0.1:19876', '', { sideToken: 'tk' });
     assert.match(cdpScript, /gemineko-host-theme-v5/);
-    assert.match(cdpScript, /__GEMINEKO_CDP_OVERLAY_V6__/);
+    assert.match(cdpScript, /__GEMINEKO_CDP_OVERLAY_V7__/);
+    assert.match(cdpScript, /optical-neko/);
+    assert.match(cdpScript, /gk-ask-thought-bubble/);
+    assert.match(cdpScript, /gk-ask-ponder-img/);
+    assert.match(cdpScript, /-ponder\.png/);
+    assert.match(cdpScript, /initHostMemeEngine/);
     assert.match(cdpScript, /--gk-catnest-pattern/);
     assert.match(cdpScript, /gemineko-conv-aurora/);
     assert.match(cdpScript, /gemineko-corner-watermark/);
@@ -626,6 +640,12 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /surface-composer-card/);
     assert.match(cdpScript, /overlay-scrollbar-thumb/);
     assert.match(cdpScript, /捅了基米窝/);
+
+    // 验证 /api/memes/list 与 /api/memes/file/ 安全门禁（拦截目录穿越 ../）
+    const memeList = await srv.inject({ url: '/api/memes/list' });
+    assert.equal(memeList.statusCode, 200);
+    const memeTraversal = await srv.inject({ url: '/api/memes/file/..%2F..%2Fpackage.json' });
+    assert.ok([403, 404].includes(memeTraversal.statusCode));
 
     // 验证自定义角落水印流式安全门禁（未配置返回 404，配置后返回 200 PNG）
     const noWm = await srv.inject({ url: '/api/watermark/file' });

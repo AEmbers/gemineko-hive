@@ -11,7 +11,7 @@ const __trackerDir = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_SPRITES_DIR = resolve(__trackerDir, '..', 'assets', 'sprites');
 
 export const ALLOWED_SPRITE_ROLES = new Set(['neon', 'hydrogen', 'carbon', 'claude', 'gpt']);
-export const ALLOWED_SPRITE_ACTIONS = new Set(['thinking', 'reading', 'editing', 'running', 'asking', 'idle']);
+export const ALLOWED_SPRITE_ACTIONS = new Set(['thinking', 'reading', 'editing', 'running', 'asking', 'ponder', 'idle']);
 
 /**
  * 解析并校验角色×动作精灵文件名：仅允许白名单角色与动作，

@@ -32,7 +32,7 @@ export const ALLOWED_ACCENT_MODES = new Set([
 export const ALLOWED_MOTION_LEVELS = new Set(['standard', 'subtle', 'off']);
 export const ALLOWED_SPINNER_STYLES = new Set(['role-motif', 'paw-bounce', 'prism-dots', 'native']);
 export const ALLOWED_CORNER_RADIUS = new Set(['compact', 'soft', 'round']);
-export const ALLOWED_THEME_INTENSITIES = new Set(['vivid', 'balanced', 'minimal']);
+export const ALLOWED_THEME_INTENSITIES = new Set(['optical-neko', 'vivid', 'minimal']);
 export const ALLOWED_WATERMARK_ROLES = new Set([
   'follow-role',
   'neon',
@@ -430,8 +430,9 @@ export const DEFAULT_HOST_THEME_CONFIG = {
   enabled: true,
   preset: 'auto',
   accentMode: 'follow-role',
-  themeIntensity: 'vivid',
+  themeIntensity: 'optical-neko',
   spinnerStyle: 'role-motif',
+  askStageEnabled: true,
   focusMode: false,
   motionLevel: 'standard',
   cornerRadius: 'soft',
@@ -439,8 +440,14 @@ export const DEFAULT_HOST_THEME_CONFIG = {
   watermark: {
     enabled: true,
     role: 'follow-role',
-    opacity: 0.14,
+    opacity: 0.12,
     customFilePath: '',
+  },
+  memes: {
+    enabled: true,
+    inlineRender: true,
+    autoFinishSticker: true,
+    pickerEnabled: true,
   },
   i18n: {
     mode: 'auto',
@@ -583,9 +590,11 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
   const accentMode = ALLOWED_ACCENT_MODES.has(src.accentMode)
     ? src.accentMode
     : (ALLOWED_ACCENT_MODES.has(b.accentMode) ? b.accentMode : 'follow-role');
-  const themeIntensity = ALLOWED_THEME_INTENSITIES.has(src.themeIntensity)
-    ? src.themeIntensity
-    : (ALLOWED_THEME_INTENSITIES.has(b.themeIntensity) ? b.themeIntensity : 'vivid');
+  const rawIntensity = src.themeIntensity === 'balanced' ? 'optical-neko' : src.themeIntensity;
+  const baseIntensity = b.themeIntensity === 'balanced' ? 'optical-neko' : b.themeIntensity;
+  const themeIntensity = ALLOWED_THEME_INTENSITIES.has(rawIntensity)
+    ? rawIntensity
+    : (ALLOWED_THEME_INTENSITIES.has(baseIntensity) ? baseIntensity : 'optical-neko');
   const spinnerStyle = ALLOWED_SPINNER_STYLES.has(src.spinnerStyle)
     ? src.spinnerStyle
     : (ALLOWED_SPINNER_STYLES.has(b.spinnerStyle) ? b.spinnerStyle : 'role-motif');
@@ -614,6 +623,8 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
 
   const srcI18n = src.i18n && typeof src.i18n === 'object' ? src.i18n : {};
   const bI18n = b.i18n || DEFAULT_HOST_THEME_CONFIG.i18n;
+  const srcMemes = src.memes && typeof src.memes === 'object' ? src.memes : {};
+  const bMemes = b.memes || DEFAULT_HOST_THEME_CONFIG.memes;
   const i18nMode = ALLOWED_I18N_MODES.has(srcI18n.mode)
     ? srcI18n.mode
     : (ALLOWED_I18N_MODES.has(bI18n.mode) ? bI18n.mode : 'auto');
@@ -651,6 +662,7 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
     accentMode,
     themeIntensity,
     spinnerStyle,
+    askStageEnabled: asBool(src.askStageEnabled, asBool(b.askStageEnabled, true)),
     focusMode: asBool(src.focusMode, asBool(b.focusMode, false)),
     motionLevel,
     cornerRadius,
@@ -658,8 +670,14 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
     watermark: {
       enabled: asBool(srcWm.enabled, asBool(bWm.enabled, true)),
       role: wmRole,
-      opacity: Number(clampNumber(srcWm.opacity, 0.04, 0.38, bWm.opacity ?? 0.14).toFixed(2)),
+      opacity: Number(clampNumber(srcWm.opacity, 0.04, 0.38, bWm.opacity ?? 0.12).toFixed(2)),
       customFilePath: wmCustomPath,
+    },
+    memes: {
+      enabled: asBool(srcMemes.enabled, asBool(bMemes.enabled, true)),
+      inlineRender: asBool(srcMemes.inlineRender, asBool(bMemes.inlineRender, true)),
+      autoFinishSticker: asBool(srcMemes.autoFinishSticker, asBool(bMemes.autoFinishSticker, true)),
+      pickerEnabled: asBool(srcMemes.pickerEnabled, asBool(bMemes.pickerEnabled, true)),
     },
     i18n: {
       mode: i18nMode,
