@@ -513,6 +513,7 @@ body:not([data-gemineko-minimal="1"]) .o2-tile {
   box-shadow: none !important;
 }
 
+.msg-av.bee img,
 .msg-av.bee img.gn-msg-avatar {
   width: 100% !important;
   height: 100% !important;
@@ -525,11 +526,13 @@ body:not([data-gemineko-minimal="1"]) .o2-tile {
   transition: transform 0.18s ease, filter 0.18s ease;
 }
 
+.msg-av.bee img:hover,
 .msg-av.bee img.gn-msg-avatar:hover {
   transform: scale(1.22);
   filter: drop-shadow(0 4px 10px rgba(124, 108, 246, 0.42));
 }
 
+.msg-av.bee img.is-pixel,
 .msg-av.bee img.gn-msg-avatar.is-pixel {
   image-rendering: pixelated !important;
 }

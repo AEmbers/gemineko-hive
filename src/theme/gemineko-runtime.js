@@ -594,7 +594,7 @@ export function bootGeminekoHive() {
   function getChibiSpriteUrl(role, action) {
     const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
     const a = ['thinking', 'reading', 'editing', 'running', 'asking', 'idle'].includes(action) ? action : 'thinking';
-    return `${getSpriteBaseUrl()}/${r}-${a}.png?q=${getActiveSpriteQuality()}&v=0.7.9`;
+    return `${getSpriteBaseUrl()}/${r}-${a}.png?q=${getActiveSpriteQuality()}&v=0.7.10`;
   }
 
   function resolveLiveSpriteUrl(act) {
@@ -604,7 +604,7 @@ export function bootGeminekoHive() {
     const validFile = /^(neon|hydrogen|carbon|claude|gpt)-(thinking|reading|editing|running|asking|idle)\.png$/i.test(rawFile)
       ? rawFile.toLowerCase()
       : `${r}-${a}.png`;
-    return `${getSpriteBaseUrl()}/${validFile}?q=${getActiveSpriteQuality()}&v=0.7.9`;
+    return `${getSpriteBaseUrl()}/${validFile}?q=${getActiveSpriteQuality()}&v=0.7.10`;
   }
 
   function attachSpriteFallback(imgEl, role) {
@@ -614,7 +614,7 @@ export function bootGeminekoHive() {
       if (imgEl.dataset.gnFallback === '1') return;
       imgEl.dataset.gnFallback = '1';
       const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
-      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?q=${getActiveSpriteQuality()}&v=0.7.9`;
+      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?q=${getActiveSpriteQuality()}&v=0.7.10`;
     });
   }
 
@@ -1441,6 +1441,44 @@ export function bootGeminekoHive() {
       }
     }
 
+    // 同步接管已存在的消息板头像（防止 Swarm app.js 在 hook 就绪前渲染出的原生 22x18 base64 小蜜蜂残留）
+    const msgAvs = document.querySelectorAll('.msg-av.bee');
+    for (const av of msgAvs) {
+      if (av.style.background !== 'transparent') {
+        av.style.background = 'transparent';
+      }
+      let img = av.querySelector('img');
+      if (!img) {
+        img = document.createElement('img');
+        img.alt = '';
+        av.appendChild(img);
+      }
+      const msgEl = av.closest('.msg');
+      const ariaName = String(msgEl?.getAttribute('aria-label') || '').split(',')[0].trim();
+      const domFromEl = msgEl?.querySelector('.msg-from, [data-gn-raw-name], [data-member]');
+      const domFromName = String(domFromEl?.getAttribute?.('data-gn-raw-name') || domFromEl?.textContent || '').replace(/^@/, '').trim();
+      const agentName = img.dataset.gnAgent || ariaName || domFromName || 'worker';
+      if (img.dataset.gnAgent !== agentName) {
+        img.dataset.gnAgent = agentName;
+      }
+      if (!img.classList.contains('gn-msg-avatar')) {
+        img.classList.add('gn-msg-avatar');
+      }
+      img.classList.toggle('is-pixel', prefs.artStyle === 'pixel');
+      if (img.hasAttribute('width')) img.removeAttribute('width');
+      if (img.hasAttribute('height')) img.removeAttribute('height');
+
+      const expectedSrc = getSpriteSrcForGifOrMsg(agentName);
+      const curDataSrc = img.getAttribute('data-src') || '';
+      const isBase64Fallback = prefs.artStyle !== 'pixel' && String(img.src || '').startsWith('data:image/png;base64,');
+      if (curDataSrc !== expectedSrc || isBase64Fallback) {
+        img.dataset.gnFallback = '0';
+        img.setAttribute('data-src', expectedSrc);
+        img.src = expectedSrc;
+      }
+      attachSpriteFallback(img, resolveMemberCharacter(agentName).kind);
+    }
+
     applyMemeNicknamesToDom();
     transformHiveCellsToCatNests();
   }
@@ -1450,14 +1488,10 @@ export function bootGeminekoHive() {
     document.querySelectorAll('.gn-sprite-host').forEach((h) => {
       delete h.dataset.gnKey;
     });
-    enhanceDomSprites();
-    document.querySelectorAll('.msg-av.bee img.gn-msg-avatar').forEach((img) => {
-      const name = img.dataset.gnAgent;
-      if (name) {
-        img.src = getSpriteSrcForGifOrMsg(name);
-        img.classList.toggle('is-pixel', prefs.artStyle === 'pixel');
-      }
+    document.querySelectorAll('.msg-av.bee img').forEach((img) => {
+      img.removeAttribute('data-src');
     });
+    enhanceDomSprites();
   }
 
   function getSidecarConversationId() {

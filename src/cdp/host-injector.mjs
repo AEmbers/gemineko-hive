@@ -14,7 +14,7 @@ import { buildHostMemeRuntimeSnippet } from './host-meme-runtime.mjs';
 import { buildHostThemeRuntimeSnippet } from './host-theme-runtime.mjs';
 
 const DEFAULT_DEBUG_PORT = 19222;
-const POLL_INTERVAL_MS = 3200;
+const POLL_INTERVAL_MS = 1600;
 const HEARTBEAT_INTERVAL_MS = 10_000;
 
 /**
@@ -731,7 +731,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       if (imgEl.dataset.gkFallback === '1') return;
       imgEl.dataset.gkFallback = '1';
       const safeRole = /^(neon|hydrogen|carbon|claude|gpt)$/.test(String(role || '')) ? String(role) : 'neon';
-      imgEl.src = \`\${SERVER}/gemineko-sprites/\${safeRole}-thinking.png?q=\${getHostSpriteQuality()}&v=0.7.9\`;
+      imgEl.src = \`\${SERVER}/gemineko-sprites/\${safeRole}-thinking.png?q=\${getHostSpriteQuality()}&v=0.7.10\`;
     });
   }
 
@@ -739,7 +739,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     const role = latestState.role || 'neon';
     const act = latestState.action || (latestState.active ? 'thinking' : 'idle');
     const spriteName = sanitizeSpriteFile(latestState.spriteFile, role, act);
-    return \`\${SERVER}/gemineko-sprites/\${spriteName}?q=\${getHostSpriteQuality()}&v=0.7.9\`;
+    return \`\${SERVER}/gemineko-sprites/\${spriteName}?q=\${getHostSpriteQuality()}&v=0.7.10\`;
   }
 
   const formatDockModelDisplay = ${formatDockModelDisplay.toString()};
@@ -810,16 +810,37 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     return false;
   }
 
+  function isHostCurrentlyGenerating() {
+    return Boolean(
+      latestState.active ||
+      document.querySelector('[data-testid="input-cancel-button"], [data-testid="stop-button"]')
+    );
+  }
+
+  function getLatestTurnMinY(scope) {
+    if (!scope) return 45;
+    const bubbles = scope.querySelectorAll('[data-testid="user-message-bubble"], .agy-user-bubble');
+    for (let i = bubbles.length - 1; i >= 0; i -= 1) {
+      const br = bubbles[i].getBoundingClientRect();
+      if (br.height > 0 && br.bottom >= 0) {
+        return Math.max(45, br.bottom);
+      }
+    }
+    return 45;
+  }
+
   function syncActiveStatusSprite() {
     if (stopped) return;
     const scope = document.querySelector('[data-testid="conversation-view"]') || document.body;
     const anchor = findComposerAnchor();
     const maxY = anchor ? anchor.getBoundingClientRect().top - 4 : window.innerHeight - 60;
+    const minActiveY = getLatestTurnMinY(scope);
+    const generating = isHostCurrentlyGenerating();
     let bestCandidate = null;
     let bestTop = -Infinity;
 
     if (scope) {
-      // 1. 优先识别宿主原生加载指示器 / 流光文本（含收起态工具组/思考折叠触发行，排除步骤清单与历史折叠条）
+      // 1. 强信号层：识别宿主原生加载指示器 / 流光文本（含收起态内嵌 shimmer 按钮，排除步骤清单与历史折叠条）
       const liveSignals = scope.querySelectorAll('[data-testid="status-loading-spinner"], [class*="animate-shimmer"]');
       for (const sig of liveSignals) {
         if (!sig || !sig.isConnected) continue;
@@ -848,8 +869,38 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         }
       }
 
-      // 2. 空闲期绝不滞留；仅活跃运行态再走收敛文本兜底，彻底杜绝误挂到历史「爪子狂敲中 +6 -2」或步骤列表
-      if (!bestCandidate && latestState.active) {
+      // 2. 专治收起态层：生成期间直查最新一轮可见区内的活跃折叠按钮（按钮常无 shimmer 且距底栏可能超过 220px）
+      if (!bestCandidate && generating) {
+        const activeIngPattern = /^(?:Thinking|Working|Running|Planning|Editing|Reading|Searching|Writing|Analyzing|Checking|Building|Testing|Installing|Fetching|Calling|Executing|Updating|Creating|Deleting|Inspecting|Listing|Viewing|思考中|猫脑|处理中|认真干活|运行中|飞速狂奔|规划中|军师规划|分析中|阅读中|修改中|改文件中|查代码中|执行中|构建中|测试中)\\b/i;
+        const completedPastPattern = /^(?:Thought|Worked|Edited|Read|Searched|Ran|Checked|Listed|Viewed|Created|Updated|Deleted|Finished|Completed|猫猫打工|已工作|已思考|已修改|已读取)\\b/i;
+        const collapsibles = scope.querySelectorAll('[data-testid="tool-group-collapsible"], [data-testid="thinking-collapsible-trigger"]');
+        for (const btn of collapsibles) {
+          if (!btn || !btn.isConnected) continue;
+          if (btn.closest('#' + DOCK_ID) || btn.closest('.' + INLINE_CLASS)) continue;
+          if (btn.closest('[data-testid="worked-for-collapsible"]')) continue;
+          if (btn.closest('aside.bg-sidebar, [data-testid="conversation-row-sidebar"]')) continue;
+          if (btn.closest('ol, ul, li, [role="list"], [role="listitem"]')) continue;
+
+          const r = btn.getBoundingClientRect();
+          if (r.width <= 0 || r.height <= 0 || r.height > 64) continue;
+          if (r.bottom < 45 || r.top < minActiveY - 12 || r.top > maxY) continue;
+
+          const txt = (btn.textContent || '').trim();
+          if (!txt || txt.length > 180) continue;
+          if (/[+-]\\d+\\s+[+-]\\d+/.test(txt)) continue;
+
+          const isOngoing = activeIngPattern.test(txt) || (!completedPastPattern.test(txt) && /\\b\\d+[sm]\\b/.test(txt));
+          if (!isOngoing) continue;
+
+          if (r.top > bestTop) {
+            bestTop = r.top;
+            bestCandidate = btn;
+          }
+        }
+      }
+
+      // 3. 空闲期绝不滞留；生成期间做纯文本兜底并归并到外层折叠按钮（基于最新一轮 Y 区间，不做 220px 误杀）
+      if (!bestCandidate && generating) {
         const activePattern = /^(?:Thinking(?:\\s+for\\s+\\d|\\s*\\d|$)|Working(?:\\b|\\s*$)|Running\\b|Planning\\b|Editing\\b|Reading\\b|Searching\\b|Writing\\b|思考中|猫脑运转|猫脑高速运转|处理中|认真干活|运行中|飞速狂奔|规划中|军师规划|分析中|阅读中|修改中|改文件中)/i;
         const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
         let node;
@@ -866,13 +917,14 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
           const btn = p.closest('button, summary');
           if (btn && /^(?:Worked for|已工作|猫猫打工)\\b/i.test((btn.textContent || '').trim())) continue;
 
-          const r = p.getBoundingClientRect();
+          const row = btn && btn.matches('[data-testid="tool-group-collapsible"], [data-testid="thinking-collapsible-trigger"]')
+            ? btn
+            : ((p.parentElement && /flex/.test(getComputedStyle(p.parentElement).display) && getComputedStyle(p.parentElement).flexDirection !== 'column')
+              ? p.parentElement
+              : p);
+          const r = row.getBoundingClientRect();
           if (r.width <= 0 || r.height <= 0 || r.height > 64) continue;
-          if (r.bottom < 45 || r.top > maxY || (maxY - r.bottom) > 220) continue;
-
-          const row = (p.parentElement && /flex/.test(getComputedStyle(p.parentElement).display) && getComputedStyle(p.parentElement).flexDirection !== 'column')
-            ? p.parentElement
-            : p;
+          if (r.bottom < 45 || r.top < minActiveY - 12 || r.top > maxY) continue;
 
           if (r.top > bestTop) {
             bestTop = r.top;
@@ -884,14 +936,14 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
 
     // 防瞬态跳闪：若当前已挂载且仍处于活跃态，阻止因底部重绘瞬间向更上方历史区域大幅跳回（>90px）
     const existingWrap = document.querySelector('.' + INLINE_CLASS);
-    if (latestState.active && existingWrap && existingWrap.parentElement?.isConnected && bestCandidate && existingWrap.parentElement !== bestCandidate) {
+    if (generating && existingWrap && existingWrap.parentElement?.isConnected && bestCandidate && existingWrap.parentElement !== bestCandidate) {
       const prevTop = existingWrap.parentElement.getBoundingClientRect().top;
       if (bestTop < prevTop - 90) {
         return;
       }
     }
 
-    // 清除不再活跃的历史挂件
+    // 清除不再活跃或非当前命中的历史挂件
     document.querySelectorAll('.' + INLINE_CLASS).forEach((el) => {
       if (!bestCandidate || el.parentElement !== bestCandidate) {
         el.remove();
@@ -909,7 +961,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     }
 
     const spriteUrl = getActiveSpriteUrl();
-    const effectiveAction = latestState.active ? (latestState.action || 'thinking') : 'thinking';
+    const effectiveAction = generating ? (latestState.action || 'thinking') : 'thinking';
     const img = wrap.querySelector('img.gk-inline-sprite');
     const spark = wrap.querySelector('.gk-inline-spark');
     bindImgFallback(img, latestState.role);

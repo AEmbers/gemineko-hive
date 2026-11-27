@@ -838,6 +838,11 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     const checklistBlock = hostInjectorTxt.match(/function isInsideChecklistOrCard[\s\S]{0,650}/)?.[0] || '';
     assert.doesNotMatch(checklistBlock.split('return false;')[0], /tool-group-collapsible/, 'isInsideChecklistOrCard 不应一刀切排除活跃工具组折叠按钮');
     assert.match(hostInjectorTxt, /collapsibleBtn\s*=\s*sig\.closest\(['"]\[data-testid="tool-group-collapsible"\],\s*\[data-testid="thinking-collapsible-trigger"\]['"]\)/, 'syncActiveStatusSprite 应优先识别收起态工具/思考折叠触发行');
+    assert.match(hostInjectorTxt, /input-cancel-button/, '应检测宿主实时生成停止按钮 input-cancel-button');
+    assert.doesNotMatch(hostInjectorTxt, /\(maxY - r\.bottom\)\s*>\s*220/, '不应使用 >220px 硬阈值误杀上方折叠行');
+    assert.match(hostInjectorTxt, /collapsibles\s*=\s*scope\.querySelectorAll/, '第2层应直查活跃折叠触发器');
+    assert.match(bundleContent, /msgAvs\s*=\s*document\.querySelectorAll\(['"]\.msg-av\.bee['"]\)/, 'enhanceDomSprites 应兜底接管原生预渲染的 .msg-av.bee');
+    assert.match(bundleContent, /gn-msg-avatar/, '消息板头像应补齐 gn-msg-avatar 类');
     assert.match(bundleContent, /\.gn-live-sub[\s\S]{0,160}--gn-font-scale/);
     assert.match(bundleContent, /image-rendering:\s*auto\s*!important/);
     assert.match(bundleContent, /\.msg-av\.bee\s*\{[\s\S]{0,180}--gn-font-scale/);

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.7.10] - 2026-11-27
+
+### Fixed
+- **彻底修复侧栏「喵鸣消息板」头像消失/退化为原生 22×18 小图**：
+  - [gemineko-runtime.js](src/theme/gemineko-runtime.js) 的 `enhanceDomSprites()` 与 `refreshAllSprites()` 新增对已渲染 `.msg-av.bee` 元素的统一兜底接管：清理原生深色六边形内联背景、剥离原版 `width="22" height="18"` 属性、从 `<article class="msg" aria-label="...">` 或 `.msg-from` 提取真实成员名、补齐 `.gn-msg-avatar` 并替换为当前角色高清透明 APNG；
+  - [gemineko-theme.css](src/theme/gemineko-theme.css) 将头像布局选择器扩展至 `.msg-av.bee img`，避免 hook 首帧接管前的原生小图缩放失真。
+- **彻底根治主对话区工具/思考折叠行收起态不显示行内立绘**：
+  - [host-injector.mjs](src/cdp/host-injector.mjs) 新增 `isHostCurrentlyGenerating()`（实时识别输入框 `[data-testid="input-cancel-button"]` / `[data-testid="stop-button"]` 与 `latestState.active`）和 `getLatestTurnMinY()`（按最新一条用户气泡下界锁定当前对话可见区，彻底移除 `(maxY - r.bottom) > 220` 误杀）；
+  - 将 `syncActiveStatusSprite()` 升级为 3 层精准匹配：除第 1 层强信号外，第 2 层在生成期间直接扫描可见区内无 shimmer 的活跃 `[data-testid="tool-group-collapsible"]` / `[data-testid="thinking-collapsible-trigger"]`，实锤收起态与展开态同样稳定挂载，空闲期 0 延迟清理。
+
 ## [0.7.9] - 2026-11-27
 
 ### Changed & Fixed

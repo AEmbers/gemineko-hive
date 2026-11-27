@@ -2721,8 +2721,8 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       const spriteQ = getSpriteQuality();
       const spriteUrl = isCustom
         ? \`\${ctx.server}/api/watermark/file?v=\${encodeURIComponent(String(cfg.updatedAt || 1))}\`
-        : \`\${ctx.server}/gemineko-sprites/\${wmRole}-\${actName}.png?q=\${spriteQ}&v=0.7.9\`;
-      const fallbackUrl = \`\${ctx.server}/gemineko-sprites/\${wmRole}-thinking.png?q=\${spriteQ}&v=0.7.9\`;
+        : \`\${ctx.server}/gemineko-sprites/\${wmRole}-\${actName}.png?q=\${spriteQ}&v=0.7.10\`;
+      const fallbackUrl = \`\${ctx.server}/gemineko-sprites/\${wmRole}-thinking.png?q=\${spriteQ}&v=0.7.10\`;
 
       let wm = document.getElementById(WATERMARK_ID);
       if (!wm) {
@@ -2746,7 +2746,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           img.addEventListener('error', () => {
             if (img.dataset.gkFb === '1') return;
             img.dataset.gkFb = '1';
-            img.src = img.dataset.gkFallbackSrc || \`\${ctx.server}/gemineko-sprites/neon-thinking.png?q=\${getSpriteQuality()}&v=0.7.9\`;
+            img.src = img.dataset.gkFallbackSrc || \`\${ctx.server}/gemineko-sprites/neon-thinking.png?q=\${getSpriteQuality()}&v=0.7.10\`;
           });
         }
         img.dataset.gkFallbackSrc = fallbackUrl;
@@ -3008,15 +3008,15 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       const img = panel.querySelector('img.gk-ask-ponder-img');
       if (img) {
         const spriteQ = getSpriteQuality();
-        const ponderUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-ponder.png?q=\${spriteQ}&v=0.7.9\`;
-        const askingUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-asking.png?q=\${spriteQ}&v=0.7.9\`;
+        const ponderUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-ponder.png?q=\${spriteQ}&v=0.7.10\`;
+        const askingUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-asking.png?q=\${spriteQ}&v=0.7.10\`;
         if (img.dataset.gkErrBound !== '1') {
           img.dataset.gkErrBound = '1';
           img.addEventListener('error', () => {
             if (img.dataset.gkFb === '2') return;
             if (img.dataset.gkFb === '1') {
               img.dataset.gkFb = '2';
-              img.src = \`\${ctx.server}/gemineko-sprites/\${activeRole}-thinking.png?q=\${getSpriteQuality()}&v=0.7.9\`;
+              img.src = \`\${ctx.server}/gemineko-sprites/\${activeRole}-thinking.png?q=\${getSpriteQuality()}&v=0.7.10\`;
             } else {
               img.dataset.gkFb = '1';
               img.src = askingUrl;
@@ -3056,7 +3056,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           <div class="gk-home-cast">
             \${HOME_ROLES.map((r) => \`
               <button type="button" class="gk-home-actor" data-home-role="\${r.id}" title="\${r.tip}">
-                <img src="\${ctx.server}/gemineko-sprites/\${r.sprite}?q=\${getSpriteQuality()}&v=0.7.9" alt="\${r.name}" />
+                <img src="\${ctx.server}/gemineko-sprites/\${r.sprite}?q=\${getSpriteQuality()}&v=0.7.10" alt="\${r.name}" />
                 <span>\${r.name}</span>
               </button>
             \`).join('')}
@@ -3068,7 +3068,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           img.addEventListener('error', () => {
             if (img.dataset.gkFallback === '1') return;
             img.dataset.gkFallback = '1';
-            img.src = \`\${ctx.server}/gemineko-sprites/\${rId}-thinking.png?q=\${getSpriteQuality()}&v=0.7.9\`;
+            img.src = \`\${ctx.server}/gemineko-sprites/\${rId}-thinking.png?q=\${getSpriteQuality()}&v=0.7.10\`;
           });
         });
         stage.addEventListener('click', (e) => {
@@ -3093,7 +3093,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         const r = HOME_ROLES[idx];
         const im = btn.querySelector('img');
         if (r && im) {
-          const nextUrl = \`\${ctx.server}/gemineko-sprites/\${r.sprite}?q=\${homeQ}&v=0.7.9\`;
+          const nextUrl = \`\${ctx.server}/gemineko-sprites/\${r.sprite}?q=\${homeQ}&v=0.7.10\`;
           if (im.getAttribute('data-qsrc') !== nextUrl) {
             im.setAttribute('data-qsrc', nextUrl);
             if (!im.src.includes(\`q=\${homeQ}&\`)) im.src = nextUrl;
@@ -3514,7 +3514,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       track.className = 'gk-parade-track';
       for (const r of ['neon', 'hydrogen', 'carbon', 'claude', 'gpt']) {
         const img = document.createElement('img');
-        img.src = \`\${ctx.server}/gemineko-sprites/\${r}-running.png?q=\${getSpriteQuality()}&v=0.7.9\`;
+        img.src = \`\${ctx.server}/gemineko-sprites/\${r}-running.png?q=\${getSpriteQuality()}&v=0.7.10\`;
         img.alt = r;
         track.appendChild(img);
       }
