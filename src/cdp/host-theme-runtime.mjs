@@ -1841,19 +1841,8 @@ html[data-gk-theme] .agy-home > :not(#\${AURORA_HOST_ID}):not(#\${WATERMARK_ID})
 }
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1),
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1) {
-  background: none !important;
-  -webkit-background-clip: border-box !important;
-  background-clip: border-box !important;
-  color: #18181B !important;
-  font-weight: 600 !important;
-  letter-spacing: -0.024em !important;
-  line-height: 1.32 !important;
-  text-align: center !important;
-  animation: none !important;
-}
-html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1),
-html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1) {
-  background: linear-gradient(180deg, #FFFFFF 0%, #CBD5E1 100%) !important;
+  background: linear-gradient(110deg, #1E1B4B 0%, #4F46E5 22%, #9333EA 46%, #DB2777 68%, #0284C7 88%, #1E1B4B 100%) !important;
+  background-size: 240% 100% !important;
   -webkit-background-clip: text !important;
   background-clip: text !important;
   color: transparent !important;
@@ -1861,7 +1850,20 @@ html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) [d
   letter-spacing: -0.024em !important;
   line-height: 1.32 !important;
   text-align: center !important;
-  animation: none !important;
+  animation: gkPrismHairlineFlow 9s linear infinite !important;
+}
+html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1),
+html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1) {
+  background: linear-gradient(110deg, #F8FAFC 0%, #7DD3FC 22%, #C4B5FD 46%, #F9A8D4 68%, #FDE68A 88%, #F8FAFC 100%) !important;
+  background-size: 240% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.024em !important;
+  line-height: 1.32 !important;
+  text-align: center !important;
+  animation: gkPrismHairlineFlow 9s linear infinite !important;
 }
 
 html[data-gk-theme][data-gk-intensity="optical-neko"] {
@@ -2334,7 +2336,8 @@ html[data-gk-theme]:is([data-gk-focus="1"], [data-gk-motion="off"]) :is(
   #\${HOME_EMBLEM_ID} .gk-he-sheen::before,
   #\${HOME_EMBLEM_ID} .gk-he-sheen::after,
   #\${HOME_EMBLEM_ID} .gk-he-spark,
-  .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1)
+  .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1),
+  [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1)
 ) {
   animation: none !important;
 }
