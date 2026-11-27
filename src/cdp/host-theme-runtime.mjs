@@ -294,6 +294,12 @@ export function buildHostThemeRuntimeSnippet() {
     const MINI_BAR_ID = 'gemineko-dock-minibar';
     const INTIMACY_KEY = 'gemineko_intimacy_v5';
     const NIGHT_TOAST_KEY = 'gemineko_night_lamp_toast_date';
+    const OUTLINE_RATIO_KEY = 'gemineko_outline_y_ratio_v1';
+    let outlineRo = null;
+    let outlineTrackedConv = null;
+    let outlineDragging = false;
+    let outlineDragMoved = false;
+    let outlineRaf = 0;
 
     const ROLE_POKE_LINES = {
       neon: [
@@ -388,9 +394,27 @@ export function buildHostThemeRuntimeSnippet() {
       } catch {}
     }
 
+    const HOST_SPRITE_Q_KEY = 'gemineko_host_sprite_q_v1';
+    function normSpriteQ(val) {
+      const s = String(val || '');
+      return s === '384' || s === '512' || s === '1024' ? s : '';
+    }
+    function readHostSpriteQ() {
+      try { return normSpriteQ(localStorage.getItem(HOST_SPRITE_Q_KEY)); } catch { return ''; }
+    }
+    function writeHostSpriteQ(q) {
+      const clean = normSpriteQ(q);
+      if (!clean) return;
+      try { localStorage.setItem(HOST_SPRITE_Q_KEY, clean); } catch {}
+    }
+    function getSpriteQuality() {
+      return normSpriteQ(cfg?.spriteQuality) || readHostSpriteQ() || '512';
+    }
+
     function sanitizeLocalCfg(input) {
       const c = input && typeof input === 'object' ? input : {};
       const localTypo = !c.typography ? readHostLocalTypo() : null;
+      const cleanQ = normSpriteQ(c.spriteQuality) || readHostSpriteQ() || '512';
       return {
         ...DEFAULT_CFG,
         ...c,
@@ -400,6 +424,7 @@ export function buildHostThemeRuntimeSnippet() {
         workbench: { ...DEFAULT_CFG.workbench, ...(c.workbench || {}) },
         wallpaper: { ...DEFAULT_CFG.wallpaper, ...(c.wallpaper || {}) },
         typography: { ...(DEFAULT_CFG.typography || { sidecarFontSize: 14, hostFontScale: 100 }), ...(c.typography || localTypo || {}) },
+        spriteQuality: cleanQ,
       };
     }
 
@@ -1465,15 +1490,26 @@ html[data-gk-scheme="dark"] #\${NIGHT_LAYER_ID} {
 }
 #\${MINI_BAR_ID} button.gk-mini-chip.is-active { background: var(--gk-role-primary, #8b5cf6); color: #fff; border-color: transparent; }
 #\${OUTLINE_FAB_ID} {
-  position: fixed; right: 18px; top: 96px; z-index: 2147483620; width: calc(32px * var(--gk-host-font-scale, 1)); height: calc(32px * var(--gk-host-font-scale, 1)); border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 34%, var(--glass-border)); background: var(--gk-popover-bg, var(--glass));
-  background-image: var(--gk-surface-sheen); color: var(--gk-role-primary, #8b5cf6);
-  box-shadow: var(--nux-chip-shadow); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-  font-size: calc(15px * var(--gk-host-font-scale, 1)) !important; opacity: 0.82; transition: opacity 0.18s ease, transform 0.18s var(--gk-ease-spring);
+  position: fixed; right: 0; top: 48%; z-index: 2147483620;
+  width: calc(24px * var(--gk-host-font-scale, 1)); height: calc(42px * var(--gk-host-font-scale, 1));
+  border-radius: 12px 0 0 12px; padding: 0 2px 0 4px;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 34%, var(--glass-border)); border-right: none;
+  background: var(--gk-popover-bg, var(--glass)); background-image: var(--gk-surface-sheen);
+  color: var(--gk-role-primary, #8b5cf6); box-shadow: var(--nux-chip-shadow);
+  backdrop-filter: blur(10px); cursor: pointer; user-select: none; touch-action: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: calc(13px * var(--gk-host-font-scale, 1)) !important; opacity: 0.46;
+  transition: width 0.2s var(--gk-ease-spring), opacity 0.2s ease, background-color 0.2s ease;
 }
-#\${OUTLINE_FAB_ID}:hover { opacity: 1; transform: scale(1.1); }
+#\${OUTLINE_FAB_ID}:is(:hover, .is-open) {
+  width: calc(32px * var(--gk-host-font-scale, 1)); opacity: 0.98;
+}
+#\${OUTLINE_FAB_ID}.is-dragging {
+  width: calc(32px * var(--gk-host-font-scale, 1)); opacity: 1; cursor: ns-resize; transition: none;
+}
 #\${OUTLINE_POP_ID} {
-  position: fixed; right: 18px; top: 134px; z-index: 2147483622; width: min(calc(280px * var(--gk-host-font-scale, 1)), calc(100vw - 36px)); max-height: 360px; display: none;
+  position: fixed; left: 16px; top: 134px; right: auto; z-index: 2147483622;
+  width: min(calc(280px * var(--gk-host-font-scale, 1)), calc(100vw - 48px)); max-height: 360px; display: none;
   flex-direction: column; gap: 6px; padding: 10px; border-radius: 14px; background: var(--gk-popover-bg, var(--glass));
   color: var(--foreground); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); backdrop-filter: blur(14px);
 }
@@ -2615,10 +2651,11 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       const actName = activity?.active && /^(thinking|reading|editing|running|asking|idle)$/i.test(String(activity.action || ''))
         ? String(activity.action).toLowerCase()
         : 'thinking';
+      const spriteQ = getSpriteQuality();
       const spriteUrl = isCustom
         ? \`\${ctx.server}/api/watermark/file?v=\${encodeURIComponent(String(cfg.updatedAt || 1))}\`
-        : \`\${ctx.server}/gemineko-sprites/\${wmRole}-\${actName}.png?v=0.7.6\`;
-      const fallbackUrl = \`\${ctx.server}/gemineko-sprites/\${wmRole}-thinking.png?v=0.7.6\`;
+        : \`\${ctx.server}/gemineko-sprites/\${wmRole}-\${actName}.png?q=\${spriteQ}&v=0.7.6\`;
+      const fallbackUrl = \`\${ctx.server}/gemineko-sprites/\${wmRole}-thinking.png?q=\${spriteQ}&v=0.7.6\`;
 
       let wm = document.getElementById(WATERMARK_ID);
       if (!wm) {
@@ -2642,7 +2679,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           img.addEventListener('error', () => {
             if (img.dataset.gkFb === '1') return;
             img.dataset.gkFb = '1';
-            img.src = img.dataset.gkFallbackSrc || \`\${ctx.server}/gemineko-sprites/neon-thinking.png?v=0.7.6\`;
+            img.src = img.dataset.gkFallbackSrc || \`\${ctx.server}/gemineko-sprites/neon-thinking.png?q=\${getSpriteQuality()}&v=0.7.6\`;
           });
         }
         img.dataset.gkFallbackSrc = fallbackUrl;
@@ -2903,15 +2940,16 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
 
       const img = panel.querySelector('img.gk-ask-ponder-img');
       if (img) {
-        const ponderUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-ponder.png?v=0.6.0\`;
-        const askingUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-asking.png?v=0.6.0\`;
+        const spriteQ = getSpriteQuality();
+        const ponderUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-ponder.png?q=\${spriteQ}&v=0.7.6\`;
+        const askingUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-asking.png?q=\${spriteQ}&v=0.7.6\`;
         if (img.dataset.gkErrBound !== '1') {
           img.dataset.gkErrBound = '1';
           img.addEventListener('error', () => {
             if (img.dataset.gkFb === '2') return;
             if (img.dataset.gkFb === '1') {
               img.dataset.gkFb = '2';
-              img.src = \`\${ctx.server}/gemineko-sprites/\${activeRole}-thinking.png?v=0.6.0\`;
+              img.src = \`\${ctx.server}/gemineko-sprites/\${activeRole}-thinking.png?q=\${getSpriteQuality()}&v=0.7.6\`;
             } else {
               img.dataset.gkFb = '1';
               img.src = askingUrl;
@@ -2951,7 +2989,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           <div class="gk-home-cast">
             \${HOME_ROLES.map((r) => \`
               <button type="button" class="gk-home-actor" data-home-role="\${r.id}" title="\${r.tip}">
-                <img src="\${ctx.server}/gemineko-sprites/\${r.sprite}?v=0.7.6" alt="\${r.name}" />
+                <img src="\${ctx.server}/gemineko-sprites/\${r.sprite}?q=\${getSpriteQuality()}&v=0.7.6" alt="\${r.name}" />
                 <span>\${r.name}</span>
               </button>
             \`).join('')}
@@ -2963,7 +3001,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           img.addEventListener('error', () => {
             if (img.dataset.gkFallback === '1') return;
             img.dataset.gkFallback = '1';
-            img.src = \`\${ctx.server}/gemineko-sprites/\${rId}-thinking.png?v=0.7.6\`;
+            img.src = \`\${ctx.server}/gemineko-sprites/\${rId}-thinking.png?q=\${getSpriteQuality()}&v=0.7.6\`;
           });
         });
         stage.addEventListener('click', (e) => {
@@ -2983,6 +3021,18 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       } else if (stage.nextElementSibling !== inputBox) {
         parentWrap.insertBefore(stage, inputBox);
       }
+      const homeQ = getSpriteQuality();
+      stage.querySelectorAll('.gk-home-actor').forEach((btn, idx) => {
+        const r = HOME_ROLES[idx];
+        const im = btn.querySelector('img');
+        if (r && im) {
+          const nextUrl = \`\${ctx.server}/gemineko-sprites/\${r.sprite}?q=\${homeQ}&v=0.7.6\`;
+          if (im.getAttribute('data-qsrc') !== nextUrl) {
+            im.setAttribute('data-qsrc', nextUrl);
+            if (!im.src.includes(\`q=\${homeQ}&\`)) im.src = nextUrl;
+          }
+        }
+      });
 
       const foot = stage.querySelector('.gk-home-brand-foot');
       if (foot) {
@@ -3397,7 +3447,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       track.className = 'gk-parade-track';
       for (const r of ['neon', 'hydrogen', 'carbon', 'claude', 'gpt']) {
         const img = document.createElement('img');
-        img.src = \`\${ctx.server}/gemineko-sprites/\${r}-running.png?v=0.7.6\`;
+        img.src = \`\${ctx.server}/gemineko-sprites/\${r}-running.png?q=\${getSpriteQuality()}&v=0.7.6\`;
         img.alt = r;
         track.appendChild(img);
       }
@@ -3426,7 +3476,11 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       if (patch?.typography && typeof patch.typography === 'object') {
         writeHostLocalTypo(patch.typography);
       }
+      if (patch?.spriteQuality) {
+        writeHostSpriteQ(patch.spriteQuality);
+      }
       const optimisticTypo = patch?.typography || readHostLocalTypo();
+      const optimisticQ = normSpriteQ(patch?.spriteQuality) || readHostSpriteQ();
       fetch(\`\${ctx.server}/api/theme/config\`, {
         method: 'POST',
         headers: {
@@ -3438,9 +3492,12 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (d?.config) {
-            const nextCfg = d.config.typography || !optimisticTypo
+            let nextCfg = d.config.typography || !optimisticTypo
               ? d.config
               : { ...d.config, typography: optimisticTypo };
+            if (!normSpriteQ(nextCfg.spriteQuality) && optimisticQ) {
+              nextCfg = { ...nextCfg, spriteQuality: optimisticQ };
+            }
             applyConfig(nextCfg);
           }
         })
@@ -3555,6 +3612,12 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           <button class="gk-mini-chip" data-font-preset="comfort">护眼 16</button>
           <button class="gk-mini-chip" data-font-preset="large">大字 18</button>
         </div>
+        <div class="gk-mini-label">立绘清晰度：</div>
+        <div class="gk-mini-row">
+          <button class="gk-mini-chip" data-sprite-q="384">轻量 384</button>
+          <button class="gk-mini-chip" data-sprite-q="512">超清 512</button>
+          <button class="gk-mini-chip" data-sprite-q="1024">极致 1024</button>
+        </div>
         <div class="gk-mini-label">反重力宿主汉化：</div>
         <div class="gk-mini-row">
           <button class="gk-mini-chip" data-i18n="auto">跟随系统</button>
@@ -3577,6 +3640,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         const intensity = btn.getAttribute('data-intensity');
         const spinner = btn.getAttribute('data-spinner');
         const fontPreset = btn.getAttribute('data-font-preset');
+        const spriteQ = btn.getAttribute('data-sprite-q');
         const i18nMode = btn.getAttribute('data-i18n');
         const act = btn.getAttribute('data-act');
         if (preset) {
@@ -3593,6 +3657,10 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           const typography = map[fontPreset] || map.normal;
           applyConfig({ ...cfg, enabled: true, typography });
           persistPatch({ enabled: true, typography });
+        } else if (spriteQ) {
+          writeHostSpriteQ(spriteQ);
+          applyConfig({ ...cfg, enabled: true, spriteQuality: spriteQ });
+          persistPatch({ enabled: true, spriteQuality: spriteQ });
         } else if (i18nMode) {
           const nextI18n = { ...(cfg.i18n || {}), mode: i18nMode };
           applyConfig({ ...cfg, i18n: nextI18n });
@@ -3642,6 +3710,10 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       bar.querySelectorAll('[data-font-preset]').forEach((b) => {
         b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-font-preset') === curPresetKey);
       });
+      const curQ = getSpriteQuality();
+      bar.querySelectorAll('[data-sprite-q]').forEach((b) => {
+        b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-sprite-q') === curQ);
+      });
       bar.querySelectorAll('[data-i18n]').forEach((b) => {
         b.classList.toggle('is-active', b.getAttribute('data-i18n') === (cfg.i18n?.mode || 'auto'));
       });
@@ -3663,8 +3735,88 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       }
     }
 
+    function readOutlineRatio() {
+      try {
+        const raw = Number(localStorage.getItem(OUTLINE_RATIO_KEY));
+        if (Number.isFinite(raw)) return Math.max(0.18, Math.min(0.78, raw));
+      } catch {}
+      return 0.48;
+    }
+
+    function saveOutlineRatio(ratio) {
+      const clamped = Math.max(0.18, Math.min(0.78, Number(ratio) || 0.48));
+      try { localStorage.setItem(OUTLINE_RATIO_KEY, clamped.toFixed(3)); } catch {}
+      return clamped;
+    }
+
+    function positionOutlineElements(overrideRatio) {
+      const fab = document.getElementById(OUTLINE_FAB_ID);
+      const pop = document.getElementById(OUTLINE_POP_ID);
+      if (!fab) return;
+      const conv = document.querySelector('[data-testid="conversation-view"]:not([data-has-browser-hole="true"])')
+        || document.querySelector('[data-testid="conversation-view"]');
+      const rect = conv ? conv.getBoundingClientRect() : null;
+      if (!conv || !rect || rect.width < 180 || rect.height < 200) {
+        fab.style.display = 'none';
+        fab.classList.remove('is-open');
+        if (pop) pop.classList.remove('is-open');
+        return;
+      }
+      fab.style.display = 'inline-flex';
+      const ratio = typeof overrideRatio === 'number' ? Math.max(0.18, Math.min(0.78, overrideRatio)) : readOutlineRatio();
+      const fabRight = Math.max(0, Math.round(window.innerWidth - rect.right));
+      const minTop = Math.round(rect.top + 56);
+      const maxTop = Math.max(minTop, Math.round(rect.bottom - 96));
+      const fabTop = Math.max(minTop, Math.min(maxTop, Math.round(rect.top + rect.height * ratio)));
+      fab.style.right = fabRight + 'px';
+      fab.style.top = fabTop + 'px';
+
+      if (pop && pop.classList.contains('is-open')) {
+        const fr = fab.getBoundingClientRect();
+        const pw = pop.offsetWidth || 280;
+        const ph = pop.offsetHeight || 260;
+        const popLeft = Math.max(12, Math.min(window.innerWidth - pw - 12, Math.round(fr.left - pw - 8)));
+        const popTop = Math.max(56, Math.min(window.innerHeight - ph - 16, Math.round(fr.top - 12)));
+        pop.style.left = popLeft + 'px';
+        pop.style.top = popTop + 'px';
+      }
+    }
+
+    function scheduleOutlinePosition() {
+      if (outlineRaf) return;
+      outlineRaf = requestAnimationFrame(() => {
+        outlineRaf = 0;
+        if (!stopped) positionOutlineElements();
+      });
+    }
+
+    function onOutlineWinResize() {
+      scheduleOutlinePosition();
+    }
+
+    function ensureOutlineObservers() {
+      const conv = document.querySelector('[data-testid="conversation-view"]');
+      if (typeof ResizeObserver === 'function') {
+        if (!outlineRo) {
+          outlineRo = new ResizeObserver(() => scheduleOutlinePosition());
+          if (document.body) outlineRo.observe(document.body);
+        }
+        if (conv && conv !== outlineTrackedConv) {
+          if (outlineTrackedConv) {
+            try { outlineRo.unobserve(outlineTrackedConv); } catch {}
+          }
+          outlineTrackedConv = conv;
+          outlineRo.observe(conv);
+        }
+      }
+      if (!window.__gkOutlineResizeBound) {
+        window.__gkOutlineResizeBound = true;
+        window.addEventListener('resize', onOutlineWinResize, { passive: true });
+      }
+    }
+
     function syncOutlineVisibility() {
-      const show = Boolean(cfg.enabled && cfg.workbench?.pawOutline !== false);
+      const show = Boolean(cfg.enabled && !cfg.focusMode && cfg.workbench?.pawOutline !== false);
       let fab = document.getElementById(OUTLINE_FAB_ID);
       let pop = document.getElementById(OUTLINE_POP_ID);
       if (!show) {
@@ -3676,17 +3828,60 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         fab = document.createElement('button');
         fab.id = OUTLINE_FAB_ID;
         fab.type = 'button';
-        fab.title = '基米窝对话大纲（点击跳转历史提问）';
+        fab.title = '基米窝对话大纲（点击跳转历史提问 · 可上下拖拽位置）';
         fab.textContent = '🐾';
+        let startY = 0;
+        let convTop = 0;
+        let convH = 1;
+        let curRatio = readOutlineRatio();
+        fab.addEventListener('pointerdown', (e) => {
+          if (e.button !== 0) return;
+          const conv = document.querySelector('[data-testid="conversation-view"]');
+          const rect = conv ? conv.getBoundingClientRect() : null;
+          if (!rect || rect.height < 200) return;
+          outlineDragging = true;
+          outlineDragMoved = false;
+          startY = e.clientY;
+          convTop = rect.top;
+          convH = rect.height;
+          curRatio = readOutlineRatio();
+          try { fab.setPointerCapture(e.pointerId); } catch {}
+        });
+        fab.addEventListener('pointermove', (e) => {
+          if (!outlineDragging) return;
+          if (!outlineDragMoved && Math.abs(e.clientY - startY) <= 5) return;
+          outlineDragMoved = true;
+          fab.classList.add('is-dragging');
+          curRatio = Math.max(0.18, Math.min(0.78, (e.clientY - convTop - 21) / Math.max(200, convH)));
+          positionOutlineElements(curRatio);
+        });
+        const finishDrag = (e) => {
+          if (!outlineDragging) return;
+          outlineDragging = false;
+          fab.classList.remove('is-dragging');
+          if (outlineDragMoved) {
+            saveOutlineRatio(curRatio);
+            positionOutlineElements(curRatio);
+            setTimeout(() => { outlineDragMoved = false; }, 60);
+          }
+          try { if (e && fab.hasPointerCapture(e.pointerId)) fab.releasePointerCapture(e.pointerId); } catch {}
+        };
+        fab.addEventListener('pointerup', finishDrag);
+        fab.addEventListener('pointercancel', finishDrag);
         fab.addEventListener('click', (e) => {
           e.stopPropagation();
+          if (outlineDragMoved) return;
           const p = ensureOutlinePop();
           const willOpen = !p.classList.contains('is-open');
           p.classList.toggle('is-open', willOpen);
+          fab.classList.toggle('is-open', willOpen);
           if (willOpen) refreshOutlineItems('');
+          positionOutlineElements();
         });
         document.body?.appendChild(fab);
       }
+      ensureOutlineObservers();
+      positionOutlineElements();
     }
 
     function ensureOutlinePop() {
@@ -3702,7 +3897,10 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         <input type="text" placeholder="过滤提问关键词..." />
         <div class="gk-outline-list"></div>
       \`;
-      pop.querySelector('[data-close="1"]').addEventListener('click', () => pop.classList.remove('is-open'));
+      pop.querySelector('[data-close="1"]').addEventListener('click', () => {
+        pop.classList.remove('is-open');
+        document.getElementById(OUTLINE_FAB_ID)?.classList.remove('is-open');
+      });
       pop.querySelector('input').addEventListener('input', (e) => refreshOutlineItems(e.target.value));
       document.body?.appendChild(pop);
       return pop;
@@ -3857,6 +4055,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       const pop = document.getElementById(OUTLINE_POP_ID);
       if (pop && !e.target.closest('#' + OUTLINE_POP_ID) && !e.target.closest('#' + OUTLINE_FAB_ID)) {
         pop.classList.remove('is-open');
+        document.getElementById(OUTLINE_FAB_ID)?.classList.remove('is-open');
       }
     }
 
@@ -3887,6 +4086,9 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
     function applyConfig(nextCfg) {
       if (nextCfg?.typography && typeof nextCfg.typography === 'object') {
         writeHostLocalTypo(nextCfg.typography);
+      }
+      if (nextCfg?.spriteQuality) {
+        writeHostSpriteQ(nextCfg.spriteQuality);
       }
       cfg = sanitizeLocalCfg(nextCfg);
       if (!isOpticalRimActive()) clearAllOpticalRims();
@@ -3927,6 +4129,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           syncHomeBrandEmblem();
           syncHomeStage();
           syncAskQuestionStage(resolveActiveRoleId(ctx.getActivity()));
+          syncOutlineVisibility();
         }
       }
     }, 1200);
@@ -3946,7 +4149,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
     applyConfig(cfg);
     decorateLongCodeBlocks();
 
-    const api = { applyConfig, onActivityUpdate, onDockPoke, triggerEvent, toggleMiniBar, syncAskQuestionStage, unmount };
+    const api = { applyConfig, onActivityUpdate, onDockPoke, triggerEvent, toggleMiniBar, syncAskQuestionStage, getSpriteQuality, unmount };
     window.__GEMINEKO_THEME_API__ = api;
 
     function unmount() {
@@ -3954,6 +4157,13 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       clearAskStage();
       clearAllOpticalRims();
       if (schemeObserver) schemeObserver.disconnect();
+      if (outlineRo) { outlineRo.disconnect(); outlineRo = null; }
+      outlineTrackedConv = null;
+      if (outlineRaf) { cancelAnimationFrame(outlineRaf); outlineRaf = 0; }
+      if (window.__gkOutlineResizeBound) {
+        window.__gkOutlineResizeBound = false;
+        window.removeEventListener('resize', onOutlineWinResize);
+      }
       if (workbenchTimer) clearInterval(workbenchTimer);
       if (nightTimer) clearInterval(nightTimer);
       document.removeEventListener('visibilitychange', onVisibilityOrFocus);

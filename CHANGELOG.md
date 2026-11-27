@@ -3,13 +3,19 @@
 ## [0.7.6] - 2026-11-27
 
 ### Changed & Fixed
-- **全量 35 张角色×动作动态 APNG 立绘（+ 5 张别名）无损升级至 `384×384` 超清分辨率**：
-  - 升级 [build-animated-sprites.mjs](scripts/build-animated-sprites.mjs) 默认导出尺寸为 `384×384`（等比 `2.5%` 安全边距 + `LANCZOS` 锐利重采样 + `compress_level=9`），直接从 `621~1024px` 原始高清动图/精灵表重新精抠导出；
-  - 同步刷新 [host-injector.mjs](src/cdp/host-injector.mjs)、[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs) 与 [gemineko-runtime.js](src/theme/gemineko-runtime.js) 中所有立绘 URL 缓存版本号为 `?v=0.7.6`，并升级 [gemineko-hive.test.mjs](tests/gemineko-hive.test.mjs) 校验全部 35 张 `384×384` APNG。
+- **立绘 `384×384` / `512×512` / `1024×1024` 三档清晰度自由切换（`512px` 母版 + Sidecar 按需无损缩放缓存）**：
+  - 将全部 35 张角色×动作动态 APNG 立绘（+ 5 张别名）由 `621~1024px` 原画无损升级导出至 **`512×512`** 仓库母版（[build-animated-sprites.mjs](scripts/build-animated-sprites.mjs) 默认 `size=512`，完整吃满原画单帧细节），同时兼容首页 `1024×1024` 双星钻；
+  - [host-theme-config.mjs](src/theme/host-theme-config.mjs) 新增 `spriteQuality` 配置项（`'384' | '512' | '1024'`，默认 `'512'`）；[server.mjs](src/sidecar/server.mjs) 的 `/gemineko-sprites/*.png?q=` 支持按需通过 Pillow LANCZOS 生成并原子缓存 `384` / `1024` 多帧 APNG 至 `~/.gemini/gemineko-hive/sprite-cache/`（并发单飞去重 + 二次命中 `<1ms`，异常优雅回退 `512` 母版）；
+  - 在「精细工坊」（[theme-workshop.js](src/theme/theme-workshop.js)）与主窗口小猫 Dock 快切浮层（[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs)）提供 **`轻量 384px` / `超清 512px` / `极致 1024px`** 三档一键切换，联动 [gemineko-runtime.js](src/theme/gemineko-runtime.js) 与 [host-injector.mjs](src/cdp/host-injector.mjs) 即时刷新 `?q=<tier>&v=0.7.6`（附 `localStorage` 兜底兼容未重启的旧 Sidecar 进程）。
 
 ## [0.7.5] - 2026-11-27
 
 ### Fixed
+- **重构猫爪大纲按钮为对话区右缘可拖拽磁吸书签（根治与右侧面板顶栏控件重叠）**：
+  - 将 `#gemineko-paw-outline-fab` 从固定在全屏右上角 `top: 96px; right: 18px` 改为使用 `ResizeObserver` 实时追踪 `[data-testid="conversation-view"]` 右边界的贴边纤细书签耳签（`24×42px`，悬停/展开平滑向左伸出至 `32px`）；
+  - 默认停靠在对话区右侧中腰（`48%` 高度），支持上下拖拽并持久化至 `localStorage`，彻底避开顶部工具栏与右侧 `Files Changed` / Sidecar 面板，无对话视口时自动隐藏，弹窗同步智能向左侧就近展开。
+- **彻底修复行内动态立绘在 `update_steps` 步骤卡片与底部状态行之间来回闪现**：
+  - [host-injector.mjs](src/cdp/host-injector.mjs) 的 `syncActiveStatusSprite()` 新增 `isInsideChecklistOrCard()` 排除清单列表、工具/产物折叠卡及带边框的多行任务卡片，同时拦截跨 `90px` 以上的瞬态向上回跳，将小猫立绘稳稳锁在最底部真实活跃状态行旁。
 - **彻底打通插件内全量动态字号缩放（侧边栏 + 商店/工坊 + 主窗口浮层 + 旧 Sidecar 兼容）**：
   - **补全 `gemineko-theme.css` 剩余固定像素规则**：消除 `.gn-bar` 的 `clamp(..., 13.5px)` 上限，为 `.gn-brand`、`.gn-live-sub`、`.gn-seg`、`.gn-phase-badge`、`.gn-action-chip`、`.gn-store-tag`、`.gn-store-footer`、`.gn-update-banner`、`.gn-setting-label` 及 `.graph .node-label` 等全部组件接入 `var(--gn-font-scale)` 矢量缩放，并在 `A- / A+` 中间加入实时字号读数徽标 `.gn-font-val`；
   - **增加 `localStorage` 韧性兜底（`gemineko_typography_v1` / `gemineko_host_typography_v1`）**：兼容尚未重启的旧版 Sidecar 后台进程（回包未带 `typography` 字段），避免点按 `A+` 或拖动滑条后被服务端回包或 4 秒轮询回弹到默认字号；
