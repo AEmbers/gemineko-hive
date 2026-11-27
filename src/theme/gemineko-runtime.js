@@ -203,6 +203,9 @@ export function bootGeminekoHive() {
       root.removeAttribute('data-gn-scheme');
       root.style.removeProperty('--gn-hive-accent');
       root.style.removeProperty('--gn-hive-accent-2');
+      for (const fp of ['--gn-font-scale', '--gn-font-size', '--text-2xs', '--text-xs', '--text-sm', '--text-base']) {
+        root.style.removeProperty(fp);
+      }
       return;
     }
 
@@ -231,6 +234,15 @@ export function bootGeminekoHive() {
     const acc = pack?.accent || {};
     root.style.setProperty('--gn-hive-accent', acc.primary || '#7c6cf6');
     root.style.setProperty('--gn-hive-accent-2', acc.accent2 || '#ec4899');
+
+    const sidecarFontSize = Math.max(11, Math.min(22, Math.round(Number(cur?.typography?.sidecarFontSize) || 14)));
+    const fontScale = Number((sidecarFontSize / 13).toFixed(3));
+    root.style.setProperty('--gn-font-scale', String(fontScale));
+    root.style.setProperty('--gn-font-size', `${sidecarFontSize}px`);
+    root.style.setProperty('--text-2xs', `${(11 * fontScale).toFixed(1)}px`);
+    root.style.setProperty('--text-xs', `${(12 * fontScale).toFixed(1)}px`);
+    root.style.setProperty('--text-sm', `${(13 * fontScale).toFixed(1)}px`);
+    root.style.setProperty('--text-base', `${(14 * fontScale).toFixed(1)}px`);
   }
 
   async function openExternalSafe(url) {
@@ -1482,7 +1494,11 @@ export function bootGeminekoHive() {
           <span>基米窝 v0.7</span>
         </span>
         <div class="gn-top-actions">
-          ${window.__GEMINEKO_SIDECAR_MODE__ ? `<button type="button" id="gn-workshop-toggle-btn" class="gn-pill ${workshop?.isOpen?.() ? 'is-active' : ''}" data-gn-act="toggle-workshop" title="打开《Gemineko Hive · 基米窝》社区主题商店与精细工坊">🏪 主题商店</button>` : ''}
+          ${window.__GEMINEKO_SIDECAR_MODE__ ? `<button type="button" id="gn-workshop-toggle-btn" class="gn-pill ${workshop?.isOpen?.() ? 'is-active' : ''}" data-gn-act="toggle-workshop" title="打开《Gemineko Hive · 基米窝》社区主题商店与精细工坊">🏪 主题商店</button>
+          <span class="gn-font-step-group" title="当前侧栏字号 ${Math.max(11, Math.min(22, Math.round(Number(lastSidecarThemeConfig?.typography?.sidecarFontSize) || 14)))}px">
+            <button type="button" class="gn-pill" data-gn-act="font-dec" aria-label="减小字号">A-</button>
+            <button type="button" class="gn-pill" data-gn-act="font-inc" aria-label="增大字号">A+</button>
+          </span>` : ''}
           <button type="button" class="gn-pill gn-star-pill" data-gn-act="open-star" title="前往 GitHub 仓库 AEmbers/gemineko-hive 点亮 Star 支持作者">${starCountText}</button>
           <button type="button" class="gn-pill ${prefs.settingsOpen ? 'is-active' : ''}" data-gn-act="toggle-settings" title="展开或收起各项模式明确开关">⚙️ ${L.settingsBtn} ${prefs.settingsOpen ? '▴' : '▾'}</button>
           <button type="button" class="gn-pill is-poke" data-gn-act="poke">🐾 ${L.poke}</button>
@@ -1531,6 +1547,26 @@ export function bootGeminekoHive() {
           return;
         } else if (act === 'open-star') {
           void openExternalSafe(lastGithubPulse?.starUrl || 'https://github.com/AEmbers/gemineko-hive');
+          return;
+        } else if (act === 'font-dec' || act === 'font-inc') {
+          const curSize = Math.max(11, Math.min(22, Math.round(Number(lastSidecarThemeConfig?.typography?.sidecarFontSize) || 14)));
+          const nextSize = Math.max(11, Math.min(22, curSize + (act === 'font-inc' ? 1 : -1)));
+          const nextTypo = { ...(lastSidecarThemeConfig?.typography || { hostFontScale: 100 }), sidecarFontSize: nextSize };
+          syncSidecarHostTheme({ ...(lastSidecarThemeConfig || { enabled: true }), typography: nextTypo });
+          try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (window.__SIDECAR_TOKEN__) headers['x-sidecar-token'] = window.__SIDECAR_TOKEN__;
+            const r = await originalFetch('/api/theme/config', {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ typography: nextTypo }),
+            });
+            if (r.ok) {
+              const resJson = await r.json();
+              if (resJson?.config) syncSidecarHostTheme(resJson.config);
+            }
+          } catch {}
+          renderToolbar();
           return;
         } else if (act === 'open-releases') {
           void openExternalSafe(lastGithubPulse?.releaseUrl || lastGithubPulse?.releasesUrl || 'https://github.com/AEmbers/gemineko-hive/releases');

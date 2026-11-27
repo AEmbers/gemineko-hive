@@ -476,6 +476,10 @@ export const DEFAULT_HOST_THEME_CONFIG = {
     blur: 4,
     scrim: 0.35,
   },
+  typography: {
+    sidecarFontSize: 14,
+    hostFontScale: 100,
+  },
   updatedAt: 0,
 };
 
@@ -645,6 +649,8 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
 
   const srcWp = src.wallpaper && typeof src.wallpaper === 'object' ? src.wallpaper : {};
   const bWp = b.wallpaper || DEFAULT_HOST_THEME_CONFIG.wallpaper;
+  const srcTypo = src.typography && typeof src.typography === 'object' ? src.typography : {};
+  const bTypo = b.typography || DEFAULT_HOST_THEME_CONFIG.typography;
 
   let wpMode = ALLOWED_WALLPAPER_MODES.has(srcWp.mode)
     ? srcWp.mode
@@ -713,6 +719,10 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
       opacity: Number(clampNumber(srcWp.opacity, 0.05, 0.65, bWp.opacity ?? 0.22).toFixed(2)),
       blur: Math.round(clampNumber(srcWp.blur, 0, 24, bWp.blur ?? 4)),
       scrim: Number(clampNumber(srcWp.scrim, 0, 0.85, bWp.scrim ?? 0.35).toFixed(2)),
+    },
+    typography: {
+      sidecarFontSize: Math.round(clampNumber(srcTypo.sidecarFontSize, 11, 22, bTypo.sidecarFontSize ?? 14)),
+      hostFontScale: Math.round(clampNumber(srcTypo.hostFontScale, 85, 135, bTypo.hostFontScale ?? 100)),
     },
     updatedAt: Number.isFinite(Number(src.updatedAt)) ? Number(src.updatedAt) : Date.now(),
   };

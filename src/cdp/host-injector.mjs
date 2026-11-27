@@ -731,6 +731,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         if (sig.closest('#' + DOCK_ID) || sig.closest('.' + INLINE_CLASS)) continue;
         if (sig.closest('code, pre, textarea, [contenteditable="true"], .monaco-editor')) continue;
         if (sig.closest('[data-testid="worked-for-collapsible"]')) continue;
+        if (sig.closest('aside.bg-sidebar, [data-testid="conversation-row-sidebar"]')) continue;
 
         const hostLine = sig.closest('div, span, p') || sig;
         const p = hostLine.parentElement && /flex/.test(getComputedStyle(hostLine.parentElement).display) && getComputedStyle(hostLine.parentElement).flexDirection !== 'column'

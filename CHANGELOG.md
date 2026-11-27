@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.3] - 2026-11-27
+
+### Added & Refined
+- **全端动态字体大小调节（双滑条 + 4 档护眼快切 + 顶栏 `A- / A+`）**：
+  - [host-theme-config.mjs](src/theme/host-theme-config.mjs) 新增持久化配置项 `typography`（`sidecarFontSize`: 侧栏与插件字号 `11~22px`，默认提升至更易读的 `14px`；`hostFontScale`: Antigravity 主窗口全局字号缩放 `85%~135%`，默认 `100%`）；
+  - **基米窝侧边栏 & Swarm 面板**：新增 `--gn-font-scale` 矢量缩放与 Swarm `--text-*` 变量实时联动，并在顶栏提供 **`A-` / `A+`** 一键微调按钮；
+  - **精细工坊 & 主窗口浮层**：在「精细工坊」新增 **紧凑 (12px) / 标准 (14px) / 护眼 (16px) / 大字 (18px)** 一键预设及双滑条实时拖拽预览，主窗口小猫 Dock 快切浮层同步新增 4 档字号按钮；
+  - 顺带在 `host-injector.mjs` 行内立绘追踪中排除左侧栏会话行内的 spinner，进一步防止误挂。
+
 ## [0.7.2] - 2026-11-27
 
 ### Fixed & Upgraded

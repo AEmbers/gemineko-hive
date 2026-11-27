@@ -473,6 +473,23 @@ export function createThemeWorkshopController(deps) {
               <option value="native" ${c.spinnerStyle === 'native' ? 'selected' : ''}>原版灰点</option>
             </select>
           </div>
+          <div class="gn-font-box">
+            <div class="gn-font-box-head">🔤 字体大小与阅读舒适度</div>
+            <div class="gn-font-presets">
+              <button type="button" class="gn-pill ${(c.typography?.sidecarFontSize ?? 14) <= 12 ? 'is-primary' : ''}" data-ws-font-preset="compact">紧凑 (12px)</button>
+              <button type="button" class="gn-pill ${(c.typography?.sidecarFontSize ?? 14) >= 13 && (c.typography?.sidecarFontSize ?? 14) <= 14 ? 'is-primary' : ''}" data-ws-font-preset="normal">标准 (14px)</button>
+              <button type="button" class="gn-pill ${(c.typography?.sidecarFontSize ?? 14) >= 15 && (c.typography?.sidecarFontSize ?? 14) <= 16 ? 'is-primary' : ''}" data-ws-font-preset="comfort">护眼 (16px)</button>
+              <button type="button" class="gn-pill ${(c.typography?.sidecarFontSize ?? 14) >= 17 ? 'is-primary' : ''}" data-ws-font-preset="large">大字 (18px)</button>
+            </div>
+            <label class="gn-range-label">
+              <span>侧栏与插件字号 <strong data-ws-typo-val="sidecarFontSize">${c.typography?.sidecarFontSize ?? 14}px</strong></span>
+              <input type="range" min="11" max="22" step="1" value="${c.typography?.sidecarFontSize ?? 14}" data-ws-typo-range="sidecarFontSize" />
+            </label>
+            <label class="gn-range-label">
+              <span>主窗口字号缩放 <strong data-ws-typo-val="hostFontScale">${c.typography?.hostFontScale ?? 100}%</strong></span>
+              <input type="range" min="85" max="135" step="5" value="${c.typography?.hostFontScale ?? 100}" data-ws-typo-range="hostFontScale" />
+            </label>
+          </div>
         </div>
 
         <div class="gn-ws-card">
@@ -669,9 +686,28 @@ export function createThemeWorkshopController(deps) {
         void savePatch({ enabled: true, preset: presetBtn.getAttribute('data-ws-preset'), activeThemePackId: 'official-gemineko' });
         return;
       }
+      const fontPresetBtn = e.target.closest('[data-ws-font-preset]');
+      if (fontPresetBtn) {
+        const key = fontPresetBtn.getAttribute('data-ws-font-preset');
+        const map = { compact: { sidecarFontSize: 12, hostFontScale: 95 }, normal: { sidecarFontSize: 14, hostFontScale: 100 }, comfort: { sidecarFontSize: 16, hostFontScale: 110 }, large: { sidecarFontSize: 18, hostFontScale: 120 } };
+        void savePatch({ typography: map[key] || map.normal });
+        return;
+      }
       const eggBtn = e.target.closest('[data-ws-egg]');
       if (eggBtn) {
         void triggerSidecarEgg(eggBtn.getAttribute('data-ws-egg'));
+      }
+    };
+
+    root.oninput = (e) => {
+      const target = e.target;
+      const typoKey = target?.getAttribute?.('data-ws-typo-range');
+      if (!typoKey) return;
+      const num = Number(target.value);
+      const valEl = root.querySelector(`[data-ws-typo-val="${typoKey}"]`);
+      if (valEl) valEl.textContent = typoKey === 'hostFontScale' ? `${num}%` : `${num}px`;
+      if (typoKey === 'sidecarFontSize' && state.config) {
+        notifyHostTheme({ ...state.config, typography: { ...(state.config.typography || {}), sidecarFontSize: num } });
       }
     };
 
@@ -746,6 +782,11 @@ export function createThemeWorkshopController(deps) {
         const rawVal = Number(target.value);
         const val = rangeKey === 'blur' ? rawVal : Number((rawVal / 100).toFixed(2));
         void savePatch({ wallpaper: { ...(c.wallpaper || {}), [rangeKey]: val } });
+        return;
+      }
+      const typoKey = target.getAttribute('data-ws-typo-range');
+      if (typoKey) {
+        void savePatch({ typography: { ...(c.typography || {}), [typoKey]: Number(target.value) } });
       }
     };
   }

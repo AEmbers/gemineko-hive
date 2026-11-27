@@ -2211,6 +2211,18 @@ html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"][da
   animation-duration: 3.0s !important;
 }
 
+/* 全局动态字号缩放（默认 100% 时零侵入；调整后协同放大侧栏与对话区） */
+html[data-gk-theme][data-gk-font-scaled="1"] {
+  font-size: calc(16px * var(--gk-host-font-scale, 1)) !important;
+}
+html[data-gk-theme][data-gk-font-scaled="1"] :is(aside.bg-sidebar, [data-testid="conversation-row-sidebar"]) {
+  font-size: calc(13.5px * var(--gk-host-font-scale, 1)) !important;
+  line-height: 1.45 !important;
+}
+html[data-gk-theme][data-gk-font-scaled="1"] [data-testid="conversation-row-sidebar"] span.truncate {
+  font-size: inherit !important;
+}
+
 /* 专注模式 & 静态动效统一关闭全量流光动画 */
 html[data-gk-theme]:is([data-gk-focus="1"], [data-gk-motion="off"]) :is(
   #\${AURORA_HOST_ID}::before,
@@ -2332,9 +2344,10 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       const root = document.documentElement;
       if (!root) return;
       if (!cfg.enabled) {
-        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper','data-gk-pack']) {
+        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper','data-gk-pack','data-gk-font-scaled']) {
           root.removeAttribute(attr);
         }
+        root.style.removeProperty('--gk-host-font-scale');
         for (const id of [THEME_STYLE_ID, COMMUNITY_PACK_STYLE_ID, AURORA_HOST_ID, HOME_STAGE_ID, HOME_EMBLEM_ID, WATERMARK_ID]) {
           const n = document.getElementById(id);
           if (n) n.remove();
@@ -2382,6 +2395,14 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       root.style.setProperty('--gk-aurora-3', pal.aurora3);
       root.style.setProperty('--gk-ambient-alpha', String(amp.toFixed(2)));
       root.style.setProperty('--gk-watermark-opacity', String(cfg.watermark?.opacity ?? 0.14));
+      const hostScale = Math.max(85, Math.min(135, Math.round(Number(cfg.typography?.hostFontScale) || 100)));
+      if (hostScale !== 100) {
+        root.setAttribute('data-gk-font-scaled', '1');
+        root.style.setProperty('--gk-host-font-scale', (hostScale / 100).toFixed(3));
+      } else {
+        root.removeAttribute('data-gk-font-scaled');
+        root.style.removeProperty('--gk-host-font-scale');
+      }
 
       syncCommunityPackLayer(root);
       syncConvAurora();
@@ -3362,6 +3383,13 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           <button class="gk-mini-chip" data-spinner="prism-dots">炫彩四点</button>
           <button class="gk-mini-chip" data-spinner="native">原生灰点</button>
         </div>
+        <div class="gk-mini-label">字体大小：</div>
+        <div class="gk-mini-row">
+          <button class="gk-mini-chip" data-font-preset="compact">紧凑 12</button>
+          <button class="gk-mini-chip" data-font-preset="normal">标准 14</button>
+          <button class="gk-mini-chip" data-font-preset="comfort">护眼 16</button>
+          <button class="gk-mini-chip" data-font-preset="large">大字 18</button>
+        </div>
         <div class="gk-mini-label">反重力宿主汉化：</div>
         <div class="gk-mini-row">
           <button class="gk-mini-chip" data-i18n="auto">跟随系统</button>
@@ -3383,6 +3411,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         const preset = btn.getAttribute('data-preset');
         const intensity = btn.getAttribute('data-intensity');
         const spinner = btn.getAttribute('data-spinner');
+        const fontPreset = btn.getAttribute('data-font-preset');
         const i18nMode = btn.getAttribute('data-i18n');
         const act = btn.getAttribute('data-act');
         if (preset) {
@@ -3394,6 +3423,11 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         } else if (spinner) {
           applyConfig({ ...cfg, enabled: true, spinnerStyle: spinner });
           persistPatch({ enabled: true, spinnerStyle: spinner });
+        } else if (fontPreset) {
+          const map = { compact: { sidecarFontSize: 12, hostFontScale: 95 }, normal: { sidecarFontSize: 14, hostFontScale: 100 }, comfort: { sidecarFontSize: 16, hostFontScale: 110 }, large: { sidecarFontSize: 18, hostFontScale: 120 } };
+          const typography = map[fontPreset] || map.normal;
+          applyConfig({ ...cfg, enabled: true, typography });
+          persistPatch({ enabled: true, typography });
         } else if (i18nMode) {
           const nextI18n = { ...(cfg.i18n || {}), mode: i18nMode };
           applyConfig({ ...cfg, i18n: nextI18n });
@@ -3437,6 +3471,11 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       });
       bar.querySelectorAll('[data-spinner]').forEach((b) => {
         b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-spinner') === (cfg.spinnerStyle || 'role-motif'));
+      });
+      const curScale = Math.round(Number(cfg.typography?.hostFontScale) || 100);
+      const curPresetKey = curScale <= 96 ? 'compact' : (curScale >= 118 ? 'large' : (curScale >= 107 ? 'comfort' : 'normal'));
+      bar.querySelectorAll('[data-font-preset]').forEach((b) => {
+        b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-font-preset') === curPresetKey);
       });
       bar.querySelectorAll('[data-i18n]').forEach((b) => {
         b.classList.toggle('is-active', b.getAttribute('data-i18n') === (cfg.i18n?.mode || 'auto'));
@@ -3771,10 +3810,10 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       }
       const root = document.documentElement;
       if (root) {
-        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper','data-gk-pack']) {
+        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper','data-gk-pack','data-gk-font-scaled']) {
           root.removeAttribute(attr);
         }
-        for (const prop of ['--gk-role-primary','--gk-role-accent2','--gk-role-accent3','--gk-role-glow','--gk-role-gradient','--gk-role-spark','--gk-role-tint','--gk-catnest-pattern','--gk-spinner-role-svg','--gk-spinner-paw-svg','--gk-aurora-1','--gk-aurora-2','--gk-aurora-3','--gk-ambient-alpha','--gk-watermark-opacity']) {
+        for (const prop of ['--gk-role-primary','--gk-role-accent2','--gk-role-accent3','--gk-role-glow','--gk-role-gradient','--gk-role-spark','--gk-role-tint','--gk-catnest-pattern','--gk-spinner-role-svg','--gk-spinner-paw-svg','--gk-aurora-1','--gk-aurora-2','--gk-aurora-3','--gk-ambient-alpha','--gk-watermark-opacity','--gk-host-font-scale']) {
           root.style.removeProperty(prop);
         }
       }

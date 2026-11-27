@@ -328,6 +328,7 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
     assert.match(overlayScript, /antigravity\.agentSidePanelInputBox/);
     assert.match(overlayScript, /gk-live-inline-wrap/);
     assert.match(overlayScript, /status-loading-spinner/);
+    assert.match(overlayScript, /conversation-row-sidebar/);
     assert.doesNotMatch(overlayScript, /activePattern\s*=\s*\/\^\(\?:[^;\n]*爪子狂敲/);
     assert.match(overlayScript, /getCurrentConversationId/);
     assert.doesNotMatch(overlayScript, /cursor:\s*grabbing/);
@@ -538,24 +539,35 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
     const cfgPath = path.join(tmpDir, 'theme-config.json');
     const store = createThemeConfigStore(cfgPath);
     assert.equal(store.get().preset, DEFAULT_HOST_THEME_CONFIG.preset);
+    assert.equal(store.get().typography.sidecarFontSize, 14);
+    assert.equal(store.get().typography.hostFontScale, 100);
 
     const updated = store.update({
       preset: 'starry-nest',
       focusMode: true,
       wallpaper: { mode: 'custom', filePath: samplePng, opacity: 0.99, blur: 99 },
+      typography: { sidecarFontSize: 99, hostFontScale: 10 },
     });
     assert.equal(updated.preset, 'starry-nest');
     assert.equal(updated.focusMode, true);
     assert.equal(updated.wallpaper.mode, 'custom');
     assert.equal(updated.wallpaper.opacity, 0.65);
     assert.equal(updated.wallpaper.blur, 24);
+    assert.equal(updated.typography.sidecarFontSize, 22);
+    assert.equal(updated.typography.hostFontScale, 85);
 
     // 重新实例化验证持久化与非法枚举容错
     const store2 = createThemeConfigStore(cfgPath);
     assert.equal(store2.get().preset, 'starry-nest');
-    const cleaned = sanitizeHostThemeConfig({ preset: 'invalid-preset', accentMode: 'bad' });
+    const cleaned = sanitizeHostThemeConfig({
+      preset: 'invalid-preset',
+      accentMode: 'bad',
+      typography: { sidecarFontSize: 2, hostFontScale: 300 },
+    });
     assert.equal(cleaned.preset, 'auto');
     assert.equal(cleaned.accentMode, 'follow-role');
+    assert.equal(cleaned.typography.sidecarFontSize, 11);
+    assert.equal(cleaned.typography.hostFontScale, 135);
 
     const resetRes = store2.reset();
     assert.equal(resetRes.preset, 'auto');
@@ -653,6 +665,8 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /AEmbers\/gemineko-hive/);
     assert.match(cdpScript, /#07080B/);
     assert.match(cdpScript, /#101225/);
+    assert.match(cdpScript, /data-gk-font-scaled/);
+    assert.match(cdpScript, /--gk-host-font-scale/);
     assert.match(cdpScript, /gk-he-gem/);
     assert.match(cdpScript, /gk-he-caustic/);
     assert.match(cdpScript, /gkGem3DFloat/);
@@ -725,6 +739,9 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(bundleContent, /data-gn-scheme/);
     assert.match(bundleContent, /gn-store-preview/);
     assert.match(bundleContent, /gn-switch/);
+    assert.match(bundleContent, /--gn-font-scale/);
+    assert.match(bundleContent, /sidecarFontSize/);
+    assert.match(bundleContent, /hostFontScale/);
     assert.match(bundleContent, /gemineko-sidecar-shell/);
     assert.match(bundleContent, /guardLoadingSkeleton/);
     assert.match(bundleContent, /offsetWidth/);

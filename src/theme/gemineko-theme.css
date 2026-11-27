@@ -1222,6 +1222,62 @@ input.gn-switch:checked::after {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--gn-font-scale, 1.077));
   color: var(--gn-ws-muted);
+}
+/* 动态字号矢量响应缩放（随 --gn-font-scale 同步缩放整个侧栏与插件内文字） */
+body {
+  font-size: var(--text-base, calc(14px * var(--gn-font-scale, 1.077)));
+}
+.gn-font-step-group {
+  display: inline-flex;
+  gap: 3px;
+}
+.gn-font-box {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--gn-ws-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gn-font-box-head {
+  font-size: calc(11.5px * var(--gn-font-scale, 1.077));
+  font-weight: 700;
+  color: var(--gn-hive-accent);
+}
+.gn-font-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.gn-bar,
+.gn-workshop-drawer,
+.gn-ws-card-title,
+.gn-ws-row,
+.gn-ws-row select,
+.gn-ws-row input[type="text"],
+.gn-switch-row,
+.gn-store-name,
+.gn-store-desc,
+.gn-store-collapse {
+  font-size: calc(11.5px * var(--gn-font-scale, 1.077));
+}
+.gn-ws-title {
+  font-size: calc(13.5px * var(--gn-font-scale, 1.077));
+}
+.gn-pill,
+.gn-chip,
+.gn-tab-btn,
+.gn-ws-preset-name,
+.gn-store-hero-title {
+  font-size: calc(11.5px * var(--gn-font-scale, 1.077));
+}
+.gn-ws-sub,
+.gn-ws-status,
+.gn-ws-preset-badge,
+.gn-store-hero-sub,
+.gn-store-author,
+.gn-range-label {
+  font-size: calc(10.8px * var(--gn-font-scale, 1.077));
 }
