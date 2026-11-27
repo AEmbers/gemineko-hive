@@ -14,7 +14,7 @@ import {
   resolveSpriteFile,
 } from '../src/activity-tracker.mjs';
 import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../src/native-patcher.mjs';
-import { translateHostText } from '../src/cdp/host-i18n-runtime.mjs';
+import { buildHostI18nRuntimeSnippet, translateHostText } from '../src/cdp/host-i18n-runtime.mjs';
 import { buildCdpOverlayScript, formatDockModelDisplay, formatDockToolDisplay } from '../src/cdp/host-injector.mjs';
 import { parseMemeCaptionFromText } from '../src/cdp/host-meme-runtime.mjs';
 import { BRAND_META } from '../src/meta/brand.mjs';
@@ -569,6 +569,12 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(translateHostText('Your plan: Google AI Ultra', 'zh'), '当前订阅：Google AI Ultra');
   assert.match(translateHostText('You have used some of your weekly limit, it will fully refresh in 5 days, 21 hours.', 'zh') || '', /5 天 21 小时/);
   assert.equal(translateHostText('Explored files', 'neko-zh'), '翻看过的文件');
+  assert.equal(translateHostText('Keyboard shortcuts', 'zh'), '键盘快捷键');
+  assert.equal(translateHostText('Files Changed', 'zh'), '已变更文件');
+  assert.equal(translateHostText('Files Changed', 'neko-zh'), '爪印变更文件');
+  assert.equal(translateHostText('Orchestrator Gemini 4 Neon High', 'neko-zh'), '总管编排喵 Gemini 4 Neon High');
+  assert.equal(translateHostText('The voice used in Voice mode.', 'zh'), '语音模式使用的音色。');
+  assert.equal(translateHostText('Powered by Gemini Live.', 'zh'), '由 Gemini Live 驱动。');
   assert.equal(formatDockModelDisplay('gemini-4-hydrogen-high', 'hydrogen', false), '氢基米');
   assert.equal(formatDockModelDisplay('gemini-4-hydrogen-high', 'hydrogen', true), 'Hydrogen');
   assert.equal(formatDockModelDisplay('gemini-4-carbon-high', 'carbon', false), '碳基米');
@@ -1174,4 +1180,271 @@ test('13 控件哈基米专属彩蛋目录、3 张专属 PNG、配置清洗、�
     await srv.close();
     fs.rmSync(sb.root, { recursive: true, force: true });
   }
+});
+
+test('host-i18n-runtime 防抖不饥饿、React 复用节点重译与属性/剪枝隔离回归验证', async () => {
+  const snippet = buildHostI18nRuntimeSnippet();
+
+  class MockText {
+    constructor(val = '') {
+      this.nodeType = 3;
+      this.nodeValue = String(val);
+      this.parentNode = null;
+      this.parentElement = null;
+      this.isConnected = false;
+    }
+  }
+
+  class MockElement {
+    constructor(tagName, attrs = {}) {
+      this.nodeType = 1;
+      this.tagName = String(tagName || 'DIV').toUpperCase();
+      this.attributes = new Map(Object.entries(attrs).map(([k, v]) => [k, String(v)]));
+      this.children = [];
+      this.parentNode = null;
+      this.parentElement = null;
+      this.isConnected = false;
+      this.shadowRoot = null;
+    }
+
+    _setConnected(flag) {
+      this.isConnected = flag;
+      for (const ch of this.children) {
+        if (ch.nodeType === 1) ch._setConnected(flag);
+        else ch.isConnected = flag;
+      }
+      if (this.shadowRoot) this.shadowRoot._setConnected(flag);
+    }
+
+    appendChild(child) {
+      if (child.parentNode) {
+        const idx = child.parentNode.children.indexOf(child);
+        if (idx >= 0) child.parentNode.children.splice(idx, 1);
+      }
+      child.parentNode = this;
+      child.parentElement = this.nodeType === 1 ? this : null;
+      if (child._setConnected) child._setConnected(this.isConnected);
+      else child.isConnected = this.isConnected;
+      this.children.push(child);
+      return child;
+    }
+
+    getAttribute(k) {
+      return this.attributes.has(k) ? this.attributes.get(k) : null;
+    }
+
+    setAttribute(k, v) {
+      this.attributes.set(k, String(v));
+    }
+
+    hasAttribute(k) {
+      return this.attributes.has(k);
+    }
+
+    matches(selectorList) {
+      for (const raw of String(selectorList).split(',')) {
+        const s = raw.trim();
+        if (!s) continue;
+        if (s.startsWith('#')) {
+          if (this.getAttribute('id') === s.slice(1)) return true;
+        } else if (s.startsWith('.')) {
+          const cls = (this.getAttribute('class') || '').split(/\s+/);
+          if (cls.includes(s.slice(1))) return true;
+        } else {
+          const attrMatch = /^\[([^=\]]+)(?:="([^"]*)")?\]$/.exec(s);
+          if (attrMatch) {
+            const [, attrName, attrVal] = attrMatch;
+            const cur = this.getAttribute(attrName);
+            if (cur != null && (attrVal === undefined || cur === attrVal)) return true;
+          } else if (this.tagName === s.toUpperCase()) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    closest(selectorList) {
+      let cur = this;
+      while (cur && cur.nodeType === 1) {
+        if (cur.matches(selectorList)) return cur;
+        cur = cur.parentElement;
+      }
+      return null;
+    }
+
+    querySelectorAll(selectorList) {
+      const out = [];
+      const walk = (el) => {
+        for (const ch of el.children) {
+          if (ch.nodeType === 1) {
+            if (ch.matches(selectorList)) out.push(ch);
+            walk(ch);
+          }
+        }
+      };
+      walk(this);
+      return out;
+    }
+  }
+
+  const rootDoc = new MockElement('HTML');
+  rootDoc.isConnected = true;
+  const body = new MockElement('BODY');
+  rootDoc.appendChild(body);
+
+  const listeners = new Map();
+  const mockWin = {
+    addEventListener(evt, fn) {
+      if (!listeners.has(evt)) listeners.set(evt, new Set());
+      listeners.get(evt).add(fn);
+    },
+    removeEventListener(evt, fn) {
+      listeners.get(evt)?.delete(fn);
+    },
+  };
+
+  let activeObserver = null;
+  class MockMutationObserver {
+    constructor(cb) {
+      this.cb = cb;
+      this.connected = false;
+      this.queue = [];
+    }
+
+    observe() {
+      this.connected = true;
+      activeObserver = this;
+    }
+
+    disconnect() {
+      this.connected = false;
+      if (activeObserver === this) activeObserver = null;
+    }
+
+    takeRecords() {
+      const out = this.queue.splice(0, this.queue.length);
+      return out;
+    }
+
+    triggerMutations(records) {
+      if (this.connected) this.cb(records);
+    }
+  }
+
+  const docListeners = new Map();
+  const mockDoc = {
+    documentElement: rootDoc,
+    body,
+    hidden: false,
+    addEventListener(evt, fn) {
+      if (!docListeners.has(evt)) docListeners.set(evt, new Set());
+      docListeners.get(evt).add(fn);
+    },
+    removeEventListener(evt, fn) {
+      docListeners.get(evt)?.delete(fn);
+    },
+    createTreeWalker(rootEl, _whatToShow, filter) {
+      const accepted = [];
+      const visit = (node) => {
+        for (const ch of node.children) {
+          const decision = filter && typeof filter.acceptNode === 'function' ? filter.acceptNode(ch) : 1;
+          if (decision === 2) continue; // FILTER_REJECT: 剪枝跳过整棵子树
+          if (decision === 1) accepted.push(ch); // FILTER_ACCEPT
+          if (ch.nodeType === 1) visit(ch);
+        }
+      };
+      if (rootEl && rootEl.children) visit(rootEl);
+      let idx = -1;
+      return {
+        nextNode() {
+          idx += 1;
+          return idx < accepted.length ? accepted[idx] : null;
+        },
+      };
+    },
+  };
+
+  const factory = new Function(
+    'window',
+    'document',
+    'navigator',
+    'NodeFilter',
+    'MutationObserver',
+    `${snippet}\nreturn initHostI18nEngine;`,
+  );
+  const initEngine = factory(
+    mockWin,
+    mockDoc,
+    { language: 'zh-CN', languages: ['zh-CN'] },
+    { SHOW_ELEMENT: 1, SHOW_TEXT: 4, FILTER_ACCEPT: 1, FILTER_REJECT: 2, FILTER_SKIP: 3 },
+    MockMutationObserver,
+  );
+
+  // 预设隔离容器与可编辑占位符
+  const composerEl = new MockElement('DIV', {
+    contenteditable: 'true',
+    'data-placeholder': 'Ask anything, @ to mention, / for actions',
+  });
+  const userDraft = new MockText('Settings');
+  composerEl.appendChild(userDraft);
+  body.appendChild(composerEl);
+
+  const plannerEl = new MockElement('DIV', { 'data-testid': 'planner-response-text' });
+  const plannerTxt = new MockText('Settings');
+  plannerEl.appendChild(plannerTxt);
+  body.appendChild(plannerEl);
+
+  const reusedWrapper = new MockElement('SPAN');
+  const reusedTxt = new MockText('');
+  reusedWrapper.appendChild(reusedTxt);
+  body.appendChild(reusedWrapper);
+
+  const engine = initEngine({ enabled: true, i18n: { mode: 'neko-zh', autoChineseStyle: 'neko-zh' } });
+
+  // 3. 验证 contenteditable 属性翻译且内部用户输入不误翻 + planner 正文隔离
+  assert.equal(composerEl.getAttribute('data-placeholder'), '问点啥都行喵~ @ 提及文件，/ 召唤指令 ✦');
+  assert.equal(userDraft.nodeValue, 'Settings');
+  assert.equal(plannerTxt.nodeValue, 'Settings');
+
+  // 2. 验证 React 复用 Text 节点从 "" -> "Turbo" -> "Ask every time"，再切 off 恢复为最后真实原值
+  reusedTxt.nodeValue = 'Turbo';
+  activeObserver.triggerMutations([{ type: 'characterData', target: reusedTxt }]);
+  await new Promise((r) => setTimeout(r, 95));
+  assert.equal(reusedTxt.nodeValue, '涡轮飙车喵');
+
+  reusedTxt.nodeValue = 'Ask every time';
+  activeObserver.triggerMutations([{ type: 'characterData', target: reusedTxt }]);
+  await new Promise((r) => setTimeout(r, 95));
+  assert.equal(reusedTxt.nodeValue, '每次询问');
+
+  engine.applyConfig({ enabled: true, i18n: { mode: 'off' } });
+  assert.equal(reusedTxt.nodeValue, 'Ask every time');
+
+  // 切回 neko-zh 继续验证高频 DOM 轰炸不饥饿
+  engine.applyConfig({ enabled: true, i18n: { mode: 'neko-zh' } });
+  const dialog = new MockElement('DIV', { role: 'dialog' });
+  const settingTitle = new MockText('Interface Layout');
+  dialog.appendChild(settingTitle);
+  body.appendChild(dialog);
+  activeObserver.triggerMutations([{ type: 'childList', addedNodes: [dialog] }]);
+
+  // 1. 每 20ms 连续触发无关变更长达 160ms，验证固定节流窗口在 120ms 内完成 Settings 弹窗翻译（不饥饿）
+  const noiseEl = new MockElement('SPAN');
+  const noiseTxt = new MockText('0');
+  noiseEl.appendChild(noiseTxt);
+  body.appendChild(noiseEl);
+  const spamTimer = setInterval(() => {
+    noiseTxt.nodeValue = String(Number(noiseTxt.nodeValue) + 1);
+    activeObserver?.triggerMutations([{ type: 'characterData', target: noiseTxt }]);
+  }, 20);
+  await new Promise((r) => setTimeout(r, 120));
+  clearInterval(spamTimer);
+
+  assert.equal(settingTitle.nodeValue, '界面布局');
+
+  // 4. unmount() 断开观察器与监听
+  engine.unmount();
+  assert.equal(activeObserver, null);
+  assert.equal(mockWin.__GEMINEKO_I18N_API__, null);
 });

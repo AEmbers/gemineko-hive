@@ -223,12 +223,16 @@ export const HOST_I18N_EXACT_ZH = {
   'Input Box': '输入框',
   'Queued messages': '排队消息',
   'Configure when follow-up messages are sent.': '配置后续追加消息的发送时机。',
+  'Keyboard shortcuts': '键盘快捷键',
+  'Files Changed': '已变更文件',
   Queue: '排队',
   'Send Immediately': '立即发送',
   'Send message': '发送消息',
   'Choose which key sends a message in the chat composer.': '选择在输入框中发送消息的快捷键。',
   'Voice mode': '语音模式',
   'The voice used in Voice mode. Powered by Gemini Live.': '语音模式使用的音色（由 Gemini Live 驱动）。',
+  'The voice used in Voice mode.': '语音模式使用的音色。',
+  'Powered by Gemini Live.': '由 Gemini Live 驱动。',
   'Not set': '未设置',
   Change: '更改',
   Microphone: '麦克风',
@@ -538,10 +542,12 @@ export const HOST_I18N_EXACT_NEKO = {
   'Your plan:': '当前猫窝方案：',
   'Weekly Limit Remaining': '本周剩余猫粮',
   'Five Hour Limit Remaining': '5 小时剩余猫粮',
+  'Files Changed': '爪印变更文件',
 };
 
 /** 动态正则模板定义（以字面串数组存放，便于无损耗注入与直接单测） */
 export const HOST_I18N_PATTERN_SPECS = [
+  { id: 'orchestrator-model', source: '^Orchestrator\\s+(.+)$', flags: 'i', zh: '编排模式 $1', neko: '总管编排喵 $1' },
   { id: 'welcome-back-full', source: '^Welcome back,\\s*(.+?)\\.\\s*Where should we pick up\\?$', flags: 'i', zh: '欢迎回来，$1，我们从哪里继续？', neko: '欢迎回窝，$1！今天想从哪开工喵？' },
   { id: 'welcome-back-short', source: '^Welcome back,\\s*(.+?)!?$', flags: 'i', zh: '欢迎回来，$1！', neko: '欢迎回窝，$1 喵！' },
   { id: 'hey-build-today', source: '^Hey\\s+(.+?),\\s*what should we build today\\?$', flags: 'i', zh: '你好，$1，今天想构建什么？', neko: '嗨 $1，今天带哈基米一起造点什么喵？' },
@@ -667,13 +673,33 @@ export function buildHostI18nRuntimeSnippet() {
       '#gemineko-context-menu',
     ].join(',');
 
-    let origTextMap = new WeakMap();
-    let origAttrMap = new WeakMap();
+    // 属性翻译仍允许覆盖输入框本身的 placeholder / data-placeholder / aria-placeholder，仅排除插件自绘容器与代码区
+    const SKIP_ATTR_CONTAINER_SEL = [
+      'pre',
+      'code',
+      '.monaco-editor',
+      '#gemineko-cdp-composer-dock',
+      '#gemineko-home-stage',
+      '#gemineko-corner-watermark',
+      '#gemineko-dock-minibar',
+      '#gemineko-paw-outline-pop',
+      '#gemineko-context-menu',
+    ].join(',');
+
+    const ATTR_NAMES = ['placeholder', 'data-placeholder', 'aria-placeholder', 'title', 'aria-label'];
+    const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'PRE', 'CODE', 'TEXTAREA', 'SVG', 'HEAD', 'NOSCRIPT']);
+
+    let nodeStateMap = new WeakMap();
+    let attrStateMap = new WeakMap();
     const trackedNodes = new Set();
     const trackedEls = new Set();
+    const pendingRoots = new Set();
     let cfg = initialCfg && typeof initialCfg === 'object' ? initialCfg : {};
     let observer = null;
     let flushTimer = null;
+    let safetyTimer = null;
+    let clickRescanTimer = null;
+    let listenersBound = false;
     let applying = false;
     let disposed = false;
 
@@ -736,80 +762,156 @@ export function buildHostI18nRuntimeSnippet() {
 
     function shouldSkipElement(el) {
       if (!el || el.nodeType !== 1) return true;
-      const tag = el.tagName;
-      if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'PRE' || tag === 'CODE' || tag === 'TEXTAREA') return true;
+      if (SKIP_TAGS.has(el.tagName)) return true;
       return Boolean(el.closest && el.closest(SKIP_CONTAINER_SEL));
+    }
+
+    function shouldSkipAttrElement(el) {
+      if (!el || el.nodeType !== 1) return true;
+      const tag = el.tagName;
+      if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'PRE' || tag === 'CODE' || tag === 'SVG') return true;
+      return Boolean(el.closest && el.closest(SKIP_ATTR_CONTAINER_SEL));
     }
 
     function processTextNode(node, style) {
       const parent = node.parentElement;
       if (!parent || shouldSkipElement(parent)) return;
-      if (!origTextMap.has(node)) {
-        origTextMap.set(node, node.nodeValue || '');
+      const cur = node.nodeValue || '';
+      let rec = nodeStateMap.get(node);
+      if (!rec) {
+        rec = { orig: cur, applied: null };
+        nodeStateMap.set(node, rec);
+      } else if (cur !== rec.applied && cur !== rec.orig) {
+        // React 复用同一 Text 节点并写入了新英文内容：刷新原文本基准，绝不回写旧缓存
+        rec.orig = cur;
+        rec.applied = null;
       }
-      const orig = origTextMap.get(node);
+
       if (style === 'off') {
-        if ((node.nodeValue || '') !== orig) node.nodeValue = orig;
+        if (rec.applied !== null && cur === rec.applied) {
+          if (cur !== rec.orig) node.nodeValue = rec.orig;
+          rec.applied = null;
+        }
         return;
       }
-      const next = translateRaw(orig, style, parent);
-      if (next && node.nodeValue !== next) {
-        node.nodeValue = next;
+
+      const next = translateRaw(rec.orig, style, parent);
+      if (next) {
+        if (cur !== next) node.nodeValue = next;
+        rec.applied = next;
         trackedNodes.add(node);
-      } else if (!next && node.nodeValue !== orig) {
-        node.nodeValue = orig;
+      } else if (rec.applied !== null && cur === rec.applied) {
+        if (cur !== rec.orig) node.nodeValue = rec.orig;
+        rec.applied = null;
       }
     }
 
     function processElementAttrs(el, style) {
-      if (!el || el.nodeType !== 1) return;
-      if (el.closest && el.closest('#gemineko-cdp-composer-dock, #gemineko-home-stage, #gemineko-dock-minibar, #gemineko-paw-outline-pop, #gemineko-context-menu, pre, code, .monaco-editor')) {
-        return;
-      }
-      const attrs = ['placeholder', 'data-placeholder', 'title', 'aria-label'];
-      let rec = origAttrMap.get(el);
-      for (const attr of attrs) {
+      if (shouldSkipAttrElement(el)) return;
+      let stateRec = attrStateMap.get(el);
+      for (const attr of ATTR_NAMES) {
         const cur = el.getAttribute(attr);
-        if (cur == null) continue;
-        if (!rec) { rec = {}; origAttrMap.set(el, rec); }
-        if (!Object.prototype.hasOwnProperty.call(rec, attr)) {
-          rec[attr] = cur;
+        if (cur == null) {
+          if (stateRec && stateRec[attr]) delete stateRec[attr];
+          continue;
         }
-        const orig = rec[attr];
+        if (!stateRec) {
+          stateRec = {};
+          attrStateMap.set(el, stateRec);
+        }
+        let rec = stateRec[attr];
+        if (!rec) {
+          rec = { orig: cur, applied: null };
+          stateRec[attr] = rec;
+        } else if (cur !== rec.applied && cur !== rec.orig) {
+          // 宿主主动更新了 placeholder/aria-label，同步更新 orig 基准
+          rec.orig = cur;
+          rec.applied = null;
+        }
+
         if (style === 'off') {
-          if (cur !== orig) el.setAttribute(attr, orig);
-        } else {
-          const next = translateRaw(orig, style, el);
-          if (next && cur !== next) {
-            el.setAttribute(attr, next);
-            trackedEls.add(el);
-          } else if (!next && cur !== orig) {
-            el.setAttribute(attr, orig);
+          if (rec.applied !== null && cur === rec.applied) {
+            if (cur !== rec.orig) el.setAttribute(attr, rec.orig);
+            rec.applied = null;
           }
+          continue;
+        }
+
+        const next = translateRaw(rec.orig, style, el);
+        if (next) {
+          if (cur !== next) el.setAttribute(attr, next);
+          rec.applied = next;
+          trackedEls.add(el);
+        } else if (rec.applied !== null && cur === rec.applied) {
+          if (cur !== rec.orig) el.setAttribute(attr, rec.orig);
+          rec.applied = null;
         }
       }
     }
 
     function walkSubtree(rootEl, style) {
-      if (!rootEl || !document.body) return;
+      const targetRoot = rootEl || document.body || document.documentElement;
+      if (!targetRoot) return;
+      const wasApplying = applying;
       applying = true;
       try {
-        if (rootEl.nodeType === 3) {
-          processTextNode(rootEl, style);
+        if (targetRoot.nodeType === 3) {
+          processTextNode(targetRoot, style);
           return;
         }
-        if (rootEl.nodeType === 1) {
-          processElementAttrs(rootEl, style);
-          const attrEls = rootEl.querySelectorAll('[placeholder], [data-placeholder], [title], [aria-label]');
+        const shadowRoots = [];
+        if (targetRoot.nodeType === 1) {
+          processElementAttrs(targetRoot, style);
+          if (targetRoot.shadowRoot) shadowRoots.push(targetRoot.shadowRoot);
+        }
+        if (targetRoot.querySelectorAll) {
+          const attrEls = targetRoot.querySelectorAll('[placeholder], [data-placeholder], [aria-placeholder], [title], [aria-label]');
           for (const el of attrEls) processElementAttrs(el, style);
         }
-        const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT);
+
+        const acceptNode = (node) => {
+          if (node.nodeType === 1) {
+            if (SKIP_TAGS.has(node.tagName) || (node.matches && node.matches(SKIP_CONTAINER_SEL))) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            if (node.shadowRoot) shadowRoots.push(node.shadowRoot);
+            return NodeFilter.FILTER_SKIP;
+          }
+          return node.nodeType === 3 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+        };
+
+        const walker = document.createTreeWalker(
+          targetRoot,
+          NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+          { acceptNode },
+        );
         let n;
         while ((n = walker.nextNode())) {
           processTextNode(n, style);
         }
-      } finally {
-        applying = false;
+
+        for (const sr of shadowRoots) {
+          walkSubtree(sr, style);
+        }
+      } catch {} finally {
+        if (!wasApplying) {
+          // 吞掉本轮改写产生的自身变更记录，防止空转二次触发 observer
+          try { observer?.takeRecords?.(); } catch {}
+          applying = false;
+        }
+      }
+    }
+
+    function pruneTrackedRefs() {
+      if (trackedNodes.size > 600) {
+        for (const n of trackedNodes) {
+          if (!n || !n.isConnected) trackedNodes.delete(n);
+        }
+      }
+      if (trackedEls.size > 400) {
+        for (const el of trackedEls) {
+          if (!el || !el.isConnected) trackedEls.delete(el);
+        }
       }
     }
 
@@ -817,52 +919,189 @@ export function buildHostI18nRuntimeSnippet() {
       applying = true;
       try {
         for (const node of trackedNodes) {
-          if (node && node.isConnected && origTextMap.has(node)) {
-            node.nodeValue = origTextMap.get(node);
+          if (!node || !node.isConnected) continue;
+          const rec = nodeStateMap.get(node);
+          if (rec && rec.applied !== null && node.nodeValue === rec.applied) {
+            if (node.nodeValue !== rec.orig) node.nodeValue = rec.orig;
+            rec.applied = null;
           }
         }
         for (const el of trackedEls) {
-          if (el && el.isConnected && origAttrMap.has(el)) {
-            const rec = origAttrMap.get(el);
-            for (const [k, v] of Object.entries(rec)) {
-              el.setAttribute(k, v);
+          if (!el || !el.isConnected) continue;
+          const stateRec = attrStateMap.get(el);
+          if (!stateRec) continue;
+          for (const [k, rec] of Object.entries(stateRec)) {
+            if (!rec || rec.applied === null) continue;
+            const cur = el.getAttribute(k);
+            if (cur === rec.applied) {
+              if (cur !== rec.orig) el.setAttribute(k, rec.orig);
+              rec.applied = null;
             }
           }
         }
         trackedNodes.clear();
         trackedEls.clear();
-        origTextMap = new WeakMap();
-        origAttrMap = new WeakMap();
-      } finally {
+        pendingRoots.clear();
+        nodeStateMap = new WeakMap();
+        attrStateMap = new WeakMap();
+      } catch {} finally {
+        try { observer?.takeRecords?.(); } catch {}
         applying = false;
       }
     }
 
+    function flushPending() {
+      flushTimer = null;
+      if (disposed || applying) return;
+      const style = resolveEffectiveStyle();
+      if (style === 'off') {
+        pendingRoots.clear();
+        return;
+      }
+      const batch = Array.from(pendingRoots);
+      pendingRoots.clear();
+      if (batch.length === 0) return;
+
+      const rootHost = document.body || document.documentElement;
+      if (batch.length > 40) {
+        if (rootHost) walkSubtree(rootHost, style);
+        return;
+      }
+
+      const rootSet = new Set(batch);
+      for (const root of batch) {
+        if (!root || !root.isConnected) continue;
+        // 祖先节点也在本次队列中时直接合并跳过，避免重复子树扫描
+        let redundant = false;
+        let cur = root.parentNode;
+        while (cur) {
+          if (rootSet.has(cur)) { redundant = true; break; }
+          cur = cur.parentNode;
+        }
+        if (!redundant) walkSubtree(root, style);
+      }
+    }
+
+    function enqueueNode(node) {
+      if (!node || !node.isConnected) return;
+      if (node.nodeType === 3) {
+        const p = node.parentElement;
+        if (!p || shouldSkipElement(p)) return;
+        pendingRoots.add(node);
+        return;
+      }
+      if (node.nodeType === 1) {
+        if (SKIP_TAGS.has(node.tagName) && node.tagName !== 'TEXTAREA') return;
+        if (shouldSkipAttrElement(node)) return;
+        if (shouldSkipElement(node)) {
+          // 对跳过容器（如 contenteditable 输入框），仅允许包含待翻属性的元素入队
+          const hasAttr = ATTR_NAMES.some((a) => node.hasAttribute && node.hasAttribute(a));
+          if (!hasAttr) return;
+        }
+        pendingRoots.add(node);
+      }
+    }
+
+    function scheduleFlush() {
+      // 固定节流窗口（不 clearTimeout），彻底消灭高频 DOM 更新导致的防抖饥饿
+      if (flushTimer || disposed) return;
+      flushTimer = setTimeout(flushPending, 60);
+    }
+
+    function rescan(targetRoot) {
+      if (disposed || applying) return;
+      const style = resolveEffectiveStyle();
+      if (style === 'off') return;
+      const host = targetRoot || document.body || document.documentElement;
+      if (host) walkSubtree(host, style);
+    }
+
+    function onDocClickRescan() {
+      if (disposed || clickRescanTimer) return;
+      if (resolveEffectiveStyle() === 'off') return;
+      clickRescanTimer = setTimeout(() => {
+        clickRescanTimer = null;
+        if (!disposed) rescan();
+      }, 120);
+    }
+
+    function onWinFocusOrVisible() {
+      if (disposed) return;
+      if (typeof document.hidden === 'boolean' && document.hidden) return;
+      rescan();
+    }
+
+    function ensureListeners() {
+      if (listenersBound) return;
+      listenersBound = true;
+      document.addEventListener('click', onDocClickRescan, true);
+      window.addEventListener('focus', onWinFocusOrVisible);
+      document.addEventListener('visibilitychange', onWinFocusOrVisible);
+      if (!safetyTimer) {
+        safetyTimer = setInterval(() => {
+          if (disposed || applying) return;
+          if (typeof document.hidden === 'boolean' && document.hidden) return;
+          const style = resolveEffectiveStyle();
+          if (style === 'off') return;
+          const host = document.body || document.documentElement;
+          if (host) walkSubtree(host, style);
+          pruneTrackedRefs();
+        }, 1500);
+      }
+    }
+
+    function stopListeners() {
+      if (clickRescanTimer) { clearTimeout(clickRescanTimer); clickRescanTimer = null; }
+      if (safetyTimer) { clearInterval(safetyTimer); safetyTimer = null; }
+      if (listenersBound) {
+        listenersBound = false;
+        document.removeEventListener('click', onDocClickRescan, true);
+        window.removeEventListener('focus', onWinFocusOrVisible);
+        document.removeEventListener('visibilitychange', onWinFocusOrVisible);
+      }
+    }
+
     function ensureObserver() {
-      if (observer || !document.body) return;
-      observer = new MutationObserver(() => {
+      const targetRoot = document.documentElement || document.body;
+      if (observer || !targetRoot) return;
+      observer = new MutationObserver((records) => {
         if (disposed || applying) return;
         const style = resolveEffectiveStyle();
         if (style === 'off') return;
-        if (flushTimer) clearTimeout(flushTimer);
-        flushTimer = setTimeout(() => {
-          flushTimer = null;
-          if (!disposed) walkSubtree(document.body, resolveEffectiveStyle());
-        }, 80);
+        if (!records || records.length === 0) {
+          enqueueNode(document.body || document.documentElement);
+        } else {
+          for (let i = 0; i < records.length; i++) {
+            const rec = records[i];
+            if (rec.type === 'childList') {
+              const added = rec.addedNodes;
+              for (let j = 0; j < added.length; j++) {
+                enqueueNode(added[j]);
+              }
+            } else if (rec.type === 'characterData' || rec.type === 'attributes') {
+              enqueueNode(rec.target);
+            }
+          }
+        }
+        if (pendingRoots.size > 0) scheduleFlush();
       });
-      observer.observe(document.body, {
+      observer.observe(targetRoot, {
         childList: true,
         subtree: true,
         characterData: true,
+        attributes: true,
+        attributeFilter: ATTR_NAMES,
       });
     }
 
     function stopObserver() {
       if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+      pendingRoots.clear();
       if (observer) {
         observer.disconnect();
         observer = null;
       }
+      stopListeners();
     }
 
     function applyConfig(nextCfg) {
@@ -874,8 +1113,10 @@ export function buildHostI18nRuntimeSnippet() {
         restoreAllOriginal();
         return;
       }
-      if (document.body) walkSubtree(document.body, style);
+      const host = document.body || document.documentElement;
+      if (host) walkSubtree(host, style);
       ensureObserver();
+      ensureListeners();
     }
 
     function unmount() {
@@ -907,7 +1148,7 @@ export function buildHostI18nRuntimeSnippet() {
     }
 
     applyConfig(cfg);
-    const api = { applyConfig, unmount, getStats, resolveEffectiveStyle };
+    const api = { applyConfig, rescan, unmount, getStats, resolveEffectiveStyle };
     window.__GEMINEKO_I18N_API__ = api;
     return api;
   }

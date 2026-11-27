@@ -209,6 +209,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
 
   let stopped = false;
   let pollTimer = null;
+  let routeI18nTimer = null;
   let syncRaf = null;
   let domObserver = null;
   let anchorResizeObserver = null;
@@ -1039,6 +1040,12 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       lastPathname = location.pathname;
       if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
       pollActivity();
+      i18nEngine?.rescan?.();
+      if (routeI18nTimer) clearTimeout(routeI18nTimer);
+      routeI18nTimer = setTimeout(() => {
+        routeI18nTimer = null;
+        if (!stopped) i18nEngine?.rescan?.();
+      }, 180);
     }
     scheduleSync();
   };
@@ -1113,6 +1120,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   window.__GEMINEKO_CDP_UNMOUNT__ = () => {
     stopped = true;
     if (pollTimer) clearTimeout(pollTimer);
+    if (routeI18nTimer) { clearTimeout(routeI18nTimer); routeI18nTimer = null; }
     if (syncRaf) cancelAnimationFrame(syncRaf);
     if (domObserver) domObserver.disconnect();
     if (anchorResizeObserver) anchorResizeObserver.disconnect();

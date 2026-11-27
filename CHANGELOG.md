@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- **根治宿主汉化防抖饥饿、React 复用节点失译导致弹窗与输入栏退回英文（#8）**：
+  - 修复 [host-i18n-runtime.mjs](src/cdp/host-i18n-runtime.mjs) `MutationObserver` 尾部防抖在流式输出与实时刷新下的饥饿问题，改为固定 `60ms` 节流队列、补充 `attributes` 与开放 `ShadowRoot` 扫描、使用 `TreeWalker` 剪枝跳过正文/代码块，并增加 `1500ms` 安全网与点击/切页兜底重扫；
+  - 将原文本/属性缓存升级为 `{ orig, applied }` 双字段状态机，彻底解决 React 复用 `Text` 或 DOM 属性时因旧缓存失配导致的英文回退与切回英文错乱；
+  - 补全 `Keyboard shortcuts`、`Files Changed`、`Orchestrator <Model>`、`The voice used in Voice mode.` 与 `Powered by Gemini Live.` 词条，并在 [host-injector.mjs](src/cdp/host-injector.mjs) 路由切换时即时联动重扫。
+
 ## [0.8.1] - 2026-11-27
 
 ### Fixed
