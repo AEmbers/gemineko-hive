@@ -1305,6 +1305,24 @@ export function bootGeminekoHive() {
     if (isSwarmData && demoActive) {
       const snap = buildDemoSwarmSnapshot();
       ingestMembersFromSnap(snap);
+      let reqEtag = '';
+      try {
+        reqEtag = new URL(urlStr, window.location.origin).searchParams.get('etag') || '';
+      } catch {
+        /* ignore */
+      }
+      if (reqEtag && snap.etag && reqEtag === snap.etag) {
+        return new window.Response(
+          JSON.stringify({
+            conversationId: snap.conversationId,
+            swarm: snap.swarm,
+            member: snap.member,
+            unchanged: true,
+            etag: snap.etag,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
       return new window.Response(JSON.stringify(snap), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -1410,25 +1428,44 @@ export function bootGeminekoHive() {
     }
 
     let domSyncTimer = null;
-    const mo = new MutationObserver(() => {
-      if (domSyncTimer) return;
-      domSyncTimer = setTimeout(() => {
-        domSyncTimer = null;
-        mo.disconnect();
-        try {
-          installSwarmHiveHooks();
-          applyThemeAndLocale();
-          ensureEmptyStateDemoButton();
-          if (!document.getElementById('gemineko-toolbar')) {
-            renderToolbar();
-          }
-          enhanceDomSprites();
-        } finally {
-          if (document.body) {
-            mo.observe(document.body, { childList: true, subtree: true });
-          }
+    let domSyncMicro = false;
+    const runDomSync = () => {
+      domSyncTimer = null;
+      domSyncMicro = false;
+      mo.disconnect();
+      try {
+        installSwarmHiveHooks();
+        applyThemeAndLocale();
+        ensureEmptyStateDemoButton();
+        if (!document.getElementById('gemineko-toolbar')) {
+          renderToolbar();
         }
-      }, 80);
+        enhanceDomSprites();
+      } finally {
+        if (document.body) {
+          mo.observe(document.body, { childList: true, subtree: true });
+        }
+      }
+    };
+
+    const mo = new MutationObserver((mutations) => {
+      const urgent = mutations.some((m) => {
+        const t = m.target;
+        return t && (t.id === 'graph' || t.id === 'replay-label' || (typeof t.closest === 'function' && t.closest('svg#graph')));
+      });
+      if (urgent) {
+        if (domSyncTimer) {
+          clearTimeout(domSyncTimer);
+          domSyncTimer = null;
+        }
+        if (!domSyncMicro) {
+          domSyncMicro = true;
+          queueMicrotask(runDomSync);
+        }
+        return;
+      }
+      if (domSyncTimer || domSyncMicro) return;
+      domSyncTimer = setTimeout(runDomSync, 80);
     });
     if (document.body) {
       mo.observe(document.body, { childList: true, subtree: true });

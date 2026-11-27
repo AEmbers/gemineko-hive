@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1] - 2026-11-27
+
+### Fixed
+- **根治独立《基米窝》侧边栏每 1.5 秒闪烁一次的问题**：
+  - `src/sidecar/server.mjs` 在 `/api/swarm` 正式实现官方 `app.js` 约定的 `?etag=` 一致性协议（数据未变时返回 `{ unchanged: true, etag }`，彻底停止每 1.5s 重建 35 节点 SVG 图谱）；
+  - `src/theme/gemineko-runtime.js` 为 Demo 模式同步补充 `etag` 返回 `unchanged: true`，并对 `svg#graph` / `#replay-label` 的重建采用 `queueMicrotask` 同帧切换（真实消息推送时也消除 80ms 英文回闪）。
+
 ## [0.3.0] - 2026-11-27
 
 ### Added & Improved

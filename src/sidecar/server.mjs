@@ -186,7 +186,12 @@ function readReadOnlySwarmSnapshot(requestedConv, overrideAppDataDirs) {
     etag: `${chosen.conv}|${Math.floor(chosen.mtimeMs)}|${messages.length}`,
   };
 
-  return enrichSwarmMembersWithActivity(snapshot, dirs);
+  const enriched = enrichSwarmMembersWithActivity(snapshot, dirs);
+  const memberSig = Array.isArray(enriched.members)
+    ? enriched.members.map((m) => `${m.name}:${m.status}:${m.action || ''}`).join(',')
+    : '';
+  enriched.etag = `${chosen.conv}|${Math.floor(chosen.mtimeMs)}|${messages.length}|${memberSig}`;
+  return enriched;
 }
 
 /**
@@ -326,7 +331,7 @@ export async function createHiveSidecarServer(options = {}) {
     }
 
     if (req.method === 'GET' && pathname === '/healthz') {
-      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.3.0', sidecar: 'hive_board' });
+      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.3.1', sidecar: 'hive_board' });
       return;
     }
 
@@ -454,7 +459,19 @@ export async function createHiveSidecarServer(options = {}) {
         return;
       }
       const conv = String(urlObj.searchParams.get('conversationId') || '').trim();
-      sendJson(res, 200, readReadOnlySwarmSnapshot(conv, options.appDataDirs));
+      const reqEtag = String(urlObj.searchParams.get('etag') || '').trim();
+      const snap = readReadOnlySwarmSnapshot(conv, options.appDataDirs);
+      if (reqEtag && snap.etag && reqEtag === snap.etag) {
+        sendJson(res, 200, {
+          conversationId: snap.conversationId,
+          swarm: snap.swarm,
+          member: snap.member,
+          unchanged: true,
+          etag: snap.etag,
+        });
+        return;
+      }
+      sendJson(res, 200, snap);
       return;
     }
 

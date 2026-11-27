@@ -272,7 +272,7 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
   try {
     const hz = await srv.inject({ url: '/healthz' });
     assert.equal(hz.statusCode, 200);
-    assert.equal(hz.json().version, '0.3.0');
+    assert.equal(hz.json().version, '0.3.1');
 
     const preloadRes = await srv.inject({ url: '/preload.js' });
     assert.equal(preloadRes.statusCode, 200);
@@ -310,6 +310,13 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
     assert.equal(sw.members.length, 2);
     assert.equal(sw.members[0].geminekoRole, 'neon');
     assert.equal(sw.members[1].geminekoRole, 'claude');
+
+    const swUnchangedRes = await srv.inject({
+      url: `/api/swarm?conversationId=${sb.convId}&etag=${encodeURIComponent(sw.etag)}`,
+    });
+    assert.equal(swUnchangedRes.statusCode, 200);
+    assert.equal(swUnchangedRes.json().unchanged, true);
+    assert.equal(swUnchangedRes.json().etag, sw.etag);
 
     const unauth = await srv.inject({ method: 'POST', url: '/api/native-patch/apply' });
     assert.equal(unauth.statusCode, 403);
