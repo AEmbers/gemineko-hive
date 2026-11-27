@@ -125,7 +125,7 @@ function createFakeSwarmSandbox() {
   return { root, swarmDir, origIndex, origMain, origLogoSvg, logoSvgPath: path.join(assetsDir, 'logo.svg'), appDataDir, convDir, convId };
 }
 
-test('35 张角色×动作 384x384 PNG 立绘全部就绪且具备 RGBA 透明通道（含抱臂仰头思考 ponder）', () => {
+test('35 张角色×动作 512x512 PNG 立绘全部就绪且具备 RGBA 透明通道（含抱臂仰头思考 ponder）', () => {
   const roles = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'];
   const actions = ['thinking', 'reading', 'editing', 'running', 'asking', 'ponder', 'idle'];
   const spritesDir = path.join(REPO_ROOT, 'assets', 'sprites');
@@ -136,8 +136,8 @@ test('35 张角色×动作 384x384 PNG 立绘全部就绪且具备 RGBA 透明�
       assert.ok(fs.existsSync(filePath), `缺少精灵图: ${role}-${action}.png`);
       const buf = fs.readFileSync(filePath);
       assert.equal(buf.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', `${role}-${action}.png 不是合法 PNG`);
-      assert.equal(buf.readUInt32BE(16), 384, `${role}-${action}.png 宽度应为 384`);
-      assert.equal(buf.readUInt32BE(20), 384, `${role}-${action}.png 高度应为 384`);
+      assert.equal(buf.readUInt32BE(16), 512, `${role}-${action}.png 宽度应为 512`);
+      assert.equal(buf.readUInt32BE(20), 512, `${role}-${action}.png 高度应为 512`);
       // PNG IHDR byte 25 为 colorType，6 表示带 Alpha 透明通道的 RGBA
       assert.equal(buf[25], 6, `${role}-${action}.png 应为 RGBA(colorType=6) 透明 PNG`);
       // 校验包含 APNG acTL 动画块且帧数 >= 2
@@ -153,8 +153,9 @@ test('35 张角色×动作 384x384 PNG 立绘全部就绪且具备 RGBA 透明�
     assert.ok(fs.existsSync(gemPath), `缺少首页 3D 星钻素材: ${gemName}`);
     const buf = fs.readFileSync(gemPath);
     assert.equal(buf.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', `${gemName} 不是合法 PNG`);
-    assert.equal(buf.readUInt32BE(16), 1024, `${gemName} 宽度应为 1024`);
-    assert.equal(buf.readUInt32BE(20), 1024, `${gemName} 高度应为 1024`);
+    const gemW = buf.readUInt32BE(16);
+    const gemH = buf.readUInt32BE(20);
+    assert.ok(gemW >= 256 && gemW === gemH, `${gemName} 应为 >=256 的正方形高清 PNG，实际为 ${gemW}x${gemH}`);
     assert.equal(buf[25], 6, `${gemName} 应为 RGBA(colorType=6) 透明 PNG`);
   }
 });
@@ -307,11 +308,13 @@ test('原生 Swarm 补丁器支持 25 态精灵路由、无损替换 logo.svg �
 test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口测试', async () => {
   const { outPath: bundlePath } = buildGeminekoBundle();
   const sb = createFakeSwarmSandbox();
+  const spriteCacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gemineko-sprite-cache-'));
   const srv = await createHiveSidecarServer({
     port: 0,
     bundlePath,
     swarmDir: sb.swarmDir,
     appDataDirs: [sb.appDataDir],
+    spriteCacheDir,
     sideToken: 'test-hive-secret',
     enableCdp: false,
   });
@@ -342,6 +345,22 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
     assert.equal(spriteRes.headers.get('access-control-allow-origin'), '*');
     const spriteBuf = Buffer.from(await spriteRes.arrayBuffer());
     assert.equal(spriteBuf.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+    assert.equal(spriteBuf.readUInt32BE(16), 512);
+
+    for (const [tier, expectedSize] of [['384', 384], ['512', 512], ['1024', 1024]]) {
+      const tr = await fetch(`${srv.origin}/gemineko-sprites/neon-thinking.png?q=${tier}`);
+      assert.equal(tr.status, 200);
+      const tb = Buffer.from(await tr.arrayBuffer());
+      assert.equal(tb.readUInt32BE(16), expectedSize, `q=${tier} 宽度应为 ${expectedSize}`);
+      assert.equal(tb.readUInt32BE(20), expectedSize, `q=${tier} 高度应为 ${expectedSize}`);
+      assert.equal(tb[25], 6, `q=${tier} 应保留 RGBA 透明通道`);
+      const actl = tb.indexOf(Buffer.from('acTL'));
+      assert.ok(actl > 0 && tb.readUInt32BE(actl + 4) >= 2, `q=${tier} 应保留 APNG 多帧动画`);
+    }
+    const hitRes = await fetch(`${srv.origin}/gemineko-sprites/neon-thinking.png?q=384`);
+    assert.equal(hitRes.status, 200);
+    assert.equal(hitRes.headers.get('x-gemineko-sprite-cache'), 'hit');
+    fs.rmSync(spriteCacheDir, { recursive: true, force: true });
 
     const liveRes = await srv.inject({ url: '/api/live-activity' });
     assert.equal(liveRes.statusCode, 200);
@@ -501,6 +520,9 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(ROLE_PALETTES.neon.crestTitle, 'NEON · GEMINEKO');
   assert.equal(sanitizeHostThemeConfig({ spinnerStyle: 'invalid' }).spinnerStyle, 'role-motif');
   assert.equal(sanitizeHostThemeConfig({ spinnerStyle: 'paw-bounce' }).spinnerStyle, 'paw-bounce');
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.spriteQuality, '512');
+  assert.equal(sanitizeHostThemeConfig({ spriteQuality: '1024' }).spriteQuality, '1024');
+  assert.equal(sanitizeHostThemeConfig({ spriteQuality: '999' }).spriteQuality, '512');
   assert.equal(parseMemeCaptionFromText('[表情: 测试全绿通过]'), '测试全绿通过');
   assert.equal(parseMemeCaptionFromText('普通文本不含贴纸'), null);
   assert.equal(resolveSpriteFile('hydrogen', 'ponder'), 'hydrogen-ponder.png');
@@ -749,6 +771,7 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(bundleContent, /hostFontScale/);
     assert.match(bundleContent, /gemineko_typography_v1/);
     assert.match(bundleContent, /gn-font-val/);
+    assert.match(bundleContent, /data-ws-sprite-q/);
     assert.match(bundleContent, /\.gn-live-sub[\s\S]{0,160}--gn-font-scale/);
     assert.match(bundleContent, /image-rendering:\s*auto\s*!important/);
     assert.match(bundleContent, /\.msg-av\.bee\s*\{[\s\S]{0,180}--gn-font-scale/);

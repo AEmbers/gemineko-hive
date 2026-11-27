@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 动态 Q 版精灵构建脚本（32-bit RGBA 透明无限循环 APNG，128x128）
+ * 动态 Q 版精灵构建脚本（32-bit RGBA 透明无限循环 APNG，默认 512x512）
  * 支持两种输入源：
  *  1. 多帧动画文件（.gif / 多帧 .png）
  *  2. 2x2 网格动作精灵表（.png / .jpg / .webp）
@@ -37,7 +37,7 @@ input_path = cfg["input"]
 output_path = cfg["output"]
 mode = cfg.get("mode", "auto")
 default_duration = int(cfg.get("duration", 210))
-target_size = int(cfg.get("size", 128))
+target_size = int(cfg.get("size", 512))
 margin_trim_ratio = float(cfg.get("trim", 0.025))
 
 def is_white_bg(r, g, b, a):
@@ -151,8 +151,9 @@ for rf in raw_frames:
 
 max_cw = max(f.width for f in cropped_frames)
 max_ch = max(f.height for f in cropped_frames)
-usable_w = target_size - 8   # 左右各留 4px 安全边距
-usable_h = target_size - 8   # 上下各留 4px 安全边距
+pad = max(4, int(round(target_size * 0.025)))
+usable_w = target_size - pad * 2   # 左右安全边距
+usable_h = target_size - pad * 2   # 上下安全边距
 scale = min(usable_w / float(max_cw), usable_h / float(max_ch))
 
 out_frames = []
@@ -165,7 +166,7 @@ for cf in cropped_frames:
     resized = cf.resize((nw, nh), Image.Resampling.LANCZOS)
     canvas = Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
     px_x = (target_size - nw) // 2
-    px_y = target_size - 4 - nh   # 贴底对齐，避免高低跳跃
+    px_y = target_size - pad - nh   # 贴底对齐，避免高低跳跃
     canvas.paste(resized, (px_x, px_y), resized)
     cpx = canvas.load()
     corners = [cpx[0,0][3], cpx[target_size-1,0][3], cpx[0,target_size-1][3], cpx[target_size-1,target_size-1][3]]
@@ -184,7 +185,7 @@ out_frames[0].save(
     duration=durations,
     loop=0,
     disposal=2,
-    optimize=False,
+    compress_level=9,
 )
 
 # 回读验证 acTL chunk 与尺寸
@@ -209,8 +210,8 @@ print(json.dumps({
 }, ensure_ascii=False))
 `;
 
-export function buildSingleAnimatedSprite({ input, output, mode = 'auto', duration = 210, trim = 0.025 }) {
-  const payload = JSON.stringify({ input, output, mode, duration, trim, size: 128 });
+export function buildSingleAnimatedSprite({ input, output, mode = 'auto', duration = 210, trim = 0.025, size = 512 }) {
+  const payload = JSON.stringify({ input, output, mode, duration, trim, size: Number(size) || 512 });
   const res = spawnSync('python', ['-c', PY_BUILD_APNG, payload], {
     encoding: 'utf8',
     timeout: 60_000,
@@ -265,6 +266,7 @@ if (isMain) {
   const mode = args.mode || 'auto';
   const duration = Number(args.duration || 210);
   const trim = args.trim !== undefined ? Number(args.trim) : 0.025;
+  const size = Number(args.size || 512);
 
   if (args.input && args.output) {
     const info = buildSingleAnimatedSprite({
@@ -273,6 +275,7 @@ if (isMain) {
       mode,
       duration,
       trim,
+      size,
     });
     console.log(JSON.stringify(info, null, 2));
   } else if (args['raw-dir']) {
@@ -291,7 +294,7 @@ if (isMain) {
     for (const [stem, fname] of chosen.entries()) {
       const inPath = path.join(rawDir, fname);
       const outPath = path.join(outDir, `${stem}.png`);
-      const info = buildSingleAnimatedSprite({ input: inPath, output: outPath, mode, duration, trim });
+      const info = buildSingleAnimatedSprite({ input: inPath, output: outPath, mode, duration, trim, size });
       results.push(info);
       console.log(`[build-apng] ${stem}.png <- ${fname} (${info.actlFrames} frames, ${Math.round(info.byteSize / 1024)} KB)`);
     }

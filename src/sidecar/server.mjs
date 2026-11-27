@@ -14,12 +14,14 @@ import { createServer } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { enrichSwarmMembersWithActivity, findActiveConversationActivity } from '../activity-tracker.mjs';
 import { CdpHostInjector } from '../cdp/host-injector.mjs';
 import { BRAND_META } from '../meta/brand.mjs';
 import { applyNativePatch, getNativePatchStatus, resolveSwarmPaths, restoreNativePatch } from '../native-patcher.mjs';
 import { buildDemoSwarmSnapshot } from '../theme/demo-data.js';
 import {
+  ALLOWED_SPRITE_QUALITIES,
   ROLE_PALETTES,
   THEME_PRESETS,
   createThemeConfigStore,
@@ -28,6 +30,42 @@ import {
 } from '../theme/host-theme-config.mjs';
 import { createThemePackManager } from '../theme/theme-store.mjs';
 import { createGithubPulseService } from './github-pulse.mjs';
+
+const execFileAsync = promisify(execFile);
+const PY_RESIZE_APNG = String.raw`
+import os, sys, json
+from PIL import Image, ImageSequence
+
+src_path, dst_path, size_str = sys.argv[1], sys.argv[2], sys.argv[3]
+target = int(size_str)
+os.makedirs(os.path.dirname(os.path.abspath(dst_path)), exist_ok=True)
+tmp_path = f"{dst_path}.{os.getpid()}.tmp"
+
+im = Image.open(src_path)
+frames = []
+durations = []
+for f in ImageSequence.Iterator(im):
+    rgba = f.convert("RGBA")
+    if rgba.size != (target, target):
+        rgba = rgba.resize((target, target), Image.Resampling.LANCZOS)
+    frames.append(rgba)
+    durations.append(int(f.info.get("duration", 210) or 210))
+
+if len(frames) > 1:
+    frames[0].save(
+        tmp_path,
+        format="PNG",
+        save_all=True,
+        append_images=frames[1:],
+        duration=durations,
+        loop=0,
+        disposal=2,
+        compress_level=6,
+    )
+else:
+    frames[0].save(tmp_path, format="PNG", compress_level=6)
+os.replace(tmp_path, dst_path)
+`;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
@@ -348,6 +386,51 @@ export async function createHiveSidecarServer(options = {}) {
     disableNetwork: options.disableNetwork,
   });
   const themeEvents = { seq: 0, latest: null };
+  const spriteCacheDir = options.spriteCacheDir
+    ? path.resolve(options.spriteCacheDir)
+    : path.join(os.homedir(), '.gemini', 'gemineko-hive', 'sprite-cache');
+  const spriteResizeJobs = new Map();
+
+  async function resolveTieredSpriteBuffer(absFile, fileName, requestedQ) {
+    const q = ALLOWED_SPRITE_QUALITIES.has(String(requestedQ || '')) ? String(requestedQ) : '512';
+    if (q === '512' || fileName.startsWith('home-star-gem-')) {
+      return { buf: fs.readFileSync(absFile), quality: '512', cache: 'master' };
+    }
+    let st;
+    try {
+      st = fs.statSync(absFile);
+    } catch {
+      return { buf: fs.readFileSync(absFile), quality: '512', cache: 'master' };
+    }
+    const tierDir = path.join(spriteCacheDir, q);
+    const stem = path.parse(fileName).name;
+    const cacheFile = path.join(tierDir, `${stem}-${st.size}-${Math.trunc(st.mtimeMs)}.png`);
+    if (fs.existsSync(cacheFile)) {
+      return { buf: fs.readFileSync(cacheFile), quality: q, cache: 'hit' };
+    }
+    const jobKey = `${q}:${cacheFile}`;
+    let job = spriteResizeJobs.get(jobKey);
+    if (!job) {
+      job = (async () => {
+        try {
+          fs.mkdirSync(tierDir, { recursive: true });
+          await execFileAsync('python', ['-c', PY_RESIZE_APNG, absFile, cacheFile, q], {
+            timeout: 30_000,
+          });
+          if (fs.existsSync(cacheFile)) {
+            return { buf: fs.readFileSync(cacheFile), quality: q, cache: 'miss' };
+          }
+        } catch {
+          /* fallback to master 512 */
+        }
+        return { buf: fs.readFileSync(absFile), quality: '512', cache: 'fallback' };
+      })().finally(() => {
+        spriteResizeJobs.delete(jobKey);
+      });
+      spriteResizeJobs.set(jobKey, job);
+    }
+    return job;
+  }
 
   function getEnrichedThemeConfig(baseCfg = themeStore.get()) {
     const packId = String(baseCfg?.activeThemePackId || 'official-gemineko');
@@ -672,13 +755,18 @@ export async function createHiveSidecarServer(options = {}) {
           return;
         }
       }
+      const rawQ = String(urlObj.searchParams.get('q') || themeStore.get()?.spriteQuality || '512');
+      const requestedQ = ALLOWED_SPRITE_QUALITIES.has(rawQ) ? rawQ : '512';
+      const resolved = await resolveTieredSpriteBuffer(absFile, path.basename(absFile), requestedQ);
       res.writeHead(200, {
         ...CORS_HEADERS,
         'Content-Type': 'image/png',
         'Cache-Control': 'no-cache',
+        'X-Gemineko-Sprite-Quality': resolved.quality,
+        'X-Gemineko-Sprite-Cache': resolved.cache,
         ...(isFallback ? { 'X-Gemineko-Fallback': '1' } : {}),
       });
-      res.end(fs.readFileSync(absFile));
+      res.end(resolved.buf);
       return;
     }
 

@@ -220,6 +220,33 @@ export function bootGeminekoHive() {
   }
 
   const TYPO_STORAGE_KEY = 'gemineko_typography_v1';
+  const SPRITE_Q_KEY = 'gemineko_sprite_quality_v1';
+
+  function normalizeSpriteQ(val) {
+    const s = String(val || '');
+    return s === '384' || s === '512' || s === '1024' ? s : '';
+  }
+
+  function readLocalSpriteQ() {
+    try {
+      return normalizeSpriteQ(localStorage.getItem(SPRITE_Q_KEY));
+    } catch {
+      return '';
+    }
+  }
+
+  function writeLocalSpriteQ(q) {
+    const clean = normalizeSpriteQ(q);
+    if (!clean) return '';
+    try { localStorage.setItem(SPRITE_Q_KEY, clean); } catch {}
+    return clean;
+  }
+
+  function getActiveSpriteQuality() {
+    return normalizeSpriteQ(lastSidecarThemeConfig?.spriteQuality) || readLocalSpriteQ() || '512';
+  }
+
+  let lastSpriteQuality = getActiveSpriteQuality();
 
   function readLocalTypography() {
     try {
@@ -253,18 +280,41 @@ export function bootGeminekoHive() {
 
   function mergeTypographyConfig(cfg) {
     if (!cfg || typeof cfg !== 'object') return cfg;
-    if (cfg.typography && typeof cfg.typography === 'object') {
-      writeLocalTypography(cfg.typography);
-      return cfg;
+    let out = cfg;
+    if (out.typography && typeof out.typography === 'object') {
+      writeLocalTypography(out.typography);
+    } else {
+      const localTypo = readLocalTypography();
+      if (localTypo) out = { ...out, typography: localTypo };
     }
-    const localTypo = readLocalTypography();
-    return localTypo ? { ...cfg, typography: localTypo } : cfg;
+    const cfgQ = normalizeSpriteQ(out.spriteQuality);
+    if (cfgQ) {
+      writeLocalSpriteQ(cfgQ);
+    } else {
+      const localQ = readLocalSpriteQ();
+      if (localQ) out = { ...out, spriteQuality: localQ };
+    }
+    return out;
   }
 
   function syncSidecarHostTheme(cfg) {
+    const prevQ = lastSpriteQuality;
     if (cfg && typeof cfg === 'object') {
       lastSidecarThemeConfig = mergeTypographyConfig(cfg);
       lastSidecarThemeTs = Number(cfg.updatedAt || 0);
+    }
+    const nextQ = getActiveSpriteQuality();
+    if (nextQ !== prevQ) {
+      lastSpriteQuality = nextQ;
+      try { chibiAvatarCache.clear(); chibiRawImgCache.clear(); } catch {}
+      try { refreshAllSprites(); } catch {}
+      const liveImg = document.querySelector('.gn-live-avatar');
+      if (liveImg && typeof resolveLiveSpriteUrl === 'function') {
+        const nextUrl = resolveLiveSpriteUrl(lastLiveActivity || {});
+        liveImg.dataset.gnFallback = '0';
+        liveImg.setAttribute('data-src', nextUrl);
+        liveImg.src = nextUrl;
+      }
     }
     const cur = lastSidecarThemeConfig;
     const root = document.documentElement;
@@ -497,7 +547,7 @@ export function bootGeminekoHive() {
   function getChibiSpriteUrl(role, action) {
     const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
     const a = ['thinking', 'reading', 'editing', 'running', 'asking', 'idle'].includes(action) ? action : 'thinking';
-    return `${getSpriteBaseUrl()}/${r}-${a}.png?v=0.5.0`;
+    return `${getSpriteBaseUrl()}/${r}-${a}.png?q=${getActiveSpriteQuality()}&v=0.7.6`;
   }
 
   function resolveLiveSpriteUrl(act) {
@@ -507,7 +557,7 @@ export function bootGeminekoHive() {
     const validFile = /^(neon|hydrogen|carbon|claude|gpt)-(thinking|reading|editing|running|asking|idle)\.png$/i.test(rawFile)
       ? rawFile.toLowerCase()
       : `${r}-${a}.png`;
-    return `${getSpriteBaseUrl()}/${validFile}?v=0.5.0`;
+    return `${getSpriteBaseUrl()}/${validFile}?q=${getActiveSpriteQuality()}&v=0.7.6`;
   }
 
   function attachSpriteFallback(imgEl, role) {
@@ -517,7 +567,7 @@ export function bootGeminekoHive() {
       if (imgEl.dataset.gnFallback === '1') return;
       imgEl.dataset.gnFallback = '1';
       const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
-      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?v=0.5.0`;
+      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?q=${getActiveSpriteQuality()}&v=0.7.6`;
     });
   }
 

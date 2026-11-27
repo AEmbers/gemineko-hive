@@ -831,6 +831,27 @@ function createThemeWorkshopController(deps) {
   };
 
   const TYPO_STORAGE_KEY = 'gemineko_typography_v1';
+  const SPRITE_Q_KEY = 'gemineko_sprite_quality_v1';
+
+  function normalizeSpriteQ(val) {
+    const s = String(val || '');
+    return s === '384' || s === '512' || s === '1024' ? s : '';
+  }
+
+  function readLocalSpriteQ() {
+    try {
+      return normalizeSpriteQ(localStorage.getItem(SPRITE_Q_KEY));
+    } catch {
+      return '';
+    }
+  }
+
+  function writeLocalSpriteQ(q) {
+    const clean = normalizeSpriteQ(q);
+    if (!clean) return '';
+    try { localStorage.setItem(SPRITE_Q_KEY, clean); } catch {}
+    return clean;
+  }
 
   function readLocalTypo() {
     try {
@@ -857,14 +878,22 @@ function createThemeWorkshopController(deps) {
     return clean;
   }
 
-  function withLocalTypo(cfg, fallbackTypo) {
+  function withLocalTypo(cfg, fallbackTypo, fallbackSpriteQ) {
     if (!cfg || typeof cfg !== 'object') return cfg;
-    if (cfg.typography && typeof cfg.typography === 'object') {
-      writeLocalTypo(cfg.typography);
-      return cfg;
+    const out = { ...cfg };
+    if (out.typography && typeof out.typography === 'object') {
+      writeLocalTypo(out.typography);
+    } else {
+      out.typography = fallbackTypo || readLocalTypo() || { sidecarFontSize: 14, hostFontScale: 100 };
     }
-    const typo = fallbackTypo || readLocalTypo() || { sidecarFontSize: 14, hostFontScale: 100 };
-    return { ...cfg, typography: typo };
+    const cfgQ = normalizeSpriteQ(out.spriteQuality);
+    if (cfgQ) {
+      writeLocalSpriteQ(cfgQ);
+      out.spriteQuality = cfgQ;
+    } else {
+      out.spriteQuality = normalizeSpriteQ(fallbackSpriteQ) || readLocalSpriteQ() || '512';
+    }
+    return out;
   }
 
   function notifyHostTheme(cfg) {
@@ -952,11 +981,20 @@ function createThemeWorkshopController(deps) {
 
   async function savePatch(patch) {
     let optimisticTypo = null;
+    let optimisticQ = '';
     if (patch?.typography && typeof patch.typography === 'object') {
       optimisticTypo = writeLocalTypo({ ...(state.config?.typography || readLocalTypo() || { sidecarFontSize: 14, hostFontScale: 100 }), ...patch.typography });
       if (state.config && optimisticTypo) {
         state.config = { ...state.config, typography: optimisticTypo };
         notifyHostTheme(state.config);
+      }
+    }
+    if (patch?.spriteQuality) {
+      optimisticQ = writeLocalSpriteQ(patch.spriteQuality);
+      if (state.config && optimisticQ) {
+        state.config = { ...state.config, spriteQuality: optimisticQ };
+        notifyHostTheme(state.config);
+        render();
       }
     }
     try {
@@ -965,7 +1003,7 @@ function createThemeWorkshopController(deps) {
         body: JSON.stringify(patch),
       });
       if (data?.ok && data.config) {
-        state.config = withLocalTypo(data.config, optimisticTypo);
+        state.config = withLocalTypo(data.config, optimisticTypo, optimisticQ);
         notifyHostTheme(state.config);
         render();
         showWorkshopToast(data.warning ? `已保存，壁纸提示：${data.warning}` : '✨ 已即时同步到主窗口与基米窝', Boolean(data.warning));
@@ -976,11 +1014,15 @@ function createThemeWorkshopController(deps) {
   }
 
   async function resetConfig() {
-    try { localStorage.removeItem(TYPO_STORAGE_KEY); } catch {}
+    try { localStorage.removeItem(TYPO_STORAGE_KEY); localStorage.removeItem(SPRITE_Q_KEY); } catch {}
     try {
       const data = await deps.hostApi('/api/theme/reset', { method: 'POST', body: '{}' });
       if (data?.ok && data.config) {
-        state.config = data.config.typography ? data.config : { ...data.config, typography: { sidecarFontSize: 14, hostFontScale: 100 } };
+        state.config = {
+          ...data.config,
+          typography: data.config.typography || { sidecarFontSize: 14, hostFontScale: 100 },
+          spriteQuality: normalizeSpriteQ(data.config.spriteQuality) || '512',
+        };
         notifyHostTheme(state.config);
         render();
         showWorkshopToast('已恢复默认《基米窝》官方旗舰配置');
@@ -1333,6 +1375,12 @@ function createThemeWorkshopController(deps) {
               <span>主窗口字号缩放 <strong data-ws-typo-val="hostFontScale">${c.typography?.hostFontScale ?? 100}%</strong></span>
               <input type="range" min="85" max="135" step="5" value="${c.typography?.hostFontScale ?? 100}" data-ws-typo-range="hostFontScale" />
             </label>
+            <div class="gn-font-box-head" style="margin-top:4px;">🖼️ 立绘清晰度</div>
+            <div class="gn-font-presets">
+              <button type="button" class="gn-pill ${(c.spriteQuality || '512') === '384' ? 'is-primary' : ''}" data-ws-sprite-q="384">轻量 384px</button>
+              <button type="button" class="gn-pill ${(c.spriteQuality || '512') === '512' ? 'is-primary' : ''}" data-ws-sprite-q="512">超清 512px</button>
+              <button type="button" class="gn-pill ${(c.spriteQuality || '512') === '1024' ? 'is-primary' : ''}" data-ws-sprite-q="1024">极致 1024px</button>
+            </div>
           </div>
         </div>
 
@@ -1535,6 +1583,13 @@ function createThemeWorkshopController(deps) {
         const key = fontPresetBtn.getAttribute('data-ws-font-preset');
         const map = { compact: { sidecarFontSize: 12, hostFontScale: 95 }, normal: { sidecarFontSize: 14, hostFontScale: 100 }, comfort: { sidecarFontSize: 16, hostFontScale: 110 }, large: { sidecarFontSize: 18, hostFontScale: 120 } };
         void savePatch({ typography: map[key] || map.normal });
+        return;
+      }
+      const spriteQBtn = e.target.closest('[data-ws-sprite-q]');
+      if (spriteQBtn) {
+        const q = spriteQBtn.getAttribute('data-ws-sprite-q') || '512';
+        writeLocalSpriteQ(q);
+        void savePatch({ spriteQuality: q });
         return;
       }
       const eggBtn = e.target.closest('[data-ws-egg]');
@@ -1921,6 +1976,33 @@ function bootGeminekoHive() {
   }
 
   const TYPO_STORAGE_KEY = 'gemineko_typography_v1';
+  const SPRITE_Q_KEY = 'gemineko_sprite_quality_v1';
+
+  function normalizeSpriteQ(val) {
+    const s = String(val || '');
+    return s === '384' || s === '512' || s === '1024' ? s : '';
+  }
+
+  function readLocalSpriteQ() {
+    try {
+      return normalizeSpriteQ(localStorage.getItem(SPRITE_Q_KEY));
+    } catch {
+      return '';
+    }
+  }
+
+  function writeLocalSpriteQ(q) {
+    const clean = normalizeSpriteQ(q);
+    if (!clean) return '';
+    try { localStorage.setItem(SPRITE_Q_KEY, clean); } catch {}
+    return clean;
+  }
+
+  function getActiveSpriteQuality() {
+    return normalizeSpriteQ(lastSidecarThemeConfig?.spriteQuality) || readLocalSpriteQ() || '512';
+  }
+
+  let lastSpriteQuality = getActiveSpriteQuality();
 
   function readLocalTypography() {
     try {
@@ -1954,18 +2036,41 @@ function bootGeminekoHive() {
 
   function mergeTypographyConfig(cfg) {
     if (!cfg || typeof cfg !== 'object') return cfg;
-    if (cfg.typography && typeof cfg.typography === 'object') {
-      writeLocalTypography(cfg.typography);
-      return cfg;
+    let out = cfg;
+    if (out.typography && typeof out.typography === 'object') {
+      writeLocalTypography(out.typography);
+    } else {
+      const localTypo = readLocalTypography();
+      if (localTypo) out = { ...out, typography: localTypo };
     }
-    const localTypo = readLocalTypography();
-    return localTypo ? { ...cfg, typography: localTypo } : cfg;
+    const cfgQ = normalizeSpriteQ(out.spriteQuality);
+    if (cfgQ) {
+      writeLocalSpriteQ(cfgQ);
+    } else {
+      const localQ = readLocalSpriteQ();
+      if (localQ) out = { ...out, spriteQuality: localQ };
+    }
+    return out;
   }
 
   function syncSidecarHostTheme(cfg) {
+    const prevQ = lastSpriteQuality;
     if (cfg && typeof cfg === 'object') {
       lastSidecarThemeConfig = mergeTypographyConfig(cfg);
       lastSidecarThemeTs = Number(cfg.updatedAt || 0);
+    }
+    const nextQ = getActiveSpriteQuality();
+    if (nextQ !== prevQ) {
+      lastSpriteQuality = nextQ;
+      try { chibiAvatarCache.clear(); chibiRawImgCache.clear(); } catch {}
+      try { refreshAllSprites(); } catch {}
+      const liveImg = document.querySelector('.gn-live-avatar');
+      if (liveImg && typeof resolveLiveSpriteUrl === 'function') {
+        const nextUrl = resolveLiveSpriteUrl(lastLiveActivity || {});
+        liveImg.dataset.gnFallback = '0';
+        liveImg.setAttribute('data-src', nextUrl);
+        liveImg.src = nextUrl;
+      }
     }
     const cur = lastSidecarThemeConfig;
     const root = document.documentElement;
@@ -2198,7 +2303,7 @@ function bootGeminekoHive() {
   function getChibiSpriteUrl(role, action) {
     const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
     const a = ['thinking', 'reading', 'editing', 'running', 'asking', 'idle'].includes(action) ? action : 'thinking';
-    return `${getSpriteBaseUrl()}/${r}-${a}.png?v=0.5.0`;
+    return `${getSpriteBaseUrl()}/${r}-${a}.png?q=${getActiveSpriteQuality()}&v=0.7.6`;
   }
 
   function resolveLiveSpriteUrl(act) {
@@ -2208,7 +2313,7 @@ function bootGeminekoHive() {
     const validFile = /^(neon|hydrogen|carbon|claude|gpt)-(thinking|reading|editing|running|asking|idle)\.png$/i.test(rawFile)
       ? rawFile.toLowerCase()
       : `${r}-${a}.png`;
-    return `${getSpriteBaseUrl()}/${validFile}?v=0.5.0`;
+    return `${getSpriteBaseUrl()}/${validFile}?q=${getActiveSpriteQuality()}&v=0.7.6`;
   }
 
   function attachSpriteFallback(imgEl, role) {
@@ -2218,7 +2323,7 @@ function bootGeminekoHive() {
       if (imgEl.dataset.gnFallback === '1') return;
       imgEl.dataset.gnFallback = '1';
       const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
-      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?v=0.5.0`;
+      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?q=${getActiveSpriteQuality()}&v=0.7.6`;
     });
   }
 

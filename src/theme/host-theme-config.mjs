@@ -44,6 +44,7 @@ export const ALLOWED_WATERMARK_ROLES = new Set([
 ]);
 export const ALLOWED_I18N_MODES = new Set(['auto', 'neko-zh', 'zh', 'off']);
 export const ALLOWED_I18N_AUTO_STYLES = new Set(['neko-zh', 'zh']);
+export const ALLOWED_SPRITE_QUALITIES = new Set(['384', '512', '1024']);
 export const ALLOWED_WALLPAPER_MODES = new Set([
   'off',
   'builtin-starry',
@@ -480,6 +481,7 @@ export const DEFAULT_HOST_THEME_CONFIG = {
     sidecarFontSize: 14,
     hostFontScale: 100,
   },
+  spriteQuality: '512',
   updatedAt: 0,
 };
 
@@ -724,6 +726,9 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
       sidecarFontSize: Math.round(clampNumber(srcTypo.sidecarFontSize, 11, 22, bTypo.sidecarFontSize ?? 14)),
       hostFontScale: Math.round(clampNumber(srcTypo.hostFontScale, 85, 135, bTypo.hostFontScale ?? 100)),
     },
+    spriteQuality: ALLOWED_SPRITE_QUALITIES.has(String(src.spriteQuality || ''))
+      ? String(src.spriteQuality)
+      : (ALLOWED_SPRITE_QUALITIES.has(String(b.spriteQuality || '')) ? String(b.spriteQuality) : '512'),
     updatedAt: Number.isFinite(Number(src.updatedAt)) ? Number(src.updatedAt) : Date.now(),
   };
 }
