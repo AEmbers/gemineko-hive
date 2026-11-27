@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.6] - 2026-11-27
+
+### Fixed
+- **重构 `ask_question` 提问舞台为无损 CSS Grid「上题目 / 左下哈基米 / 右下选项」并同步真实编号气泡**：
+  - 针对宿主 React `Fragment` 将 `<style>`、选项组（`role="radiogroup"` / 多选列表）与底部 `Other / Skip / 提交` 行同级平铺在 `flex-col` 容器内的真实结构，在不改变 React 节点父子关系（零卸载崩溃风险）的前提下，将 `.gk-ask-split-row` 升级为 `display: grid; grid-template-columns: 108px minmax(0, 1fr)` 并配合 `--gk-ask-rows` 跨行对齐，彻底修复旧版 `flex-col` 覆盖导致哈基米居中偏右独占整行的问题；
+  - 重写 `findActiveAskQuestionPanel()` 与 `syncAskQuestionStage()`：精准识别 `label[data-testid="ask-question-option"]`、`[data-testid="ask-question-writein"]` 与 `[data-testid="ask-question-header-text"]`，按选项真实快捷徽章（如 `1? 2? 3? 4?` 或 `A? B?`）渲染思考气泡，支持悬停/聚焦实时高亮及多题切换（`optList` 重建）自动重挂载。
+
 ## [0.6.5] - 2026-11-27
 
 ### Changed & Restored

@@ -650,6 +650,11 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /--gk-rx/);
     assert.match(cdpScript, /gk-ask-thought-bubble/);
     assert.match(cdpScript, /gk-ask-ponder-img/);
+    assert.match(cdpScript, /grid-template-columns:\s*108px minmax\(0,\s*1fr\)/);
+    assert.match(cdpScript, /--gk-ask-rows/);
+    assert.match(cdpScript, /ask-question-option/);
+    assert.match(cdpScript, /ask-question-shortcut-badge/);
+    assert.match(cdpScript, /ask-question-header-text/);
     assert.match(cdpScript, /-ponder\.png/);
     assert.match(cdpScript, /initHostMemeEngine/);
     assert.match(cdpScript, /--gk-catnest-pattern/);

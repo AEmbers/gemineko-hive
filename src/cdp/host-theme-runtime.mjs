@@ -1173,7 +1173,7 @@ html[data-gk-smooth="1"] * { scroll-behavior: smooth; }
   border: 1px solid color-mix(in srgb, var(--gk-role-primary) 26%, transparent);
 }
 
-/* === 7.5 提问模式 (ask_question) 主题舞台：上问题 / 左下抱臂仰头思考+ABCD?轮盘气泡 / 右下选项 === */
+/* === 7.5 提问模式 (ask_question) 主题舞台：上问题 / 左下抱臂仰头思考+真实编号气泡 / 右下选项+Other+提交 === */
 html[data-gk-theme] [data-gk-ask-stage="1"] {
   position: relative !important;
   border-radius: var(--nux-radius-xl, 18px) !important;
@@ -1196,30 +1196,54 @@ html[data-gk-theme] [data-gk-ask-stage="1"]::before {
   pointer-events: none;
 }
 .gk-ask-split-row {
-  display: flex !important;
-  align-items: flex-end !important;
-  gap: 14px !important;
+  display: grid !important;
+  grid-template-columns: 108px minmax(0, 1fr) !important;
+  grid-auto-rows: min-content !important;
+  column-gap: 12px !important;
+  row-gap: 6px !important;
+  align-items: end !important;
   width: 100% !important;
   margin-top: 6px !important;
 }
+.gk-ask-split-row > style {
+  display: none !important;
+}
+.gk-ask-split-row > .gk-ask-header-span {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+}
+.gk-ask-split-row > .gk-ask-mascot-col {
+  grid-column: 1 !important;
+  grid-row: var(--gk-ask-row-start, 1) / span var(--gk-ask-rows, 2) !important;
+  align-self: end !important;
+  justify-self: center !important;
+}
+.gk-ask-split-row > :not(.gk-ask-mascot-col):not(.gk-ask-header-span):not(style) {
+  grid-column: 2 !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
 .gk-ask-mascot-col {
-  width: 136px;
+  width: 108px !important;
   flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
   gap: 4px;
-  padding: 4px 2px 2px;
+  padding: 2px 0;
   user-select: none;
 }
 .gk-ask-thought-bubble {
   position: relative;
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 5px 10px;
+  max-width: 106px;
+  gap: 4px;
+  row-gap: 2px;
+  padding: 4px 8px;
   border-radius: 14px;
   background: color-mix(in srgb, var(--gk-popover-bg, var(--card)) 94%, var(--gk-role-primary) 6%);
   border: 1.5px solid color-mix(in srgb, var(--gk-role-primary) 42%, transparent);
@@ -1264,16 +1288,16 @@ html[data-gk-theme] [data-gk-ask-stage="1"]::before {
   color: var(--gk-role-accent2, var(--gk-role-primary));
 }
 img.gk-ask-ponder-img {
-  width: 96px !important;
-  height: 96px !important;
+  width: 88px !important;
+  height: 88px !important;
   object-fit: contain !important;
   background: transparent !important;
   display: block;
   filter: drop-shadow(0 6px 14px var(--gk-role-glow));
 }
 .gk-ask-options-col {
-  flex: 1 1 auto !important;
   min-width: 0 !important;
+  width: auto !important;
 }
 
 /* === 8. 壁纸 / 极光 / 发光彩色 SVG 爪印星尘雨 / 气泡 / 大纲 / 右键菜单 === */
@@ -2406,9 +2430,12 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
     }
 
     let askStageRef = null;
+    let askOptListRef = null;
+    let askLabelsSig = '';
     let askRouletteTimer = null;
     let askHoveredIdx = -1;
     let askLitIdx = 0;
+    let askOptCount = 2;
 
     function clearAskStage() {
       if (askRouletteTimer) {
@@ -2417,32 +2444,62 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       }
       if (askStageRef && askStageRef.isConnected) {
         askStageRef.removeAttribute('data-gk-ask-stage');
-        const col = askStageRef.querySelector('.gk-ask-mascot-col');
-        if (col) col.remove();
+        askStageRef.querySelectorAll('.gk-ask-mascot-col').forEach((col) => col.remove());
         askStageRef.querySelectorAll('.gk-ask-split-row').forEach((row) => {
           row.classList.remove('gk-ask-split-row');
+          row.style.removeProperty('--gk-ask-rows');
+          row.style.removeProperty('--gk-ask-row-start');
         });
         askStageRef.querySelectorAll('.gk-ask-options-col').forEach((oc) => {
           oc.classList.remove('gk-ask-options-col');
         });
+        askStageRef.querySelectorAll('.gk-ask-header-span').forEach((hs) => {
+          hs.classList.remove('gk-ask-header-span');
+        });
       }
       askStageRef = null;
+      askOptListRef = null;
+      askLabelsSig = '';
       askHoveredIdx = -1;
     }
 
     function findActiveAskQuestionPanel() {
-      const explicit = document.querySelector('[data-testid*="ask-question"]:not([data-testid*="readonly"]), [data-testid="question-panel"]');
-      if (explicit && explicit.offsetHeight > 40) return explicit;
-      const box = document.getElementById('antigravity.agentSidePanelInputBox');
       const scope = document.querySelector('[data-testid="conversation-view"]') || document.body;
       if (!scope) return null;
-      const candGroups = scope.querySelectorAll('[role="radiogroup"], [data-testid*="question"]');
+      const box = document.getElementById('antigravity.agentSidePanelInputBox');
+      const boxBottom = box ? box.getBoundingClientRect().bottom : Infinity;
+
+      const optSeeds = [...scope.querySelectorAll('[data-testid="ask-question-option"], [data-testid="ask-question-writein"]')];
+      for (const seed of optSeeds) {
+        if (seed.closest('[data-testid*="readonly"], #gemineko-home-stage, #gemineko-cdp-composer-dock')) continue;
+        const r = seed.getBoundingClientRect();
+        if (r.width < 80 || r.height < 14 || r.top > boxBottom) continue;
+        let cur = seed.parentElement;
+        let fallbackCard = null;
+        while (cur && cur !== scope && cur !== document.body && cur !== document.documentElement) {
+          if (box && cur.contains(box)) break;
+          if (cur.matches?.('[data-testid="conversation-view"], [data-testid="autoscroll-viewport"]')) break;
+          const hasHeader = Boolean(cur.querySelector('[data-testid="ask-question-header-text"]'));
+          const cls = typeof cur.className === 'string' ? cur.className : '';
+          if (hasHeader && /(?:border|rounded|shadow|card|bg-)/.test(cls)) {
+            return cur;
+          }
+          if (hasHeader && !fallbackCard) fallbackCard = cur;
+          cur = cur.parentElement;
+        }
+        if (fallbackCard) return fallbackCard;
+      }
+
+      const explicit = document.querySelector('[data-testid="question-panel"]:not([data-testid*="readonly"])');
+      if (explicit && explicit.offsetHeight > 40) return explicit;
+
+      const candGroups = scope.querySelectorAll('[role="radiogroup"]');
       for (const g of candGroups) {
         if (g.closest('[data-testid*="readonly"], #gemineko-home-stage, #gemineko-cdp-composer-dock')) continue;
         const r = g.getBoundingClientRect();
         if (r.width < 180 || r.height < 48) continue;
-        if (box && r.top > box.getBoundingClientRect().bottom) continue;
-        const btns = g.querySelectorAll('button, [role="radio"], [role="option"]');
+        if (box && r.top > boxBottom) continue;
+        const btns = g.querySelectorAll('label[data-testid="ask-question-option"], button, [role="radio"], [role="option"]');
         if (btns.length >= 2) {
           return g.closest('form, section, [class*="card"], [class*="border"]') || g.parentElement || g;
         }
@@ -2452,9 +2509,43 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
 
     function updateAskBubbleLit(bubble, count) {
       if (!bubble) return;
-      const idx = askHoveredIdx >= 0 && askHoveredIdx < count ? askHoveredIdx : (askLitIdx % Math.max(1, count));
+      const total = Math.max(1, count || askOptCount);
+      const idx = askHoveredIdx >= 0 && askHoveredIdx < total ? askHoveredIdx : (askLitIdx % total);
       bubble.querySelectorAll('.gk-ask-opt-letter').forEach((el, i) => {
         el.classList.toggle('is-lit', i === idx);
+      });
+    }
+
+    function resolveAskOptionList(panel) {
+      const rg = panel.querySelector('[role="radiogroup"]');
+      if (rg) return rg;
+      const firstOpt = panel.querySelector('label[data-testid="ask-question-option"]');
+      if (firstOpt) {
+        const allCount = panel.querySelectorAll('label[data-testid="ask-question-option"]').length;
+        let cur = firstOpt.parentElement;
+        while (cur && cur !== panel) {
+          if (cur.querySelectorAll('label[data-testid="ask-question-option"]').length >= allCount) {
+            return cur;
+          }
+          cur = cur.parentElement;
+        }
+      }
+      return [...panel.children].find((ch) => ch.querySelectorAll('button, [role="radio"], [role="option"]').length >= 2) || null;
+    }
+
+    function renderAskBubbleLetters(bubble, labels) {
+      if (!bubble) return;
+      bubble.textContent = '';
+      labels.forEach((label, i) => {
+        const span = document.createElement('span');
+        span.className = 'gk-ask-opt-letter' + (i === 0 ? ' is-lit' : '');
+        span.setAttribute('data-idx', String(i));
+        span.appendChild(document.createTextNode(label));
+        const q = document.createElement('em');
+        q.className = 'gk-ask-q';
+        q.textContent = '?';
+        span.appendChild(q);
+        bubble.appendChild(span);
       });
     }
 
@@ -2470,57 +2561,114 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       }
 
       const activeRole = ROLE_PALETTES[roleId] ? roleId : 'neon';
-      const optList = panel.querySelector('[role="radiogroup"]')
-        || [...panel.children].find((ch) => ch.querySelectorAll('button, [role="radio"], [role="option"]').length >= 2);
+      const optList = resolveAskOptionList(panel);
       if (!optList || !optList.parentElement) return;
-
-      const optItems = [...optList.querySelectorAll('button, [role="radio"], [role="option"]')]
-        .filter((b) => !/^(?:submit|skip|cancel|提交|跳过|取消)$/i.test((b.textContent || '').trim()))
-        .slice(0, 6);
-      const optCount = Math.max(2, Math.min(6, optItems.length || 4));
       const splitParent = optList.parentElement;
 
-      if (askStageRef !== panel) {
-        clearAskStage();
+      let optItems = [...splitParent.querySelectorAll('label[data-testid="ask-question-option"]')];
+      const writeInLabel = splitParent.querySelector('[data-testid="ask-question-writein"]')?.closest('label');
+      if (writeInLabel && !optItems.includes(writeInLabel)) {
+        optItems.push(writeInLabel);
+      }
+      if (optItems.length === 0) {
+        optItems = [...optList.querySelectorAll('button, [role="radio"], [role="option"]')]
+          .filter((b) => !/^(?:submit|skip|cancel|continue|提交|继续|跳过|取消)$/i.test((b.textContent || '').trim()));
+      }
+      optItems = optItems.slice(0, 6);
+
+      const rawLabels = optItems.map((el, i) => {
+        const badge = el.querySelector('[data-testid="ask-question-shortcut-badge"], [data-testid="ask-question-writein-shortcut-badge"]');
+        const txt = (badge?.textContent || '').trim();
+        return txt || 'ABCDEF'[i] || String(i + 1);
+      });
+      const optLabels = rawLabels.length >= 2 ? rawLabels : ['A', 'B'];
+      askOptCount = optLabels.length;
+      const labelsSig = optLabels.join('|');
+
+      let headerRowSpan = false;
+      for (const ch of [...splitParent.children]) {
+        if (ch.classList?.contains('gk-ask-mascot-col')) continue;
+        if (ch.querySelector?.('[data-testid="ask-question-header-text"]')) {
+          ch.classList.add('gk-ask-header-span');
+          headerRowSpan = true;
+        } else {
+          ch.classList?.remove('gk-ask-header-span');
+        }
+      }
+      const rightCols = [...splitParent.children].filter((ch) => (
+        ch.tagName !== 'STYLE' &&
+        !ch.classList?.contains('gk-ask-mascot-col') &&
+        !ch.classList?.contains('gk-ask-header-span')
+      ));
+      splitParent.style.setProperty('--gk-ask-row-start', headerRowSpan ? '2' : '1');
+      splitParent.style.setProperty('--gk-ask-rows', String(Math.max(1, rightCols.length)));
+
+      const existingMascot = splitParent.querySelector(':scope > .gk-ask-mascot-col');
+      const needsRemount = (
+        askStageRef !== panel ||
+        askOptListRef !== optList ||
+        askLabelsSig !== labelsSig ||
+        !existingMascot
+      );
+
+      if (needsRemount) {
+        if (askStageRef && askStageRef !== panel) {
+          clearAskStage();
+        }
         askStageRef = panel;
+        askOptListRef = optList;
+        askLabelsSig = labelsSig;
+        askHoveredIdx = -1;
+        askLitIdx = 0;
+
         panel.setAttribute('data-gk-ask-stage', '1');
         splitParent.classList.add('gk-ask-split-row');
         optList.classList.add('gk-ask-options-col');
 
-        const mascotCol = document.createElement('div');
-        mascotCol.className = 'gk-ask-mascot-col';
-        const letters = 'ABCDEF'.slice(0, optCount).split('');
-        mascotCol.innerHTML = \`
-          <div class="gk-ask-thought-bubble">
-            \${letters.map((ch, i) => \`<span class="gk-ask-opt-letter \${i === 0 ? 'is-lit' : ''}" data-idx="\${i}">\${ch}<em class="gk-ask-q">?</em></span>\`).join('')}
-          </div>
-          <img class="gk-ask-ponder-img" alt="pondering" />
-        \`;
-        splitParent.insertBefore(mascotCol, optList);
+        let mascotCol = existingMascot;
+        if (!mascotCol) {
+          mascotCol = document.createElement('div');
+          mascotCol.className = 'gk-ask-mascot-col';
+          mascotCol.innerHTML = '<div class="gk-ask-thought-bubble"></div><img class="gk-ask-ponder-img" alt="pondering" />';
+          splitParent.insertBefore(mascotCol, optList);
+        }
+        const bubble = mascotCol.querySelector('.gk-ask-thought-bubble');
+        renderAskBubbleLetters(bubble, optLabels);
+        updateAskBubbleLit(bubble, askOptCount);
 
         optItems.forEach((btn, idx) => {
+          btn.dataset.gkAskIdx = String(idx);
           if (btn.dataset.gkAskHover === '1') return;
           btn.dataset.gkAskHover = '1';
           btn.addEventListener('mouseenter', () => {
-            askHoveredIdx = idx;
-            updateAskBubbleLit(mascotCol.querySelector('.gk-ask-thought-bubble'), optCount);
+            askHoveredIdx = Number(btn.dataset.gkAskIdx ?? -1);
+            updateAskBubbleLit(askStageRef?.querySelector('.gk-ask-thought-bubble'), askOptCount);
           });
           btn.addEventListener('mouseleave', () => {
             askHoveredIdx = -1;
-            updateAskBubbleLit(mascotCol.querySelector('.gk-ask-thought-bubble'), optCount);
+            updateAskBubbleLit(askStageRef?.querySelector('.gk-ask-thought-bubble'), askOptCount);
+          });
+          btn.addEventListener('focusin', () => {
+            const nextIdx = Number(btn.dataset.gkAskIdx ?? -1);
+            if (nextIdx >= 0) {
+              askLitIdx = nextIdx;
+              updateAskBubbleLit(askStageRef?.querySelector('.gk-ask-thought-bubble'), askOptCount);
+            }
           });
         });
 
-        askRouletteTimer = setInterval(() => {
-          if (!askStageRef || !askStageRef.isConnected) {
-            clearAskStage();
-            return;
-          }
-          if (askHoveredIdx < 0 && getMotionEnabled()) {
-            askLitIdx = (askLitIdx + 1) % optCount;
-            updateAskBubbleLit(askStageRef.querySelector('.gk-ask-thought-bubble'), optCount);
-          }
-        }, 950);
+        if (!askRouletteTimer) {
+          askRouletteTimer = setInterval(() => {
+            if (!askStageRef || !askStageRef.isConnected) {
+              clearAskStage();
+              return;
+            }
+            if (askHoveredIdx < 0 && getMotionEnabled()) {
+              askLitIdx = (askLitIdx + 1) % Math.max(1, askOptCount);
+              updateAskBubbleLit(askStageRef.querySelector('.gk-ask-thought-bubble'), askOptCount);
+            }
+          }, 950);
+        }
       }
 
       const img = panel.querySelector('img.gk-ask-ponder-img');
