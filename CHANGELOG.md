@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1] - 2026-11-27
+
+### Fixed
+- **修正彩蛋贴图角色为正宗 Gemini 社区二创同人猫娘（哈基米本人）并消除叠罗汉**：
+  - 严格基于角色三视图 [q-hydrogen.png](assets/triviews/q-hydrogen.png) 与哈气参考 [hiss-warning.webp](assets/sprites/neon-thinking.png) 重绘 [egg-spinosaurus-hiss.png](assets/sprites/egg-spinosaurus-hiss.png)、[egg-maodie-boss.png](assets/sprites/egg-maodie-boss.png) 与 [egg-greenbean-soy.png](assets/sprites/egg-greenbean-soy.png)，全部保留蓝紫渐变双丸子卷发、粉金异瞳与四芒星发卡特征；
+  - 将 [host-easter-eggs-runtime.mjs](src/cdp/host-easter-eggs-runtime.mjs) 的「脊背龙形态」与「圆头耄耋护主」升级为**原位立绘变身替换**（配合 [host-injector.mjs](src/cdp/host-injector.mjs) 与 [host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs) 轮询锁止保护），触发时原地变成新造型并在 3.4~3.6 秒后还原，彻底消灭两张图上下叠罗汉。
+
 ## [0.8.0] - 2026-11-27
 
 ### Added

@@ -34,6 +34,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
     const inlineClickState = new WeakMap();
     const outlineFlipHistory = [];
     let spinoTimer = null;
+    let maodieTimer = null;
 
     const FORTUNE_QUOTES = [
       '上上签：今日代码零报错，南北绿豆浆管饱 🫛',
@@ -116,7 +117,12 @@ export function buildHostEasterEggsRuntimeSnippet() {
   0% { opacity: 0; transform: translate(-50%, -18px) scale(0.9); }
   100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
-/* 1. 脊背龙形态：极怒哈气 Dock */
+/* 1. 脊背龙形态：原地变身 Dock（零叠罗汉） */
+#\${ctx.dockId}.gk-egg-spino-active .gk-dock-cat {
+  filter: drop-shadow(0 0 18px rgba(236, 72, 153, 0.85)) !important;
+  transform: scale(1.12);
+  transition: transform 0.25s cubic-bezier(.22,1.5,.4,1), filter 0.25s ease;
+}
 #\${ctx.dockId}.gk-egg-spino-active .gk-dock-badge {
   border-color: rgba(244, 63, 94, 0.85) !important;
   box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.35), 0 14px 32px -10px rgba(244, 63, 94, 0.55) !important;
@@ -129,22 +135,6 @@ export function buildHostEasterEggsRuntimeSnippet() {
 @keyframes gkSpinoJitter {
   0% { transform: translate(-1.5px, 0) rotate(-0.8deg); }
   100% { transform: translate(1.5px, -1.5px) rotate(0.8deg); }
-}
-.gk-egg-spino-pop {
-  position: fixed;
-  z-index: 2147483645;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  animation: gkSpinoBurst 0.28s cubic-bezier(.2,1.5,.4,1);
-}
-.gk-egg-spino-pop img {
-  width: 118px;
-  height: 118px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 16px rgba(236, 72, 153, 0.72));
 }
 .gk-egg-spino-wave {
   position: fixed;
@@ -575,6 +565,47 @@ export function buildHostEasterEggsRuntimeSnippet() {
       ctx.showSpeechBubble?.(text, 2800, { x, y, role });
     }
 
+    function restoreDockSpinosaurus() {
+      const dock = document.getElementById(ctx.dockId);
+      if (!dock) return;
+      dock.classList.remove('gk-egg-spino-active');
+      const img = dock.querySelector('img.gk-dock-sprite');
+      const phase = dock.querySelector('.gk-phase');
+      const action = dock.querySelector('.gk-action');
+      if (img && img.dataset.gkOrigSrc) {
+        img.setAttribute('data-src', img.dataset.gkOrigDataSrc || img.dataset.gkOrigSrc);
+        img.src = img.dataset.gkOrigSrc;
+        delete img.dataset.gkOrigSrc;
+        delete img.dataset.gkOrigDataSrc;
+      }
+      if (phase && phase.dataset.gkSavedTxt !== undefined) {
+        phase.textContent = phase.dataset.gkSavedTxt;
+        delete phase.dataset.gkSavedTxt;
+      }
+      if (action && action.dataset.gkSavedTxt !== undefined) {
+        action.textContent = action.dataset.gkSavedTxt;
+        delete action.dataset.gkSavedTxt;
+      }
+    }
+
+    function restoreWatermarkMaodie() {
+      const wm = document.getElementById('gemineko-corner-watermark');
+      if (!wm) return;
+      wm.classList.remove('gk-egg-maodie-active');
+      const img = wm.querySelector('img.gk-wm-sprite');
+      const tag = wm.querySelector('.gk-wm-tag');
+      if (img && img.dataset.gkOrigWmSrc) {
+        img.setAttribute('data-src', img.dataset.gkOrigWmDataSrc || img.dataset.gkOrigWmSrc);
+        img.src = img.dataset.gkOrigWmSrc;
+        delete img.dataset.gkOrigWmSrc;
+        delete img.dataset.gkOrigWmDataSrc;
+      }
+      if (tag && tag.dataset.gkOrigWmTag !== undefined) {
+        tag.textContent = tag.dataset.gkOrigWmTag;
+        delete tag.dataset.gkOrigWmTag;
+      }
+    }
+
     // ========================================================
     // 10 个主窗口自研控件专属哈基米热梗彩蛋
     // ========================================================
@@ -587,40 +618,34 @@ export function buildHostEasterEggsRuntimeSnippet() {
       const y = anchor?.y || r.top;
 
       if (dock) {
-        dock.classList.add('gk-egg-spino-active');
+        const img = dock.querySelector('img.gk-dock-sprite');
         const phase = dock.querySelector('.gk-phase');
         const action = dock.querySelector('.gk-action');
-        if (phase && !phase.dataset.gkSavedTxt) phase.dataset.gkSavedTxt = phase.textContent || '';
-        if (action && !action.dataset.gkSavedTxt) action.dataset.gkSavedTxt = action.textContent || '';
+        if (img && !img.dataset.gkOrigSrc) {
+          img.dataset.gkOrigSrc = img.src || '';
+          img.dataset.gkOrigDataSrc = img.getAttribute('data-src') || '';
+        }
+        if (phase && phase.dataset.gkSavedTxt === undefined) phase.dataset.gkSavedTxt = phase.textContent || '';
+        if (action && action.dataset.gkSavedTxt === undefined) action.dataset.gkSavedTxt = action.textContent || '';
+        dock.classList.add('gk-egg-spino-active');
+        if (img) {
+          const spinoUrl = \`\${ctx.server}/gemineko-sprites/egg-spinosaurus-hiss.png?v=0.8.1\`;
+          img.setAttribute('data-src', spinoUrl);
+          img.src = spinoUrl;
+        }
         if (phase) phase.textContent = '⚡ 脊背龙形态';
         if (action) action.textContent = '极怒哈气戒备';
         if (spinoTimer) clearTimeout(spinoTimer);
         spinoTimer = setManagedTimeout(() => {
           spinoTimer = null;
-          dock.classList.remove('gk-egg-spino-active');
-          if (phase && phase.dataset.gkSavedTxt) {
-            phase.textContent = phase.dataset.gkSavedTxt;
-            delete phase.dataset.gkSavedTxt;
-          }
-          if (action && action.dataset.gkSavedTxt) {
-            action.textContent = action.dataset.gkSavedTxt;
-            delete action.dataset.gkSavedTxt;
-          }
+          restoreDockSpinosaurus();
         }, 3600);
       }
 
-      document.querySelectorAll('.gk-egg-spino-pop, .gk-egg-spino-wave').forEach((n) => n.remove());
-      const pop = document.createElement('div');
-      pop.className = 'gk-egg-spino-pop ' + OVERLAY_CLASS;
-      pop.innerHTML = \`<img src="\${ctx.server}/gemineko-sprites/egg-spinosaurus-hiss.png?v=0.8.0" alt="脊背龙形态" />\`;
-      pop.style.left = Math.max(16, Math.min(window.innerWidth - 136, Math.round(r.left + 6))) + 'px';
-      pop.style.top = Math.max(20, Math.round(r.top - 118)) + 'px';
-      document.body?.appendChild(pop);
-      setManagedTimeout(() => { if (pop.isConnected) pop.remove(); }, 3500);
-
+      document.querySelectorAll('.gk-egg-spino-wave').forEach((n) => n.remove());
       const waveDirs = [
         ['嘶哈——！！', -52, -48],
-        ['脊背龙警戒！', 44, -64],
+        ['脊背龙形态！', 44, -64],
         ['哈基米炸毛！！', 84, -30],
       ];
       waveDirs.forEach(([txt, wx, wy], idx) => {
@@ -661,7 +686,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
       cup.style.left = Math.max(96, Math.min(window.innerWidth - 96, Math.round(cx))) + 'px';
       cup.style.top = Math.max(18, Math.round(cy - 138)) + 'px';
       cup.innerHTML = \`
-        <img src="\${ctx.server}/gemineko-sprites/egg-greenbean-soy.png?v=0.8.0" alt="南北绿豆浆" />
+        <img src="\${ctx.server}/gemineko-sprites/egg-greenbean-soy.png?v=0.8.1" alt="南北绿豆浆" />
         <div class="gk-egg-bean-banner">🫛 既见哈基，为何不咪 · 南北绿豆浆已满杯</div>
       \`;
       document.body?.appendChild(cup);
@@ -728,21 +753,43 @@ export function buildHostEasterEggsRuntimeSnippet() {
     function runWatermarkMaodie() {
       ensureStyle();
       const wm = document.getElementById('gemineko-corner-watermark');
-      if (wm) {
-        wm.classList.add('gk-egg-maodie-active');
-        setManagedTimeout(() => wm.classList.remove('gk-egg-maodie-active'), 3400);
-      }
       document.querySelectorAll('.gk-egg-maodie-card').forEach((n) => n.remove());
-      const card = document.createElement('div');
-      card.className = 'gk-egg-maodie-card ' + OVERLAY_CLASS;
-      card.innerHTML = \`
-        <img src="\${ctx.server}/gemineko-sprites/egg-maodie-boss.png?v=0.8.0" alt="圆头耄耋" />
-        <div class="gk-egg-maodie-halo">👑 圆头耄耋 · 博古架护主降临</div>
-      \`;
-      document.body?.appendChild(card);
-      setManagedTimeout(() => { if (card.isConnected) card.remove(); }, 3400);
 
-      spawnFloatingMsg(window.innerWidth - 130, window.innerHeight - 235, '阁下也是来挑战博古架的？哈气预警！😾', 'claude');
+      if (wm && wm.isConnected) {
+        const img = wm.querySelector('img.gk-wm-sprite');
+        const tag = wm.querySelector('.gk-wm-tag');
+        if (img && !img.dataset.gkOrigWmSrc) {
+          img.dataset.gkOrigWmSrc = img.src || '';
+          img.dataset.gkOrigWmDataSrc = img.getAttribute('data-src') || '';
+        }
+        if (tag && tag.dataset.gkOrigWmTag === undefined) {
+          tag.dataset.gkOrigWmTag = tag.textContent || '';
+        }
+        wm.classList.add('gk-egg-maodie-active');
+        if (img) {
+          const bossUrl = \`\${ctx.server}/gemineko-sprites/egg-maodie-boss.png?v=0.8.1\`;
+          img.setAttribute('data-src', bossUrl);
+          img.src = bossUrl;
+        }
+        if (tag) tag.textContent = '👑 圆头耄耋 · 哈基米护主';
+        if (maodieTimer) clearTimeout(maodieTimer);
+        maodieTimer = setManagedTimeout(() => {
+          maodieTimer = null;
+          restoreWatermarkMaodie();
+        }, 3400);
+        const wr = wm.getBoundingClientRect();
+        spawnFloatingMsg(wr.left + wr.width / 2, wr.top, '阁下也是来挑战博古架的？哈气预警！😾', 'claude');
+      } else {
+        const card = document.createElement('div');
+        card.className = 'gk-egg-maodie-card ' + OVERLAY_CLASS;
+        card.innerHTML = \`
+          <img src="\${ctx.server}/gemineko-sprites/egg-maodie-boss.png?v=0.8.1" alt="圆头耄耋" />
+          <div class="gk-egg-maodie-halo">👑 圆头耄耋 · 博古架护主降临</div>
+        \`;
+        document.body?.appendChild(card);
+        setManagedTimeout(() => { if (card.isConnected) card.remove(); }, 3400);
+        spawnFloatingMsg(window.innerWidth - 130, window.innerHeight - 235, '阁下也是来挑战博古架的？哈气预警！😾', 'claude');
+      }
       playEggSfx('maodie');
       unlockEgg('watermark-maodie');
     }
@@ -1018,9 +1065,9 @@ export function buildHostEasterEggsRuntimeSnippet() {
           👑 13/13 全彩蛋收集完成 · 至尊圆头耄耋星河大阅兵 👑
         </div>
         <div class="gk-egg-supreme-trio">
-          <img src="\${ctx.server}/gemineko-sprites/egg-spinosaurus-hiss.png?v=0.8.0" alt="脊背龙" />
-          <img class="is-king" src="\${ctx.server}/gemineko-sprites/egg-maodie-boss.png?v=0.8.0" alt="至尊圆头耄耋" />
-          <img src="\${ctx.server}/gemineko-sprites/egg-greenbean-soy.png?v=0.8.0" alt="南北绿豆浆" />
+          <img src="\${ctx.server}/gemineko-sprites/egg-spinosaurus-hiss.png?v=0.8.1" alt="脊背龙" />
+          <img class="is-king" src="\${ctx.server}/gemineko-sprites/egg-maodie-boss.png?v=0.8.1" alt="至尊圆头耄耋" />
+          <img src="\${ctx.server}/gemineko-sprites/egg-greenbean-soy.png?v=0.8.1" alt="南北绿豆浆" />
         </div>
       \`;
       document.body?.appendChild(stage);
@@ -1162,11 +1209,9 @@ export function buildHostEasterEggsRuntimeSnippet() {
       intervals.clear();
       document.removeEventListener('dblclick', onDocDblClick, true);
       document.removeEventListener('click', onDocClick, true);
+      restoreDockSpinosaurus();
+      restoreWatermarkMaodie();
       document.querySelectorAll('.' + OVERLAY_CLASS + ', #' + TOAST_ID + ', .gk-egg-code-stamp').forEach((n) => n.remove());
-      const dock = document.getElementById(ctx.dockId);
-      if (dock) dock.classList.remove('gk-egg-spino-active');
-      document.getElementById('gemineko-home-stage')?.classList.remove('gk-egg-mambo-dance');
-      document.getElementById('gemineko-corner-watermark')?.classList.remove('gk-egg-maodie-active');
       document.getElementById('gemineko-dock-minibar')?.classList.remove('gk-egg-rave-mode');
       try { audioCtx?.close?.(); } catch {}
       audioCtx = null;

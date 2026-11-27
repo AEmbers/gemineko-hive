@@ -1,6 +1,6 @@
 {
   "name": "gemineko-hive",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Gemineko Hive · 基米窝：面向 Google Antigravity 的开源主题引擎 × 社区主题商店（3D 晶透猫耳星钻、社区主题包热插拔、一键导出投稿与 GitHub Star/更新推送、25 态哈基米看板与可选全量汉化）",
   "type": "module",
   "license": "MIT",

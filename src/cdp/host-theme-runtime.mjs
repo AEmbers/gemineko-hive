@@ -2746,6 +2746,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         crest.setAttribute('data-role', wmRole);
         crest.innerHTML = ROLE_CREST_SVGS[wmRole] || ROLE_CREST_SVGS.neon;
       }
+      const maodieActive = wm.classList.contains('gk-egg-maodie-active');
       const img = wm.querySelector('img.gk-wm-sprite');
       if (img) {
         if (img.dataset.gkErrBound !== '1') {
@@ -2753,18 +2754,18 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           img.addEventListener('error', () => {
             if (img.dataset.gkFb === '1') return;
             img.dataset.gkFb = '1';
-            img.src = img.dataset.gkFallbackSrc || \`\${ctx.server}/gemineko-sprites/neon-thinking.png?q=\${getSpriteQuality()}&v=0.7.10\`;
+            img.src = img.dataset.gkFallbackSrc || \`\${ctx.server}/gemineko-sprites/neon-thinking.png?q=\${getSpriteQuality()}&v=0.8.1\`;
           });
         }
         img.dataset.gkFallbackSrc = fallbackUrl;
-        if (img.getAttribute('data-src') !== spriteUrl) {
+        if (!maodieActive && img.getAttribute('data-src') !== spriteUrl) {
           img.dataset.gkFb = '0';
           img.setAttribute('data-src', spriteUrl);
           img.src = spriteUrl;
         }
       }
       const tag = wm.querySelector('.gk-wm-tag');
-      if (tag) {
+      if (tag && !maodieActive) {
         const nextTitle = pal.crestTitle || \`\${wmRole.toUpperCase()} · GEMINEKO\`;
         if (tag.textContent !== nextTitle) tag.textContent = nextTitle;
       }

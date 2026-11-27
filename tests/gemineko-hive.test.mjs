@@ -1111,10 +1111,12 @@ test('13 控件哈基米专属彩蛋目录、3 张专属 PNG、配置清洗、�
   });
 
   try {
-    const eggImg = await srv.inject({ url: '/gemineko-sprites/egg-maodie-boss.png?v=0.8.0' });
+    const eggImg = await srv.inject({ url: '/gemineko-sprites/egg-maodie-boss.png?v=0.8.1' });
     assert.equal(eggImg.statusCode, 200);
     assert.equal(eggImg.headers['content-type'], 'image/png');
     assert.equal(eggImg.headers['x-gemineko-sprite-cache'], 'static-egg');
+    assert.doesNotMatch(cdpScript, /gk-egg-spino-pop/, 'Dock 脊背龙彩蛋应使用原位立绘变身而非额外弹窗叠罗汉');
+    assert.match(cdpScript, /restoreDockSpinosaurus/, '应具备 3.6s 还原与 unmount 原位还原函数');
 
     const cfgRes = await srv.inject({ url: '/api/theme/config' });
     assert.equal(cfgRes.statusCode, 200);

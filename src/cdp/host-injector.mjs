@@ -757,23 +757,24 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     const toolEl = dock.querySelector('.gk-tool');
 
     bindImgFallback(img, latestState.role);
+    const spinoActive = dock.classList.contains('gk-egg-spino-active');
     const nextSrc = getActiveSpriteUrl();
-    if (img.getAttribute('data-src') !== nextSrc) {
+    if (!spinoActive && img.getAttribute('data-src') !== nextSrc) {
       img.dataset.gkFallback = '0';
       img.setAttribute('data-src', nextSrc);
       img.src = nextSrc;
     }
     const actCls = actionClassFor(latestState.action);
     const nextImgCls = 'gk-dock-sprite ' + actCls;
-    if (img.className !== nextImgCls) img.className = nextImgCls;
+    if (!spinoActive && img.className !== nextImgCls) img.className = nextImgCls;
 
     const nextPhaseText = latestState.phaseLabel || '编排模式';
-    if (!dock.classList.contains('gk-egg-spino-active') && phaseEl.textContent !== nextPhaseText) phaseEl.textContent = nextPhaseText;
+    if (!spinoActive && phaseEl.textContent !== nextPhaseText) phaseEl.textContent = nextPhaseText;
     const nextPhaseCls = 'gk-phase ' + (latestState.phase === 'executor' ? 'is-executor' : latestState.phase === 'idle' ? 'is-idle' : '');
     if (phaseEl.className !== nextPhaseCls) phaseEl.className = nextPhaseCls;
 
     const nextActText = latestState.actionLabel || '思考中';
-    if (!dock.classList.contains('gk-egg-spino-active') && actionEl.textContent !== nextActText) actionEl.textContent = nextActText;
+    if (!spinoActive && actionEl.textContent !== nextActText) actionEl.textContent = nextActText;
 
     const fullModel = String(latestState.model || 'gemini-4-neon').replace(/-preview$/i, '');
     const isEnglish = window.__GEMINEKO_I18N_API__?.resolveEffectiveStyle?.() === 'off';

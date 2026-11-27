@@ -2912,7 +2912,7 @@ function bootGeminekoHive() {
     document.querySelectorAll('.gn-egg-supreme-banner').forEach((n) => n.remove());
     const el = document.createElement('div');
     el.className = 'gn-egg-supreme-banner';
-    el.innerHTML = `<img src="${getSpriteBaseUrl()}/egg-maodie-boss.png?v=0.8.0" alt="至尊圆头耄耋" /><div>👑 13/13 全彩蛋收集完成 · 至尊圆头耄耋降临基米窝！</div>`;
+    el.innerHTML = `<img src="${getSpriteBaseUrl()}/egg-maodie-boss.png?v=0.8.1" alt="至尊圆头耄耋" /><div>👑 13/13 全彩蛋收集完成 · 至尊圆头耄耋降临基米窝！</div>`;
     document.body.appendChild(el);
     setTimeout(() => { if (el.isConnected) el.remove(); }, 4600);
     playMeow('alchemy');
