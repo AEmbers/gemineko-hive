@@ -94,6 +94,7 @@ export const HOST_I18N_EXACT_ZH = {
   Reload: '重新加载',
   Restart: '重启',
   'Just now': '刚刚',
+  'just now': '刚刚',
 
   // 输入栏、模型选择器与权限模式
   'Ask anything, @ to mention, / for actions': '随便问点什么，@ 提及文件，/ 呼出指令',
@@ -354,6 +355,7 @@ export const HOST_I18N_EXACT_NEKO = {
   Analyzing: '深潜洞察中',
   Analyzed: '分析完毕',
   'Just now': '刚才喵',
+  'just now': '刚才喵',
   'This Computer': '这台猫窝主机',
   'This computer': '这台猫窝主机',
   'Local Checkout': '本地仓库检出',

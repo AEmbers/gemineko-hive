@@ -17,6 +17,43 @@ const POLL_INTERVAL_MS = 3200;
 const HEARTBEAT_INTERVAL_MS = 10_000;
 
 /**
+ * 将模型原始 ID 映射为简短友好的元素名 / X基米名称（支持中英双语切换）。
+ * @param {string} modelStr
+ * @param {string} [role]
+ * @param {boolean} [isEnglish]
+ * @returns {string}
+ */
+export function formatDockModelDisplay(modelStr, role = 'neon', isEnglish = false) {
+  const m = String(modelStr || '').toLowerCase();
+  const r = String(role || 'neon').toLowerCase();
+  const rules = [
+    ['neon', 'Neon', '氖基米'],
+    ['hydrogen', 'Hydrogen', '氢基米'],
+    ['carbon', 'Carbon', '碳基米'],
+    ['argon', 'Argon', '氩基米'],
+    ['helium', 'Helium', '氦基米'],
+    ['lithium', 'Lithium', '锂基米'],
+    ['flash', 'Flash', '闪基米'],
+    ['claude', 'Claude', '克劳德'],
+    ['gpt', 'GPT', 'GPT小龙'],
+    ['sol', 'GPT Sol', 'GPT小龙'],
+    ['astra', 'GPT Astra', 'GPT小龙'],
+  ];
+  for (const [kw, enName, zhName] of rules) {
+    if (m.includes(kw)) return isEnglish ? enName : zhName;
+  }
+  const roleMap = {
+    neon: ['Neon', '氖基米'],
+    hydrogen: ['Hydrogen', '氢基米'],
+    carbon: ['Carbon', '碳基米'],
+    claude: ['Claude', '克劳德'],
+    gpt: ['GPT', 'GPT小龙'],
+  };
+  const pair = roleMap[r] || roleMap.neon;
+  return isEnglish ? pair[0] : pair[1];
+}
+
+/**
  * 验证 Host 仅允许本地回环地址，杜绝远程连接。
  * @param {string} host
  * @returns {boolean}
@@ -631,6 +668,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     return \`\${SERVER}/gemineko-sprites/\${spriteName}?v=0.5.0\`;
   }
 
+  const formatDockModelDisplay = ${formatDockModelDisplay.toString()};
+
   function renderDockState() {
     const dock = document.getElementById(DOCK_ID);
     if (!dock) return;
@@ -659,8 +698,11 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     const nextActText = latestState.actionLabel || '思考中';
     if (actionEl.textContent !== nextActText) actionEl.textContent = nextActText;
 
-    const shortModel = String(latestState.model || 'gemini-4-neon').replace(/-preview$/i, '');
-    if (modelEl.textContent !== shortModel) modelEl.textContent = shortModel;
+    const fullModel = String(latestState.model || 'gemini-4-neon').replace(/-preview$/i, '');
+    const isEnglish = window.__GEMINEKO_I18N_API__?.resolveEffectiveStyle?.() === 'off';
+    const displayModel = formatDockModelDisplay(fullModel, latestState.role, isEnglish);
+    if (modelEl.textContent !== displayModel) modelEl.textContent = displayModel;
+    if (modelEl.title !== fullModel) modelEl.title = fullModel;
 
     const nextTool = latestState.lastTool ? \`· \${latestState.lastTool}\` : '';
     if (toolEl.textContent !== nextTool) toolEl.textContent = nextTool;
@@ -811,7 +853,10 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     dockId: DOCK_ID,
     getActivity: () => latestState,
     initialConfig: INITIAL_THEME_CONFIG,
-    onConfigApplied: (nextCfg) => i18nEngine?.applyConfig?.(nextCfg),
+    onConfigApplied: (nextCfg) => {
+      i18nEngine?.applyConfig?.(nextCfg);
+      renderDockState();
+    },
   });
   fetch(\`\${SERVER}/api/theme/config\`)
     .then((r) => (r.ok ? r.json() : null))

@@ -15,7 +15,7 @@ import {
 } from '../src/activity-tracker.mjs';
 import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../src/native-patcher.mjs';
 import { translateHostText } from '../src/cdp/host-i18n-runtime.mjs';
-import { buildCdpOverlayScript } from '../src/cdp/host-injector.mjs';
+import { buildCdpOverlayScript, formatDockModelDisplay } from '../src/cdp/host-injector.mjs';
 import { createHiveSidecarServer } from '../src/sidecar/server.mjs';
 import { resolveMemeNickname } from '../src/theme/nicknames.js';
 import {
@@ -489,6 +489,14 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(translateHostText('Configure agent execution, queued message delivery, and permissions.', 'zh'), '配置智能体执行策略、排队消息投递方式及权限控制。');
   assert.equal(translateHostText('Send Immediately', 'zh'), '立即发送');
   assert.equal(translateHostText('This Computer', 'zh'), '本机电脑');
+  assert.equal(translateHostText('just now', 'neko-zh'), '刚才喵');
+  assert.equal(translateHostText('just now', 'zh'), '刚刚');
+  assert.equal(formatDockModelDisplay('gemini-4-hydrogen-high', 'hydrogen', false), '氢基米');
+  assert.equal(formatDockModelDisplay('gemini-4-hydrogen-high', 'hydrogen', true), 'Hydrogen');
+  assert.equal(formatDockModelDisplay('gemini-4-carbon-high', 'carbon', false), '碳基米');
+  assert.equal(formatDockModelDisplay('gemini-4-neon-high', 'neon', false), '氖基米');
+  assert.equal(formatDockModelDisplay('claude-sonnet-5-5-high', 'claude', false), '克劳德');
+  assert.equal(formatDockModelDisplay('gpt-6-2-sol', 'gpt', false), 'GPT小龙');
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gemineko-theme-cfg-'));
   try {

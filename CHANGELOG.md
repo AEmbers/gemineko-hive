@@ -10,7 +10,8 @@
   - 将宿主四点旋转运行指示器 `[data-testid="status-loading-spinner"]` 及 `.animate-shimmer-text` 纳入主题体系（支持 `role-motif` 5 角色专属旋转星徽、`paw-bounce` 弹跳发光猫肉垫、`prism-dots` 炫彩四色旋转点阵及 `native` 原版切换，并高亮侧栏运行中对话行）。
 - **交互细节与全内页汉化补全（v0.5.1-fix）**：
   - `src/cdp/host-injector.mjs` 与 `src/cdp/host-theme-runtime.mjs`：空白首页显示 `#gemineko-home-stage`（5 角色迎宾舞台）时自动隐藏左上沿小猫 Dock，消除相互遮挡；迎宾舞台内置「🎨 主题/汉化」直达快切钮，切入对话页自动恢复 Dock；
-  - `src/cdp/host-i18n-runtime.mjs`：放行对话流内系统折行卡（`Worked for` / `steps` / `files changed` / `Review`）同时保持 `planner-response-text` / `user-message-bubble` / `pre` / `code` 正文保护；补充首页问候、工作区栏与 Settings 设置弹窗全内页中英对照词典。
+  - `src/cdp/host-i18n-runtime.mjs`：放行对话流内系统折行卡（`Worked for` / `steps` / `files changed` / `Review`）同时保持 `planner-response-text` / `user-message-bubble` / `pre` / `code` 正文保护；补充首页问候、工作区栏、Settings 设置弹窗全内页中英对照词典及小写 `just now`；
+  - `src/cdp/host-injector.mjs`：输入栏 Dock 胶囊将截断的冗长模型 ID 改为简短元素名/X基米（`氢基米`/`碳基米`/`氖基米` 等，英文模式对应显示 `Hydrogen`/`Carbon`/`Neon`，悬停显示完整模型 ID）。
   - 默认 `i18n.mode: 'auto'`：中文系统自动开启哈基米萌系中文（`neko-zh`），海外英文环境默认零开销完全关闭（`off`）；支持 `auto` / `neko-zh` / `zh`（标准专业中文）/ `off`（原版英文）4 档秒级无损切换。
   - 使用 `WeakMap` 记录首次修改前原始文本与属性，严格排除聊天正文、`pre`、`code`、`.monaco-editor`、输入编辑框及 `Antigravity` 品牌字样；切回 `off` 完整还原并断开 `MutationObserver`。
 - **服务端与工坊联动**：
