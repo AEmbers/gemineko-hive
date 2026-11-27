@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.9] - 2026-11-27
+
+### Changed & Fixed
+- **彻底解决长工具名压扁模型名、更新黄金默认值并打通快切与侧栏工坊双向同步**：
+  - **长工具名精简 & 模型名永不截断**：[host-injector.mjs](src/cdp/host-injector.mjs) 新增 `formatDockToolDisplay()`，将超长 MCP 工具名（如 `mcp_agy-dart_fast_batch_search`）格式化为短语义名称（如 `batch_search`），同时为 `.gk-model` 设置 `flex-shrink: 0` 保证模型名完整可见，`.gk-tool` 独立承担省略并在 `title` 保留完整工具名；
+  - **更新黄金默认值**：[host-theme-config.mjs](src/theme/host-theme-config.mjs) 默认 `spriteQuality` 升级为 `'1024'`，`dock` 默认值调整为 `{ side: 'left', catSize: 100, badgeScale: 120, sidecarAvatarSize: 64 }`；
+  - **快切 ↔ 侧栏/工坊 1s 实时双向同步**：[server.mjs](src/sidecar/server.mjs) 为配置响应显式声明 `Cache-Control: no-store`；[gemineko-runtime.js](src/theme/gemineko-runtime.js) 新增 `1000ms` 轻量轮询并在检测到变化时同步通知 [theme-workshop.js](src/theme/theme-workshop.js) 新增的 `syncExternalConfig()` 实时重绘面板状态；[gemineko-theme.css](src/theme/gemineko-theme.css) 补全 `nebula-day` / `cream-paper` / `starry-nest` 完整视觉表面对比；
+  - **根治「跟随宿主」一浅一深分裂 Bug**：[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs) 通过 `POST /api/theme/host-scheme` 向 [server.mjs](src/sidecar/server.mjs) 上报真实宿主明暗，`GET /api/theme/config` 返回 `hostScheme`，侧栏 `resolveHostNativeDark()` 优先遵循 `hostScheme` 并回退 `matchMedia`，不再误读原生 Swarm 写死的 `data-theme="dark"`。
+
 ## [0.7.8] - 2026-11-27
 
 ### Fixed

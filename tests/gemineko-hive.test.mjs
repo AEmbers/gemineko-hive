@@ -15,7 +15,7 @@ import {
 } from '../src/activity-tracker.mjs';
 import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../src/native-patcher.mjs';
 import { translateHostText } from '../src/cdp/host-i18n-runtime.mjs';
-import { buildCdpOverlayScript, formatDockModelDisplay } from '../src/cdp/host-injector.mjs';
+import { buildCdpOverlayScript, formatDockModelDisplay, formatDockToolDisplay } from '../src/cdp/host-injector.mjs';
 import { parseMemeCaptionFromText } from '../src/cdp/host-meme-runtime.mjs';
 import { BRAND_META } from '../src/meta/brand.mjs';
 import { compareSemver, createGithubPulseService } from '../src/sidecar/github-pulse.mjs';
@@ -315,6 +315,7 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
     swarmDir: sb.swarmDir,
     appDataDirs: [sb.appDataDir],
     spriteCacheDir,
+    themeConfigPath: path.join(spriteCacheDir, 'theme-config.json'),
     sideToken: 'test-hive-secret',
     enableCdp: false,
   });
@@ -345,7 +346,7 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
     assert.equal(spriteRes.headers.get('access-control-allow-origin'), '*');
     const spriteBuf = Buffer.from(await spriteRes.arrayBuffer());
     assert.equal(spriteBuf.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
-    assert.equal(spriteBuf.readUInt32BE(16), 512);
+    assert.equal(spriteBuf.readUInt32BE(16), 1024);
 
     for (const [tier, expectedSize] of [['384', 384], ['512', 512], ['1024', 1024]]) {
       const tr = await fetch(`${srv.origin}/gemineko-sprites/neon-thinking.png?q=${tier}`);
@@ -520,15 +521,19 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(ROLE_PALETTES.neon.crestTitle, 'NEON · GEMINEKO');
   assert.equal(sanitizeHostThemeConfig({ spinnerStyle: 'invalid' }).spinnerStyle, 'role-motif');
   assert.equal(sanitizeHostThemeConfig({ spinnerStyle: 'paw-bounce' }).spinnerStyle, 'paw-bounce');
-  assert.equal(DEFAULT_HOST_THEME_CONFIG.spriteQuality, '512');
-  assert.equal(sanitizeHostThemeConfig({ spriteQuality: '1024' }).spriteQuality, '1024');
-  assert.equal(sanitizeHostThemeConfig({ spriteQuality: '999' }).spriteQuality, '512');
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.spriteQuality, '1024');
+  assert.equal(sanitizeHostThemeConfig({ spriteQuality: '384' }).spriteQuality, '384');
+  assert.equal(sanitizeHostThemeConfig({ spriteQuality: '999' }).spriteQuality, '1024');
   assert.deepEqual(DEFAULT_HOST_THEME_CONFIG.dock, {
     side: 'left',
-    catSize: 88,
-    badgeScale: 115,
+    catSize: 100,
+    badgeScale: 120,
     sidecarAvatarSize: 64,
   });
+  assert.equal(formatDockToolDisplay('mcp_agy-dart_fast_batch_search'), 'batch_search');
+  assert.equal(formatDockToolDisplay('mcp_gemini-api_gemini-api-docs_gemini_search_docs'), 'search_docs');
+  assert.ok(formatDockToolDisplay('extremely_long_tool_name_without_mcp_prefix').length <= 16);
+  assert.equal(formatDockToolDisplay('edit_file'), 'edit_file');
   assert.deepEqual(
     sanitizeHostThemeConfig({ dock: { side: 'right', catSize: 200, badgeScale: 50, sidecarAvatarSize: 200 } }).dock,
     { side: 'right', catSize: 140, badgeScale: 85, sidecarAvatarSize: 112 },
@@ -782,12 +787,26 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     });
     const getDockRes = await srv.inject({ url: '/api/theme/config' });
     assert.equal(getDockRes.statusCode, 200);
+    assert.equal(getDockRes.headers['cache-control'], 'no-store');
     assert.deepEqual(getDockRes.json().config.dock, {
       side: 'right',
       catSize: 112,
       badgeScale: 130,
       sidecarAvatarSize: 72,
     });
+
+    // 验证宿主明暗上报路由 (/api/theme/host-scheme) 与 /api/theme/config hostScheme 返回闭环
+    const setSchemeRes = await srv.inject({
+      method: 'POST',
+      url: '/api/theme/host-scheme',
+      headers: { 'x-sidecar-token': 'test-v5-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scheme: 'light' }),
+    });
+    assert.equal(setSchemeRes.statusCode, 200);
+    assert.equal(setSchemeRes.json().hostScheme, 'light');
+    const getSchemeRes = await srv.inject({ url: '/api/theme/config' });
+    assert.equal(getSchemeRes.statusCode, 200);
+    assert.equal(getSchemeRes.json().hostScheme, 'light');
 
     const bundleRes = buildGeminekoBundle();
     assert.ok(bundleRes.bytes < 420_000, `主包体过大: ${bundleRes.bytes}`);
@@ -808,6 +827,7 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(bundleContent, /data-ws-sprite-q/);
     assert.match(bundleContent, /data-ws-dock-side/);
     assert.match(bundleContent, /data-ws-dock-range/);
+    assert.match(bundleContent, /syncExternalConfig/);
     assert.match(bundleContent, /--gn-avatar-size/);
     assert.match(cdpScript, /--gk-dock-cat-size/);
     assert.match(cdpScript, /--gk-dock-badge-scale/);

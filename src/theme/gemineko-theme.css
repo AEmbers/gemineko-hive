@@ -42,15 +42,38 @@ html[data-gn-scheme="light"] {
   --sw-warning: #bca136 !important;
   --o2-card: #ffffff;
   --o2-border: rgba(15, 23, 42, 0.1);
+  --gn-ws-surface: rgba(255, 255, 255, 0.90);
+  --gn-ws-card: rgba(255, 255, 255, 0.96);
+  --gn-ws-border: rgba(99, 102, 241, 0.20);
+  --gn-ws-text: #1e1b4b;
+  --gn-ws-muted: #525d73;
+  --gn-ws-input: #f8fafc;
+  --gn-ws-pill: rgba(99, 102, 241, 0.08);
+  --gn-ws-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 14px 36px -14px rgba(30, 58, 138, 0.14);
+}
+html[data-gn-preset="nebula-day"] {
+  --background: #eef2fc !important;
+  --card: #fbfcff !important;
+  --sw-bg: #eef2fc !important;
+  --sw-card: #fbfcff !important;
+  --sw-muted: #e2e9fa !important;
+  --gn-ws-surface: rgba(235, 240, 252, 0.93);
+  --gn-ws-card: rgba(252, 253, 255, 0.97);
+  --gn-ws-border: rgba(79, 70, 229, 0.22);
 }
 html[data-gn-preset="cream-paper"] {
-  --background: #fcf8f0 !important;
+  --background: #f5ede1 !important;
   --card: #fffdf8 !important;
-  --sw-bg: #fcf8f0 !important;
+  --foreground: #231c16 !important;
+  --sw-bg: #f5ede1 !important;
   --sw-card: #fffdf8 !important;
-  --sw-muted: #f4ede1 !important;
-  --gn-ws-surface: rgba(255, 253, 248, 0.92);
-  --gn-ws-card: rgba(255, 254, 250, 0.96);
+  --sw-muted: #ebe1d0 !important;
+  --gn-ws-surface: rgba(245, 237, 225, 0.94);
+  --gn-ws-card: rgba(255, 253, 248, 0.98);
+  --gn-ws-border: rgba(180, 108, 52, 0.24);
+  --gn-ws-text: #231c16;
+  --gn-ws-muted: #6a5848;
+  --gn-ws-pill: rgba(217, 95, 32, 0.10);
 }
 html[data-gn-scheme="dark"] {
   color-scheme: dark !important;
@@ -80,6 +103,14 @@ html[data-gn-scheme="dark"] {
   --gn-ws-input: rgba(12, 14, 28, 0.85);
   --gn-ws-pill: rgba(139, 92, 246, 0.16);
   --gn-ws-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 18px 42px -14px rgba(0, 0, 0, 0.6);
+}
+html[data-gn-preset="starry-nest"] {
+  --background: #101222 !important;
+  --card: #181b31 !important;
+  --sw-bg: #101222 !important;
+  --sw-card: #181b31 !important;
+  --gn-ws-surface: rgba(16, 18, 34, 0.92);
+  --gn-ws-card: rgba(24, 27, 49, 0.90);
 }
 html[data-gn-preset="carbon-obsidian"] {
   --background: #07080b !important;

@@ -38,7 +38,7 @@ export function createThemeWorkshopController(deps) {
 
   function normDockPrefs(val, base) {
     const d = val && typeof val === 'object' ? val : {};
-    const b = base && typeof base === 'object' ? base : { side: 'left', catSize: 88, badgeScale: 115, sidecarAvatarSize: 64 };
+    const b = base && typeof base === 'object' ? base : { side: 'left', catSize: 100, badgeScale: 120, sidecarAvatarSize: 64 };
     const clampInt = (v, min, max, fb) => {
       const n = Number(v);
       return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : fb;
@@ -48,8 +48,8 @@ export function createThemeWorkshopController(deps) {
       : (b.side === 'right' ? 'right' : 'left');
     return {
       side,
-      catSize: clampInt(d.catSize, 52, 140, b.catSize ?? 88),
-      badgeScale: clampInt(d.badgeScale, 85, 150, b.badgeScale ?? 115),
+      catSize: clampInt(d.catSize, 52, 140, b.catSize ?? 100),
+      badgeScale: clampInt(d.badgeScale, 85, 150, b.badgeScale ?? 120),
       sidecarAvatarSize: clampInt(d.sidecarAvatarSize, 44, 112, b.sidecarAvatarSize ?? 64),
     };
   }
@@ -134,14 +134,14 @@ export function createThemeWorkshopController(deps) {
       writeLocalSpriteQ(cfgQ);
       out.spriteQuality = cfgQ;
     } else {
-      out.spriteQuality = normalizeSpriteQ(fallbackSpriteQ) || readLocalSpriteQ() || '512';
+      out.spriteQuality = normalizeSpriteQ(fallbackSpriteQ) || readLocalSpriteQ() || '1024';
     }
     return out;
   }
 
-  function notifyHostTheme(cfg) {
+  function notifyHostTheme(cfg, hostScheme) {
     if (cfg && typeof deps.onThemeConfigChange === 'function') {
-      deps.onThemeConfigChange(cfg);
+      deps.onThemeConfigChange(cfg, hostScheme);
     }
   }
 
@@ -204,7 +204,7 @@ export function createThemeWorkshopController(deps) {
         state.presets = cfgRes.presets || {};
         state.rolePalettes = cfgRes.rolePalettes || {};
         if (cfgRes.brand) state.brand = cfgRes.brand;
-        notifyHostTheme(state.config);
+        notifyHostTheme(state.config, cfgRes.hostScheme);
       }
       if (regRes?.ok) {
         state.registry = Array.isArray(regRes.registry) ? regRes.registry : [];
@@ -629,9 +629,9 @@ export function createThemeWorkshopController(deps) {
             </label>
             <div class="gn-font-box-head" style="margin-top:4px;">🖼️ 立绘清晰度</div>
             <div class="gn-font-presets">
-              <button type="button" class="gn-pill ${(c.spriteQuality || '512') === '384' ? 'is-primary' : ''}" data-ws-sprite-q="384">轻量 384px</button>
-              <button type="button" class="gn-pill ${(c.spriteQuality || '512') === '512' ? 'is-primary' : ''}" data-ws-sprite-q="512">超清 512px</button>
-              <button type="button" class="gn-pill ${(c.spriteQuality || '512') === '1024' ? 'is-primary' : ''}" data-ws-sprite-q="1024">极致 1024px</button>
+              <button type="button" class="gn-pill ${(c.spriteQuality || '1024') === '384' ? 'is-primary' : ''}" data-ws-sprite-q="384">轻量 384px</button>
+              <button type="button" class="gn-pill ${(c.spriteQuality || '1024') === '512' ? 'is-primary' : ''}" data-ws-sprite-q="512">超清 512px</button>
+              <button type="button" class="gn-pill ${(c.spriteQuality || '1024') === '1024' ? 'is-primary' : ''}" data-ws-sprite-q="1024">极致 1024px</button>
             </div>
             <div class="gn-font-box-head" style="margin-top:6px;">🐱 悬浮小猫停靠与大小</div>
             <div class="gn-font-presets">
@@ -639,12 +639,12 @@ export function createThemeWorkshopController(deps) {
               <button type="button" class="gn-pill ${c.dock?.side === 'right' ? 'is-primary' : ''}" data-ws-dock-side="right">输入框右侧 ➡</button>
             </div>
             <label class="gn-range-label">
-              <span>主窗口小猫大小 <strong data-ws-dock-val="catSize">${c.dock?.catSize ?? 88}px</strong></span>
-              <input type="range" min="52" max="140" step="4" value="${c.dock?.catSize ?? 88}" data-ws-dock-range="catSize" />
+              <span>主窗口小猫大小 <strong data-ws-dock-val="catSize">${c.dock?.catSize ?? 100}px</strong></span>
+              <input type="range" min="52" max="140" step="4" value="${c.dock?.catSize ?? 100}" data-ws-dock-range="catSize" />
             </label>
             <label class="gn-range-label">
-              <span>状态气泡大小 <strong data-ws-dock-val="badgeScale">${c.dock?.badgeScale ?? 115}%</strong></span>
-              <input type="range" min="85" max="150" step="5" value="${c.dock?.badgeScale ?? 115}" data-ws-dock-range="badgeScale" />
+              <span>状态气泡大小 <strong data-ws-dock-val="badgeScale">${c.dock?.badgeScale ?? 120}%</strong></span>
+              <input type="range" min="85" max="150" step="5" value="${c.dock?.badgeScale ?? 120}" data-ws-dock-range="badgeScale" />
             </label>
             <label class="gn-range-label">
               <span>侧栏与消息板头像 <strong data-ws-dock-val="sidecarAvatarSize">${c.dock?.sidecarAvatarSize ?? 64}px</strong></span>
@@ -1039,6 +1039,20 @@ export function createThemeWorkshopController(deps) {
     }
   }
 
+  function syncExternalConfig(extCfg) {
+    if (!extCfg || typeof extCfg !== 'object') return;
+    state.config = withLocalTypo(extCfg, state.config?.typography, state.config?.spriteQuality, state.config?.dock);
+    if (!state.open) return;
+    const root = document.getElementById('gn-theme-workshop');
+    if (root && !root.classList.contains('hidden')) {
+      const ae = document.activeElement;
+      if (ae && root.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) {
+        return;
+      }
+      render();
+    }
+  }
+
   return {
     isOpen: () => state.open,
     setOpen,
@@ -1047,5 +1061,6 @@ export function createThemeWorkshopController(deps) {
     pollEvents,
     triggerSidecarEgg,
     syncExternalTypography,
+    syncExternalConfig,
   };
 }

@@ -189,29 +189,12 @@ export function bootGeminekoHive() {
   let updateBannerDismissed = false;
   let lastSidecarThemeConfig = null;
   let lastSidecarThemeTs = 0;
+  let lastReportedHostScheme = '';
+  let lastSidecarThemeSig = '';
 
-  function resolveHostNativeDark(root) {
-    const dt = root?.getAttribute?.('data-theme');
-    if (dt === 'dark') return true;
-    if (dt === 'light') return false;
-    const bgStr = String(root?.style?.getPropertyValue?.('--background') || '').trim();
-    if (bgStr) {
-      const hex6 = /^#([0-9a-f]{6})$/i.exec(bgStr);
-      if (hex6) {
-        const n = parseInt(hex6[1], 16);
-        const lum = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
-        return lum < 128;
-      }
-      const hex3 = /^#([0-9a-f]{3})$/i.exec(bgStr);
-      if (hex3) {
-        const [r, g, b] = hex3[1].split('').map((c) => parseInt(c + c, 16));
-        return 0.299 * r + 0.587 * g + 0.114 * b < 128;
-      }
-      const rgb = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(bgStr);
-      if (rgb) {
-        return 0.299 * Number(rgb[1]) + 0.587 * Number(rgb[2]) + 0.114 * Number(rgb[3]) < 128;
-      }
-    }
+  function resolveHostNativeDark(_root, reportedScheme = lastReportedHostScheme) {
+    if (reportedScheme === 'dark') return true;
+    if (reportedScheme === 'light') return false;
     try {
       return Boolean(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
     } catch {
@@ -225,7 +208,7 @@ export function bootGeminekoHive() {
 
   function normDockPrefs(raw, base) {
     const d = raw && typeof raw === 'object' ? raw : {};
-    const b = base && typeof base === 'object' ? base : { side: 'left', catSize: 88, badgeScale: 115, sidecarAvatarSize: 64 };
+    const b = base && typeof base === 'object' ? base : { side: 'left', catSize: 100, badgeScale: 120, sidecarAvatarSize: 64 };
     const clampInt = (v, min, max, fb) => {
       const n = Number(v);
       return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : fb;
@@ -235,8 +218,8 @@ export function bootGeminekoHive() {
       : (b.side === 'right' ? 'right' : 'left');
     return {
       side,
-      catSize: clampInt(d.catSize, 52, 140, b.catSize ?? 88),
-      badgeScale: clampInt(d.badgeScale, 85, 150, b.badgeScale ?? 115),
+      catSize: clampInt(d.catSize, 52, 140, b.catSize ?? 100),
+      badgeScale: clampInt(d.badgeScale, 85, 150, b.badgeScale ?? 120),
       sidecarAvatarSize: clampInt(d.sidecarAvatarSize, 44, 112, b.sidecarAvatarSize ?? 64),
     };
   }
@@ -279,7 +262,7 @@ export function bootGeminekoHive() {
   }
 
   function getActiveSpriteQuality() {
-    return normalizeSpriteQ(lastSidecarThemeConfig?.spriteQuality) || readLocalSpriteQ() || '512';
+    return normalizeSpriteQ(lastSidecarThemeConfig?.spriteQuality) || readLocalSpriteQ() || '1024';
   }
 
   let lastSpriteQuality = getActiveSpriteQuality();
@@ -339,11 +322,31 @@ export function bootGeminekoHive() {
     return out;
   }
 
-  function syncSidecarHostTheme(cfg) {
+  function computeThemeSyncSig(cfg, hostScheme) {
+    if (!cfg || typeof cfg !== 'object') return '';
+    return JSON.stringify([
+      hostScheme || '',
+      Number(cfg.updatedAt || 0),
+      Boolean(cfg.enabled),
+      cfg.preset || '',
+      cfg.activeThemePackId || '',
+      cfg.themeIntensity || '',
+      cfg.spinnerStyle || '',
+      cfg.spriteQuality || '',
+      cfg.dock || null,
+      cfg.typography || null,
+    ]);
+  }
+
+  function syncSidecarHostTheme(cfg, hostScheme) {
+    if (hostScheme === 'light' || hostScheme === 'dark') {
+      lastReportedHostScheme = hostScheme;
+    }
     const prevQ = lastSpriteQuality;
     if (cfg && typeof cfg === 'object') {
       lastSidecarThemeConfig = mergeTypographyConfig(cfg);
       lastSidecarThemeTs = Number(cfg.updatedAt || 0);
+      lastSidecarThemeSig = computeThemeSyncSig(lastSidecarThemeConfig, lastReportedHostScheme);
     }
     const nextQ = getActiveSpriteQuality();
     if (nextQ !== prevQ) {
@@ -374,7 +377,7 @@ export function bootGeminekoHive() {
 
     const pack = cur.activeThemePack && typeof cur.activeThemePack === 'object' ? cur.activeThemePack : null;
     const preset = cur.preset || 'auto';
-    const hostDark = resolveHostNativeDark(root);
+    const hostDark = resolveHostNativeDark(root, lastReportedHostScheme);
 
     let scheme = hostDark ? 'dark' : 'light';
     if (pack && (pack.scheme === 'light' || pack.scheme === 'dark')) {
@@ -591,7 +594,7 @@ export function bootGeminekoHive() {
   function getChibiSpriteUrl(role, action) {
     const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
     const a = ['thinking', 'reading', 'editing', 'running', 'asking', 'idle'].includes(action) ? action : 'thinking';
-    return `${getSpriteBaseUrl()}/${r}-${a}.png?q=${getActiveSpriteQuality()}&v=0.7.7`;
+    return `${getSpriteBaseUrl()}/${r}-${a}.png?q=${getActiveSpriteQuality()}&v=0.7.9`;
   }
 
   function resolveLiveSpriteUrl(act) {
@@ -601,7 +604,7 @@ export function bootGeminekoHive() {
     const validFile = /^(neon|hydrogen|carbon|claude|gpt)-(thinking|reading|editing|running|asking|idle)\.png$/i.test(rawFile)
       ? rawFile.toLowerCase()
       : `${r}-${a}.png`;
-    return `${getSpriteBaseUrl()}/${validFile}?q=${getActiveSpriteQuality()}&v=0.7.7`;
+    return `${getSpriteBaseUrl()}/${validFile}?q=${getActiveSpriteQuality()}&v=0.7.9`;
   }
 
   function attachSpriteFallback(imgEl, role) {
@@ -611,7 +614,7 @@ export function bootGeminekoHive() {
       if (imgEl.dataset.gnFallback === '1') return;
       imgEl.dataset.gnFallback = '1';
       const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
-      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?q=${getActiveSpriteQuality()}&v=0.7.7`;
+      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?q=${getActiveSpriteQuality()}&v=0.7.9`;
     });
   }
 
@@ -1476,7 +1479,7 @@ export function bootGeminekoHive() {
         originalFetch(liveUrl),
         originalFetch('/api/cdp/status'),
         originalFetch('/api/github/status'),
-        originalFetch('/api/theme/config'),
+        originalFetch('/api/theme/config', { cache: 'no-store' }),
       ]);
       if (nativeResp.ok) lastNativeStatus = await nativeResp.json();
       if (liveResp.ok) {
@@ -1493,7 +1496,7 @@ export function bootGeminekoHive() {
       }
       if (themeResp.ok) {
         const th = await themeResp.json();
-        if (th?.config) syncSidecarHostTheme(th.config);
+        if (th?.config) syncSidecarHostTheme(th.config, th.hostScheme);
       }
       if (barUpdateCb) barUpdateCb();
     } catch {
@@ -1985,8 +1988,8 @@ export function bootGeminekoHive() {
         const rect = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { left: 80, bottom: 48 };
         spawnBubbleAt(rect.left + 80, rect.bottom + 26, text);
       },
-      onThemeConfigChange: (nextCfg) => {
-        syncSidecarHostTheme(nextCfg);
+      onThemeConfigChange: (nextCfg, hostScheme) => {
+        syncSidecarHostTheme(nextCfg, hostScheme);
       },
     });
   }
@@ -2077,16 +2080,30 @@ export function bootGeminekoHive() {
           })
           .catch(() => {});
         workshop?.pollEvents?.();
-        originalFetch('/api/theme/config')
+      }, 4000);
+
+      // 1s 轻量级主题与宿主明暗轮询（实时接收主窗口快切浮层的配色、大小、停靠方向及宿主日夜变更）
+      setInterval(() => {
+        originalFetch('/api/theme/config', { cache: 'no-store' })
           .then((r) => (r.ok ? r.json() : null))
           .then((th) => {
-            if (th?.config && Number(th.config.updatedAt || 0) !== lastSidecarThemeTs) {
-              syncSidecarHostTheme(th.config);
+            if (!th?.config) return;
+            const nextSig = computeThemeSyncSig(th.config, th.hostScheme || lastReportedHostScheme);
+            if (nextSig !== lastSidecarThemeSig) {
+              syncSidecarHostTheme(th.config, th.hostScheme);
+              workshop?.syncExternalConfig?.(th.config);
             }
           })
           .catch(() => {});
-      }, 4000);
+      }, 1000);
     }
+
+    try {
+      const mql = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+      mql?.addEventListener?.('change', () => {
+        if (lastSidecarThemeConfig) syncSidecarHostTheme();
+      });
+    } catch {}
 
     let domSyncTimer = null;
     let domSyncMicro = false;

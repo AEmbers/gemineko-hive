@@ -484,11 +484,11 @@ export const DEFAULT_HOST_THEME_CONFIG = {
   },
   dock: {
     side: 'left',
-    catSize: 88,
-    badgeScale: 115,
+    catSize: 100,
+    badgeScale: 120,
     sidecarAvatarSize: 64,
   },
-  spriteQuality: '512',
+  spriteQuality: '1024',
   updatedAt: 0,
 };
 
@@ -740,13 +740,13 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
     },
     dock: {
       side: dockSide,
-      catSize: Math.round(clampNumber(srcDock.catSize, 52, 140, bDock.catSize ?? 88)),
-      badgeScale: Math.round(clampNumber(srcDock.badgeScale, 85, 150, bDock.badgeScale ?? 115)),
+      catSize: Math.round(clampNumber(srcDock.catSize, 52, 140, bDock.catSize ?? 100)),
+      badgeScale: Math.round(clampNumber(srcDock.badgeScale, 85, 150, bDock.badgeScale ?? 120)),
       sidecarAvatarSize: Math.round(clampNumber(srcDock.sidecarAvatarSize, 44, 112, bDock.sidecarAvatarSize ?? 64)),
     },
     spriteQuality: ALLOWED_SPRITE_QUALITIES.has(String(src.spriteQuality || ''))
       ? String(src.spriteQuality)
-      : (ALLOWED_SPRITE_QUALITIES.has(String(b.spriteQuality || '')) ? String(b.spriteQuality) : '512'),
+      : (ALLOWED_SPRITE_QUALITIES.has(String(b.spriteQuality || '')) ? String(b.spriteQuality) : '1024'),
     updatedAt: Number.isFinite(Number(src.updatedAt)) ? Number(src.updatedAt) : Date.now(),
   };
 }

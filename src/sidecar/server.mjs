@@ -411,6 +411,7 @@ export async function createHiveSidecarServer(options = {}) {
     disableNetwork: options.disableNetwork,
   });
   const themeEvents = { seq: 0, latest: null };
+  let reportedHostScheme = '';
   const spriteCacheDir = options.spriteCacheDir
     ? path.resolve(options.spriteCacheDir)
     : path.join(os.homedir(), '.gemini', 'gemineko-hive', 'sprite-cache');
@@ -780,8 +781,8 @@ export async function createHiveSidecarServer(options = {}) {
           return;
         }
       }
-      const rawQ = String(urlObj.searchParams.get('q') || themeStore.get()?.spriteQuality || '512');
-      const requestedQ = ALLOWED_SPRITE_QUALITIES.has(rawQ) ? rawQ : '512';
+      const rawQ = String(urlObj.searchParams.get('q') || themeStore.get()?.spriteQuality || '1024');
+      const requestedQ = ALLOWED_SPRITE_QUALITIES.has(rawQ) ? rawQ : '1024';
       const resolved = await resolveTieredSpriteBuffer(absFile, path.basename(absFile), requestedQ);
       res.writeHead(200, {
         ...CORS_HEADERS,
@@ -822,10 +823,27 @@ export async function createHiveSidecarServer(options = {}) {
       sendJson(res, 200, {
         ok: true,
         config: getEnrichedThemeConfig(),
+        hostScheme: reportedHostScheme || null,
         presets: THEME_PRESETS,
         rolePalettes: ROLE_PALETTES,
         brand: BRAND_META,
       });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/theme/host-scheme') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const scheme = body?.scheme === 'dark' ? 'dark' : (body?.scheme === 'light' ? 'light' : '');
+      if (!scheme) {
+        sendJson(res, 400, { ok: false, error: 'Invalid host scheme' });
+        return;
+      }
+      reportedHostScheme = scheme;
+      sendJson(res, 200, { ok: true, hostScheme: reportedHostScheme });
       return;
     }
 

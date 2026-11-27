@@ -55,6 +55,36 @@ export function formatDockModelDisplay(modelStr, role = 'neon', isEnglish = fals
 }
 
 /**
+ * 将超长工具名（如 MCP 工具全称）精简为适合状态气泡展示的短语义名称。
+ * @param {string} rawTool
+ * @returns {string}
+ */
+export function formatDockToolDisplay(rawTool) {
+  let s = String(rawTool || '').trim();
+  if (!s) return '';
+  if (s.startsWith('mcp_')) {
+    s = s.slice(4);
+    const segs = s.split('_').filter(Boolean);
+    if (segs.length >= 3) {
+      const tail2 = segs.slice(-2).join('_');
+      s = tail2.length <= 16 ? tail2 : segs[segs.length - 1];
+    } else if (segs.length === 2 && s.length > 16) {
+      s = segs[1];
+    }
+  } else if (s.includes('--')) {
+    const segs = s.split('_').filter(Boolean);
+    if (segs.length >= 2) {
+      const tail2 = segs.slice(-2).join('_');
+      s = tail2.length <= 16 ? tail2 : segs[segs.length - 1];
+    }
+  }
+  if (s.length > 16) {
+    return `${s.slice(0, 15)}…`;
+  }
+  return s;
+}
+
+/**
  * 验证 Host 仅允许本地回环地址，杜绝远程连接。
  * @param {string} host
  * @returns {boolean}
@@ -249,8 +279,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       }
       #\${DOCK_ID} .gk-dock-cat {
         position: relative;
-        width: var(--gk-dock-cat-size, 88px);
-        height: var(--gk-dock-cat-size, 88px);
+        width: var(--gk-dock-cat-size, 100px);
+        height: var(--gk-dock-cat-size, 100px);
         flex-shrink: 0;
         pointer-events: auto;
         cursor: pointer;
@@ -262,8 +292,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         justify-content: center;
       }
       #\${DOCK_ID} img.gk-dock-sprite {
-        width: var(--gk-dock-cat-size, 88px);
-        height: var(--gk-dock-cat-size, 88px);
+        width: var(--gk-dock-cat-size, 100px);
+        height: var(--gk-dock-cat-size, 100px);
         object-fit: contain;
         image-rendering: auto;
         background: transparent !important;
@@ -349,20 +379,28 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       #\${DOCK_ID} .gk-sub-row {
         display: flex;
         align-items: center;
-        gap: calc(5px * var(--gk-dock-badge-scale, 1.15));
-        font-size: calc(11px * var(--gk-dock-badge-scale, 1.15)) !important;
+        gap: calc(5px * var(--gk-dock-badge-scale, 1.2));
+        font-size: calc(11px * var(--gk-dock-badge-scale, 1.2)) !important;
         color: #4c3e6b;
         white-space: nowrap;
+        min-width: 0;
         overflow: hidden;
-        text-overflow: ellipsis;
       }
       #\${DOCK_ID}.is-dark .gk-sub-row {
         color: #e2e8f0;
       }
       #\${DOCK_ID} .gk-model {
-        font-weight: 600;
+        font-weight: 700;
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+      #\${DOCK_ID} .gk-tool {
+        min-width: 0;
+        flex: 0 1 auto;
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
+        opacity: 0.86;
       }
       #\${DOCK_ID} .gk-collapse-btn {
         border: none;
@@ -570,14 +608,14 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         if (parsed && typeof parsed === 'object') {
           return {
             side: parsed.side === 'right' ? 'right' : 'left',
-            catSize: Math.max(52, Math.min(140, Math.round(Number(parsed.catSize) || 88))),
-            badgeScale: Math.max(85, Math.min(150, Math.round(Number(parsed.badgeScale) || 115))),
+            catSize: Math.max(52, Math.min(140, Math.round(Number(parsed.catSize) || 100))),
+            badgeScale: Math.max(85, Math.min(150, Math.round(Number(parsed.badgeScale) || 120))),
             sidecarAvatarSize: Math.max(44, Math.min(112, Math.round(Number(parsed.sidecarAvatarSize) || 64))),
           };
         }
       }
     } catch {}
-    return { side: 'left', catSize: 88, badgeScale: 115, sidecarAvatarSize: 64 };
+    return { side: 'left', catSize: 100, badgeScale: 120, sidecarAvatarSize: 64 };
   }
 
   function syncDockPosition() {
@@ -636,7 +674,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     dock.style.setProperty('--gk-composer-w', Math.round(r.width) + 'px');
     const dr = dock.getBoundingClientRect();
     const dockW = Math.ceil(dr.width || dock.offsetWidth || 160);
-    const dockH = Math.ceil(dr.height || dock.offsetHeight || dockCfg.catSize || 88);
+    const dockH = Math.ceil(dr.height || dock.offsetHeight || dockCfg.catSize || 100);
     const rawLeft = isRight ? Math.round(r.right - dockW - 12) : Math.round(r.left + 12);
     const left = Math.max(8, Math.min(Math.max(8, window.innerWidth - dockW - 8), rawLeft));
     // 严格停靠在输入栏顶部 2px 之上，确保小猫与气泡无论放大缩小都不压入输入区
@@ -683,7 +721,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       const lsQ = String(localStorage.getItem('gemineko_host_sprite_q_v1') || '');
       if (lsQ === '384' || lsQ === '512' || lsQ === '1024') return lsQ;
     } catch {}
-    return '512';
+    return '1024';
   }
 
   function bindImgFallback(imgEl, role) {
@@ -693,7 +731,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       if (imgEl.dataset.gkFallback === '1') return;
       imgEl.dataset.gkFallback = '1';
       const safeRole = /^(neon|hydrogen|carbon|claude|gpt)$/.test(String(role || '')) ? String(role) : 'neon';
-      imgEl.src = \`\${SERVER}/gemineko-sprites/\${safeRole}-thinking.png?q=\${getHostSpriteQuality()}&v=0.7.7\`;
+      imgEl.src = \`\${SERVER}/gemineko-sprites/\${safeRole}-thinking.png?q=\${getHostSpriteQuality()}&v=0.7.9\`;
     });
   }
 
@@ -701,10 +739,11 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     const role = latestState.role || 'neon';
     const act = latestState.action || (latestState.active ? 'thinking' : 'idle');
     const spriteName = sanitizeSpriteFile(latestState.spriteFile, role, act);
-    return \`\${SERVER}/gemineko-sprites/\${spriteName}?q=\${getHostSpriteQuality()}&v=0.7.7\`;
+    return \`\${SERVER}/gemineko-sprites/\${spriteName}?q=\${getHostSpriteQuality()}&v=0.7.9\`;
   }
 
   const formatDockModelDisplay = ${formatDockModelDisplay.toString()};
+  const formatDockToolDisplay = ${formatDockToolDisplay.toString()};
 
   function renderDockState() {
     const dock = document.getElementById(DOCK_ID);
@@ -740,8 +779,11 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     if (modelEl.textContent !== displayModel) modelEl.textContent = displayModel;
     if (modelEl.title !== fullModel) modelEl.title = fullModel;
 
-    const nextTool = latestState.lastTool ? \`· \${latestState.lastTool}\` : '';
+    const rawTool = String(latestState.lastTool || '').trim();
+    const shortTool = formatDockToolDisplay(rawTool);
+    const nextTool = shortTool ? \`· \${shortTool}\` : '';
     if (toolEl.textContent !== nextTool) toolEl.textContent = nextTool;
+    if (toolEl.title !== rawTool) toolEl.title = rawTool;
   }
 
   function isInsideChecklistOrCard(el, scope) {
