@@ -1,7 +1,7 @@
 {
   "name": "gemineko-hive",
   "displayName": "Gemineko Hive · 基米窝",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "把 Google Antigravity 原生 Swarm 与主对话编排/执行进程变成一窝 25 态活灵活现的哈基米！支持 5 大模型 × 5 大工作动作立绘（思考/读代码/改文件/跑终端/打盹）、主对话区 CDP 实时悬浮胶囊与步骤条头像、无损替换原生小蜜蜂入口图标、高浓度玩梗花名与一键无损还原。",
   "logo": "assets/logo.png",
   "author": {

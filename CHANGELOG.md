@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1] - 2026-11-27
+
+### Fixed
+- **彻底根治侧边栏加载卡死转圈**：重构 `src/theme/gemineko-runtime.js` 中 `MutationObserver` 为 `80ms` 防抖调度 + `disconnect()` 互斥重入保护 + 文本与属性值相等校验，消除微任务死循环锁死 UI 线程的 Bug。
+- **补齐独立面板 `/preload.js`**：`src/sidecar/server.mjs` 在独立 Sidecar 模式下返回完整 `sidecar_sdk/preload.js`（及可用 polyfill），修复独立《基米窝》侧边栏缺少 `window.sidecar` 导致的卡载问题。
+- **修复主对话步骤条头像竖排重叠**：`src/cdp/host-injector.mjs` 清理历史 `.gk-step-avatar` 误插元素，改为仅针对紧凑 `Worked for` 按钮插入唯一 `18×18` 行内圆角头像，不再撑坏聊天排版。
+
 ## [0.2.0] - 2026-11-27
 
 ### Added

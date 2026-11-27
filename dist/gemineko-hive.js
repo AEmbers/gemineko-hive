@@ -1,4 +1,4 @@
-// Built by Gemineko Hive v0.2.0 (scripts/build-bundle.mjs) — DO NOT EDIT DIRECTLY.
+// Built by Gemineko Hive v0.2.1 (scripts/build-bundle.mjs) — DO NOT EDIT DIRECTLY.
 (function() {
   "use strict";
   if (typeof window === "undefined" || window.__GEMINEKO_HIVE_LOADED__) return;
@@ -1139,31 +1139,42 @@ function bootGeminekoHive() {
     },
   };
 
+  function setTextIfChanged(el, nextText) {
+    if (!el) return;
+    if (el.textContent !== nextText) {
+      el.textContent = nextText;
+    }
+  }
+
   function setButtonLeadText(el, nextText) {
     if (!el) return;
     for (const node of el.childNodes) {
       if (node.nodeType === 3 && node.nodeValue.trim()) {
-        node.nodeValue = nextText;
+        if (node.nodeValue !== nextText) {
+          node.nodeValue = nextText;
+        }
         return;
       }
     }
-    if (!el.children.length) el.textContent = nextText;
+    if (!el.children.length && el.textContent !== nextText) {
+      el.textContent = nextText;
+    }
   }
 
   function applyThemeAndLocale() {
-    document.body.setAttribute('data-gemineko-minimal', prefs.themeMode === 'avatar-only' ? '1' : '0');
+    const nextMinimal = prefs.themeMode === 'avatar-only' ? '1' : '0';
+    if (document.body.getAttribute('data-gemineko-minimal') !== nextMinimal) {
+      document.body.setAttribute('data-gemineko-minimal', nextMinimal);
+    }
     const L = LOCALE_TEXT[prefs.locale] || LOCALE_TEXT['neko-zh'];
     setButtonLeadText(document.getElementById('tabbtn-overview'), L.overview);
     setButtonLeadText(document.getElementById('tabbtn-feed'), L.feed);
     setButtonLeadText(document.getElementById('tabbtn-members'), L.members);
     setButtonLeadText(document.getElementById('tabbtn-graph'), L.graph);
     setButtonLeadText(document.getElementById('tabbtn-raw'), L.raw);
-    const liveLbl = document.getElementById('live-label');
-    if (liveLbl) liveLbl.textContent = L.live;
-    const emptyTitle = document.getElementById('empty-title');
-    if (emptyTitle) emptyTitle.textContent = L.emptyTitle;
-    const gifLbl = document.getElementById('graph-export-gif-label');
-    if (gifLbl) gifLbl.textContent = L.exportGif;
+    setTextIfChanged(document.getElementById('live-label'), L.live);
+    setTextIfChanged(document.getElementById('empty-title'), L.emptyTitle);
+    setTextIfChanged(document.getElementById('graph-export-gif-label'), L.exportGif);
   }
 
   /**
@@ -1209,7 +1220,9 @@ function bootGeminekoHive() {
       if (el.textContent !== targetText) {
         el.textContent = targetText;
       }
-      el.setAttribute('title', nick.tooltip);
+      if (el.getAttribute('title') !== nick.tooltip) {
+        el.setAttribute('title', nick.tooltip);
+      }
     }
   }
 
@@ -1252,7 +1265,8 @@ function bootGeminekoHive() {
       const nick = typeof resolveMemeNickname === 'function'
         ? resolveMemeNickname({ id: ch.name, agent: ch.name, model: ch.model, geminekoRole: ch.kind, isCoordinator: ch.isCoordinator, actionLabel: ch.actionLabel }, { enabled: prefs.memeNicknames })
         : { displayName: `@${ch.name}`, tooltip: `@${ch.name}` };
-      host.title = `${nick.tooltip} · 点击摸摸头`;
+      const nextTitle = `${nick.tooltip} · 点击摸摸头`;
+      if (host.title !== nextTitle) host.title = nextTitle;
 
       if (host.dataset.gnKey !== renderKey) {
         host.dataset.gnKey = renderKey;
@@ -1725,16 +1739,30 @@ function bootGeminekoHive() {
       }, 4000);
     }
 
+    let domSyncTimer = null;
     const mo = new MutationObserver(() => {
-      installSwarmHiveHooks();
-      applyThemeAndLocale();
-      ensureEmptyStateDemoButton();
-      if (!document.getElementById('gemineko-toolbar')) {
-        renderToolbar();
-      }
-      enhanceDomSprites();
+      if (domSyncTimer) return;
+      domSyncTimer = setTimeout(() => {
+        domSyncTimer = null;
+        mo.disconnect();
+        try {
+          installSwarmHiveHooks();
+          applyThemeAndLocale();
+          ensureEmptyStateDemoButton();
+          if (!document.getElementById('gemineko-toolbar')) {
+            renderToolbar();
+          }
+          enhanceDomSprites();
+        } finally {
+          if (document.body) {
+            mo.observe(document.body, { childList: true, subtree: true });
+          }
+        }
+      }, 80);
     });
-    mo.observe(document.body, { childList: true, subtree: true });
+    if (document.body) {
+      mo.observe(document.body, { childList: true, subtree: true });
+    }
   };
 
   if (document.readyState === 'loading') {

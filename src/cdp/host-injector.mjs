@@ -108,6 +108,13 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
     try { window.__GEMINEKO_CDP_UNMOUNT__(); } catch {}
   }
 
+  // 先彻底清除页面上所有历史误插的 .gk-step-avatar 与标记，防止升级后残留重叠
+  function cleanupStepAvatars() {
+    document.querySelectorAll('.gk-step-avatar').forEach((n) => n.remove());
+    document.querySelectorAll('[data-gemineko-step]').forEach((el) => el.removeAttribute('data-gemineko-step'));
+  }
+  cleanupStepAvatars();
+
   let stopped = false;
   let pollTimer = null;
   let observer = null;
@@ -247,15 +254,17 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
         100% { opacity: 0; transform: translateY(-28px) scale(1.25); }
       }
       .gk-step-avatar {
-        width: 20px;
-        height: 20px;
-        border-radius: 6px;
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border-radius: 5px;
         object-fit: cover;
-        margin-right: 6px;
-        vertical-align: middle;
+        margin-right: 5px;
+        vertical-align: -3px;
         border: 1px solid rgba(139, 92, 246, 0.35);
         background: #fff;
         flex-shrink: 0;
+        pointer-events: none;
       }
     \`;
     document.head.appendChild(style);
@@ -395,28 +404,26 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
   }
 
   function decorateChatStream() {
-    const stepCandidates = document.querySelectorAll('button, summary, [role="button"], div');
+    // 严格只扫描交互型步骤按钮（button / summary / [role="button"]），绝不扫描外层 div，防止多层竖排叠图
+    const stepCandidates = document.querySelectorAll('button, summary, [role="button"]');
     for (const el of stepCandidates) {
       if (el.getAttribute('data-gemineko-step') === '1') continue;
-      if (el.children.length > 4) continue;
+      if (el.closest('[data-gemineko-step="1"]')) continue;
+      if (el.querySelector('.gk-step-avatar')) continue;
       const text = (el.textContent || '').trim();
-      if (!text || text.length > 96) continue;
-      if (/^(Worked for |Inspecting |Analyzed |Ran |Read |Edited |Created |Searching )/i.test(text)) {
-        const avatar = document.createElement('img');
-        avatar.className = 'gk-step-avatar';
-        const lower = text.toLowerCase();
-        const act = /analyz|read|inspect|search/.test(lower)
-          ? 'reading'
-          : /edit|creat|writ|modif/.test(lower)
-            ? 'editing'
-            : /ran |exec|test|command/.test(lower)
-              ? 'running'
-              : (latestState.action || 'thinking');
-        const role = latestState.role || 'neon';
-        avatar.src = \`\${SERVER}/gemineko-sprites/\${role}-\${act}.png\`;
-        el.setAttribute('data-gemineko-step', '1');
-        el.prepend(avatar);
-      }
+      if (!text || text.length > 40) continue;
+      if (!/^Worked for\s+\d/i.test(text)) continue;
+
+      const cs = window.getComputedStyle ? window.getComputedStyle(el) : null;
+      if (cs && /flex/.test(cs.display) && cs.flexDirection === 'column') continue;
+
+      const avatar = document.createElement('img');
+      avatar.className = 'gk-step-avatar';
+      const role = latestState.role || 'neon';
+      const act = latestState.action && latestState.action !== 'asking' ? latestState.action : 'thinking';
+      avatar.src = \`\${SERVER}/gemineko-sprites/\${role}-\${act}.png\`;
+      el.setAttribute('data-gemineko-step', '1');
+      el.prepend(avatar);
     }
 
     if (LOGO_URI) {
@@ -473,6 +480,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
     stopped = true;
     if (pollTimer) clearTimeout(pollTimer);
     if (observer) observer.disconnect();
+    cleanupStepAvatars();
     const box = document.getElementById(OVERLAY_ID);
     if (box) {
       if (typeof box.__gkCleanup === 'function') box.__gkCleanup();

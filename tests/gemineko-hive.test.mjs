@@ -13,6 +13,7 @@ import {
   readConversationLiveActivity,
 } from '../src/activity-tracker.mjs';
 import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../src/native-patcher.mjs';
+import { buildCdpOverlayScript } from '../src/cdp/host-injector.mjs';
 import { createHiveSidecarServer } from '../src/sidecar/server.mjs';
 import { resolveMemeNickname } from '../src/theme/nicknames.js';
 
@@ -130,6 +131,7 @@ test('buildGeminekoBundle 生成轻量化自包含脚本并内联花名与动作
   assert.match(content, /resolveMemeNickname/);
   assert.match(content, /drawPixelSprite/);
   assert.match(content, /buildDemoSwarmSnapshot/);
+  assert.match(content, /mo\.disconnect\(\)/);
 });
 
 test('activity-tracker 正确识别 5 大模型、工具动作与编排/执行阶段', () => {
@@ -248,7 +250,16 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
   try {
     const hz = await srv.inject({ url: '/healthz' });
     assert.equal(hz.statusCode, 200);
-    assert.equal(hz.json().version, '0.2.0');
+    assert.equal(hz.json().version, '0.2.1');
+
+    const preloadRes = await srv.inject({ url: '/preload.js' });
+    assert.equal(preloadRes.statusCode, 200);
+    assert.ok(preloadRes.text.length > 200, 'preload.js 不应为空注释');
+    assert.match(preloadRes.text, /window\.sidecar/);
+
+    const overlayScript = buildCdpOverlayScript(srv.origin, '');
+    assert.match(overlayScript, /cleanupStepAvatars/);
+    assert.doesNotMatch(overlayScript, /querySelectorAll\(['"]button, summary, \[role="button"\], div['"]\)/);
 
     const spriteRes = await fetch(`${srv.origin}/gemineko-sprites/neon-thinking.png`);
     assert.equal(spriteRes.status, 200);

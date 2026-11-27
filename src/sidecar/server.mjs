@@ -204,6 +204,44 @@ async function readJsonBody(req) {
 }
 
 /**
+ * 解析并返回真实的 sidecar_sdk/preload.js（提供 window.sidecar API 与主题变量同步）。
+ * 若宿主不存在该模块，则提供最小可用 Polyfill，保证独立面板不因缺少 window.sidecar 而卡死。
+ */
+let cachedPreloadJs = null;
+function resolveSidecarPreloadJs() {
+  if (cachedPreloadJs) return cachedPreloadJs;
+  const sdkPreload = path.join(os.homedir(), '.gemini', 'antigravity', 'lib', 'node_modules', 'sidecar_sdk', 'preload.js');
+  if (fs.existsSync(sdkPreload)) {
+    try {
+      cachedPreloadJs = fs.readFileSync(sdkPreload, 'utf8');
+      return cachedPreloadJs;
+    } catch {
+      /* fallback below */
+    }
+  }
+  cachedPreloadJs = `(() => {
+  const params = new URLSearchParams(window.location.search);
+  const conversationId = params.get('conversationId') || '';
+  const token = params.get('token') || '';
+  window.sidecar = {
+    conversationId,
+    fetch(input, init = {}) {
+      const headers = new Headers(init.headers || {});
+      if (token && !headers.has('x-sidecar-token')) headers.set('x-sidecar-token', token);
+      return window.fetch(input, { ...init, headers });
+    },
+    async getWorkspaceUris() { return []; },
+    onWorkspaceChange() { return () => {}; },
+    ui: {
+      toggleAuxPane(p) { window.parent?.postMessage({ type: 'toggle-aux-pane', payload: p }, '*'); },
+      toggleConversation(c, o) { window.parent?.postMessage({ type: 'toggle-conversation', payload: { conversationId: c, ...o } }, '*'); },
+    },
+  };
+})();`;
+  return cachedPreloadJs;
+}
+
+/**
  * 如果宿主未部署官方 swarm_board 静态前端，则回退输出轻量化独立页。
  */
 function renderStandaloneFallbackHtml(sideToken) {
@@ -288,13 +326,13 @@ export async function createHiveSidecarServer(options = {}) {
     }
 
     if (req.method === 'GET' && pathname === '/healthz') {
-      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.2.0', sidecar: 'hive_board' });
+      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.2.1', sidecar: 'hive_board' });
       return;
     }
 
     if (req.method === 'GET' && pathname === '/preload.js') {
       res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
-      res.end('/* Gemineko Hive Sidecar Preload */');
+      res.end(resolveSidecarPreloadJs());
       return;
     }
 
@@ -425,6 +463,9 @@ export async function createHiveSidecarServer(options = {}) {
       if (fs.existsSync(nativeIndex)) {
         let html = fs.readFileSync(nativeIndex, 'utf8');
         html = html.replace(/<!-- GEMINEKO_HIVE_START -->[\s\S]*?<!-- GEMINEKO_HIVE_END -->/g, '');
+        // 移除 Google Fonts 外部阻塞链接，避免离线或弱网环境下卡住 Sidecar iframe load 事件
+        html = html.replace(/<link[^>]+fonts\.googleapis\.com[^>]*>/gi, '');
+        html = html.replace(/<link[^>]+fonts\.gstatic\.com[^>]*>/gi, '');
         const injectBoot = `<script>window.__GEMINEKO_SIDECAR_MODE__=true;window.__SIDECAR_TOKEN__=${JSON.stringify(tok)};</script><script src="/gemineko-hive.js"></script>`;
         html = html.includes('</body>') ? html.replace('</body>', `${injectBoot}\n</body>`) : html + injectBoot;
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });

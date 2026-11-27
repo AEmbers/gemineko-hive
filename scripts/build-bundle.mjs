@@ -51,7 +51,7 @@ export function buildGeminekoBundle() {
   );
 
   const bundle = [
-    '// Built by Gemineko Hive v0.2.0 (scripts/build-bundle.mjs) — DO NOT EDIT DIRECTLY.',
+    '// Built by Gemineko Hive v0.2.1 (scripts/build-bundle.mjs) — DO NOT EDIT DIRECTLY.',
     '(function() {',
     '  "use strict";',
     '  if (typeof window === "undefined" || window.__GEMINEKO_HIVE_LOADED__) return;',
