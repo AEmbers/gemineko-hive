@@ -3,8 +3,8 @@
 ## [0.6.3] - 2026-11-27
 
 ### Fixed & Refined
-- **去除 `optical-neko` 下思考折叠条/文件变更卡/行内代码的突兀紫框**：
-  - 将 `[data-testid="thinking-collapsible-trigger"]`、`[data-testid="worked-for-collapsible"]`、`[data-testid="tool-group-collapsible"]`、`[data-testid="changed-files-card"]` 与行内 `code`/胶囊在 `optical-neko` 模式下收敛为极净透明或中性玻璃边框（保留 `vivid` 浓郁模式原样）；
+- **去除 `optical-neko` 下思考折叠条/文件变更卡的突兀紫框（保留行内字块与胶囊角色高亮）**：
+  - 将 `[data-testid="thinking-collapsible-trigger"]`、`[data-testid="worked-for-collapsible"]`、`[data-testid="tool-group-collapsible"]` 与 `[data-testid="changed-files-card"]` 在 `optical-neko` 模式下收敛为极净透明或中性玻璃边框（保留行内 `code` / 实体胶囊随角色配色的柔美高亮，保留 `vivid` 浓郁模式原样）；
 - **提升浅色 `optical-neko` 下右下角水印猫娘清晰度**：
   - 浅色模式下 `#gemineko-corner-watermark` 透明度提升至 `clamp(0.32, var(--gk-watermark-opacity) * 2.8, 0.52)`，配合 `saturate(1.22) contrast(1.06)` 与白底玻璃名牌，深色模式保持不变；
 - **消除小猫 Dock 与最后一条消息操作按钮拥挤**：

@@ -2025,22 +2025,6 @@ html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="changed-
   border: 1px solid var(--gk-optical-border-base) !important;
   box-shadow: var(--gk-optical-shadow-card) !important;
 }
-html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] :is([data-testid="planner-response-text"], [data-testid="agent-response"]) :not(pre) > code {
-  background: rgba(15, 23, 42, 0.048) !important;
-  border: 1px solid rgba(15, 23, 42, 0.08) !important;
-}
-html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] :is([data-testid="planner-response-text"], [data-testid="agent-response"]) :not(pre) > code {
-  background: rgba(255, 255, 255, 0.068) !important;
-  border: 1px solid rgba(255, 255, 255, 0.10) !important;
-}
-html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] :is([data-testid="entity-pill"], .inline-pill, [data-testid="step-plan-chip"]) {
-  background-color: rgba(15, 23, 42, 0.045) !important;
-  border: 1px solid rgba(15, 23, 42, 0.085) !important;
-}
-html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] :is([data-testid="entity-pill"], .inline-pill, [data-testid="step-plan-chip"]) {
-  background-color: rgba(255, 255, 255, 0.065) !important;
-  border: 1px solid rgba(255, 255, 255, 0.11) !important;
-}
 html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] #\${WATERMARK_ID} {
   opacity: clamp(0.32, calc(var(--gk-watermark-opacity, 0.14) * 2.8), 0.52) !important;
 }
