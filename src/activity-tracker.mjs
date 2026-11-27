@@ -97,8 +97,6 @@ const RUN_TOOLS = new Set([
 
 const ASK_TOOLS = new Set([
   'ask_question',
-  'enter_plan_mode',
-  'exit_plan_mode',
 ]);
 
 /**
@@ -143,7 +141,7 @@ export function normalizeToolName(rawToolName = '') {
 export function classifyToolAction(toolName = '', hasThinking = false, isActive = true) {
   if (!isActive) return 'idle';
   const name = normalizeToolName(toolName);
-  if (ASK_TOOLS.has(name) || /ask_question|plan_mode/.test(name)) return 'asking';
+  if (ASK_TOOLS.has(name) || /ask_question/.test(name)) return 'asking';
   if (EDIT_TOOLS.has(name) || /write_file|edit_file|apply_edits|replace_file/.test(name)) return 'editing';
   if (RUN_TOOLS.has(name) || /run_command|run_checks|ctx_execute|colab_run|colab_exec|workflow/.test(name)) return 'running';
   if (READ_TOOLS.has(name) || /read_file|read_slices|search|list_|find_|view_|ctx_/.test(name)) return 'reading';

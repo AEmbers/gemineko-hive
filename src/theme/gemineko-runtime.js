@@ -190,6 +190,35 @@ export function bootGeminekoHive() {
   let lastSidecarThemeConfig = null;
   let lastSidecarThemeTs = 0;
 
+  function resolveHostNativeDark(root) {
+    const dt = root?.getAttribute?.('data-theme');
+    if (dt === 'dark') return true;
+    if (dt === 'light') return false;
+    const bgStr = String(root?.style?.getPropertyValue?.('--background') || '').trim();
+    if (bgStr) {
+      const hex6 = /^#([0-9a-f]{6})$/i.exec(bgStr);
+      if (hex6) {
+        const n = parseInt(hex6[1], 16);
+        const lum = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+        return lum < 128;
+      }
+      const hex3 = /^#([0-9a-f]{3})$/i.exec(bgStr);
+      if (hex3) {
+        const [r, g, b] = hex3[1].split('').map((c) => parseInt(c + c, 16));
+        return 0.299 * r + 0.587 * g + 0.114 * b < 128;
+      }
+      const rgb = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(bgStr);
+      if (rgb) {
+        return 0.299 * Number(rgb[1]) + 0.587 * Number(rgb[2]) + 0.114 * Number(rgb[3]) < 128;
+      }
+    }
+    try {
+      return Boolean(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch {
+      return false;
+    }
+  }
+
   function syncSidecarHostTheme(cfg) {
     if (cfg && typeof cfg === 'object') {
       lastSidecarThemeConfig = cfg;
@@ -211,11 +240,7 @@ export function bootGeminekoHive() {
 
     const pack = cur.activeThemePack && typeof cur.activeThemePack === 'object' ? cur.activeThemePack : null;
     const preset = cur.preset || 'auto';
-    let sysDark = false;
-    try {
-      sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    } catch {}
-    const hostDark = root.getAttribute('data-theme') === 'dark' || sysDark;
+    const hostDark = resolveHostNativeDark(root);
 
     let scheme = hostDark ? 'dark' : 'light';
     if (pack && (pack.scheme === 'light' || pack.scheme === 'dark')) {
@@ -229,7 +254,6 @@ export function bootGeminekoHive() {
     const effPreset = preset === 'auto' ? (scheme === 'dark' ? 'starry-nest' : 'nebula-day') : preset;
     setAttrIfChanged(root, 'data-gn-scheme', scheme);
     setAttrIfChanged(root, 'data-gn-preset', effPreset);
-    setAttrIfChanged(root, 'data-theme', scheme);
 
     const acc = pack?.accent || {};
     root.style.setProperty('--gn-hive-accent', acc.primary || '#7c6cf6');
@@ -1961,6 +1985,12 @@ export function bootGeminekoHive() {
     });
     if (document.body) {
       mo.observe(document.body, { childList: true, subtree: true });
+    }
+    if (document.documentElement) {
+      const rootThemeMo = new MutationObserver(() => {
+        if (lastSidecarThemeConfig) syncSidecarHostTheme();
+      });
+      rootThemeMo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     }
   };
 

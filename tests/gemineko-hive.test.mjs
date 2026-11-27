@@ -189,6 +189,8 @@ test('activity-tracker 正确识别 5 大模型、工具动作与编排/执行�
   assert.equal(classifyToolAction('mcp_agy-dart_fast_apply_edits', false, true), 'editing');
   assert.equal(classifyToolAction('run_checks', false, true), 'running');
   assert.equal(classifyToolAction('ask_question', false, true), 'asking');
+  assert.equal(classifyToolAction('exit_plan_mode', false, true), 'thinking');
+  assert.equal(classifyToolAction('enter_plan_mode', false, true), 'thinking');
   assert.equal(resolveSpriteFile('neon', 'asking'), 'neon-asking.png');
   assert.equal(resolveSpriteFile('claude', 'nonexistent-action'), 'claude-thinking.png');
   assert.equal(resolveSpriteFile('unknown-role', 'reading'), 'neon-reading.png');
@@ -740,6 +742,8 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(bundleContent, /gn-store-preview/);
     assert.match(bundleContent, /gn-switch/);
     assert.match(bundleContent, /--gn-font-scale/);
+    assert.match(bundleContent, /resolveHostNativeDark/);
+    assert.doesNotMatch(bundleContent, /setAttrIfChanged\(root,\s*'data-theme',\s*scheme\)/);
     assert.match(bundleContent, /sidecarFontSize/);
     assert.match(bundleContent, /hostFontScale/);
     assert.match(bundleContent, /gemineko-sidecar-shell/);

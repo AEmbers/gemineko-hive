@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.4] - 2026-11-27
+
+### Fixed
+- **彻底修复 `auto` 模式下《基米窝》侧边栏自锁深色的 Bug**：
+  - 移除 `syncSidecarHostTheme()` 中误写宿主 `data-theme` 属性的逻辑，改为只读侦测宿主原生 `data-theme` 与 `--background` 亮度并仅写入插件自有 `data-gn-scheme` / `data-gn-preset`；
+  - 增加 `document.documentElement[data-theme]` 监听并在 `html[data-gn-scheme="light"]` 补充覆盖 `--sw-hover` / `--sw-press` / `--sw-fill` / `--sw-field` / `--sw-success` / `--sw-warning`，确保即便先切过纯黑深色再切回 `auto` 或浅色基底，侧边栏也能立即恢复纯粹浅白。
+- **修复 `exit_plan_mode` / `enter_plan_mode` 误显「等你拍板」的 Bug**：
+  - 将 `src/activity-tracker.mjs` 的 `ASK_TOOLS` 收窄为仅包含 `ask_question`，避免内部规划阶段切换被归类为 `'asking'`（「等你拍板」），统一归入 `'thinking'`（「思考中」）。
+
 ## [0.7.3] - 2026-11-27
 
 ### Added & Refined

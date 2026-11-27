@@ -34,6 +34,12 @@ html[data-gn-scheme="light"] {
   --sw-fg-muted: #64748b !important;
   --sw-border: rgba(15, 23, 42, 0.08) !important;
   --sw-card-border: rgba(15, 23, 42, 0.1) !important;
+  --sw-hover: color-mix(in srgb, #0f172a 5%, transparent) !important;
+  --sw-press: color-mix(in srgb, #0f172a 9%, transparent) !important;
+  --sw-fill: color-mix(in srgb, #0f172a 6%, transparent) !important;
+  --sw-field: color-mix(in srgb, #0f172a 4.5%, transparent) !important;
+  --sw-success: #63984f !important;
+  --sw-warning: #bca136 !important;
   --o2-card: #ffffff;
   --o2-border: rgba(15, 23, 42, 0.1);
 }
