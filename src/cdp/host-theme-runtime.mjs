@@ -3,13 +3,8 @@
  * 参考真实宿主 CSS Token 与 data-testid 选择器深度适配全界面，零修改 app.asar。
  */
 
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { BRAND_META } from '../meta/brand.mjs';
 import { DEFAULT_HOST_THEME_CONFIG, ROLE_PALETTES, THEME_PRESETS } from '../theme/host-theme-config.mjs';
-
-const THEME_RUNTIME_DIR = dirname(fileURLToPath(import.meta.url));
 
 function pawGroupSvg(x, y, rot, scale = 1) {
   return [
@@ -199,18 +194,10 @@ function buildTopBrandPawUri() {
   return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
 }
 
-/** 读取《基米窝》首页透明大徽章素材（assets/sprites/home-star-gem-light|dark.png）为内联 Base64 Data URI（带矢量兜底） */
-function readHomeGemDataUri(fileName, fallbackBuilder) {
-  try {
-    const gemPath = resolve(THEME_RUNTIME_DIR, '..', '..', 'assets', 'sprites', fileName);
-    if (existsSync(gemPath)) {
-      const b64 = readFileSync(gemPath).toString('base64');
-      return `url("data:image/png;base64,${b64}")`;
-    }
-  } catch {
-    // 忽略读取异常并降级到内置 SVG
-  }
-  return fallbackBuilder();
+/** 凹弧四角光学棱镜轮廓 Mask URI（用于将流光与扫描高光严格限定在棱镜外轮廓内，零 CORS 且不外溢矩形边） */
+function buildHomeGemMaskUri() {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 3 Q57 43 97 50 Q57 57 50 97 Q43 57 3 50 Q43 43 50 3 Z" fill="#000"/></svg>';
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
 }
 
 /** 空白首页正中央 120×120 珠宝级 8 切面立体炫彩哈基米猫耳星钻（✦）SVG data URI */
@@ -274,8 +261,7 @@ export function buildHostThemeRuntimeSnippet() {
   const roleSpinnersJson = JSON.stringify(buildRoleSpinnerSvgMap());
   const pawSpinnersJson = JSON.stringify(buildPawSpinnerSvgMap());
   const topBrandPawJson = JSON.stringify(buildTopBrandPawUri());
-  const homeGemLightJson = JSON.stringify(readHomeGemDataUri('home-star-gem-light.png', buildHomeBrandCatUri));
-  const homeGemDarkJson = JSON.stringify(readHomeGemDataUri('home-star-gem-dark.png', buildHomeBrandCatUri));
+  const homeGemMaskJson = JSON.stringify(buildHomeGemMaskUri());
   const brandMetaJson = JSON.stringify(BRAND_META);
 
   return `
@@ -289,8 +275,10 @@ export function buildHostThemeRuntimeSnippet() {
     const ROLE_SPINNERS = ${roleSpinnersJson};
     const PAW_SPINNERS = ${pawSpinnersJson};
     const TOP_BRAND_PAW_URI = ${topBrandPawJson};
-    const HOME_GEM_LIGHT_URI = ${homeGemLightJson};
-    const HOME_GEM_DARK_URI = ${homeGemDarkJson};
+    const HOME_GEM_MASK_URI = ${homeGemMaskJson};
+    const homeGemVer = encodeURIComponent((BRAND && BRAND.version) || '0.7.5') + '-1024';
+    const HOME_GEM_LIGHT_URI = 'url("' + ctx.server + '/gemineko-sprites/home-star-gem-light.png?v=' + homeGemVer + '")';
+    const HOME_GEM_DARK_URI = 'url("' + ctx.server + '/gemineko-sprites/home-star-gem-dark.png?v=' + homeGemVer + '")';
     const THEME_STYLE_ID = 'gemineko-host-theme-v5';
     const COMMUNITY_PACK_STYLE_ID = 'gemineko-community-pack-style';
     const WP_LAYER_ID = 'gemineko-wallpaper-layer';
@@ -1656,7 +1644,7 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-ne
   transform: scale(1.08) rotate(-4deg) !important;
 }
 
-/* 焦点 3：空白首页主视觉高定重构（严格中轴居中 × 128×128 无方框钻石棱镜哈基米 × 四层光学流光动效） */
+/* 焦点 3：空白首页主视觉高定重构（严格中轴居中 × 208×208 原生 1024px 超清钻石棱镜哈基米 × 中心透空防冲白四层流光） */
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home .home-greeting-mark,
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="home-greeting"] .home-greeting-mark {
   display: none !important;
@@ -1673,11 +1661,11 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) :is(.agy-home [data-testi
 }
 #\${HOME_EMBLEM_ID} {
   position: relative !important;
-  width: 128px !important;
-  height: 128px !important;
-  min-width: 128px !important;
-  min-height: 128px !important;
-  margin: 0 auto 12px !important;
+  width: 208px !important;
+  height: 208px !important;
+  min-width: 208px !important;
+  min-height: 208px !important;
+  margin: 0 auto 10px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -1685,28 +1673,28 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) :is(.agy-home [data-testi
   user-select: none !important;
   overflow: visible !important;
   flex-shrink: 0 !important;
-  perspective: 720px !important;
+  perspective: 820px !important;
   perspective-origin: 50% 50% !important;
 }
 #\${HOME_EMBLEM_ID} .gk-he-halo {
   position: absolute;
-  inset: 6px;
+  inset: 14px;
   border-radius: 999px;
   pointer-events: none;
-  filter: blur(24px);
-  opacity: 0.24;
+  filter: blur(30px);
+  opacity: 0.22;
   background: conic-gradient(from 0deg, #38BDF8, #6366F1, #A855F7, #EC4899, #FBBF24, #38BDF8);
   animation: gkPrismHaloOrbit 16s linear infinite;
   transition: opacity 0.26s ease;
 }
 html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-halo {
-  opacity: 0.46;
+  opacity: 0.44;
 }
 #\${HOME_EMBLEM_ID}:hover .gk-he-halo {
-  opacity: 0.38;
+  opacity: 0.36;
 }
 html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID}:hover .gk-he-halo {
-  opacity: 0.60;
+  opacity: 0.58;
 }
 #\${HOME_EMBLEM_ID} .gk-he-stage {
   position: relative;
@@ -1723,20 +1711,20 @@ html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID}:hover .gk-he-halo {
   transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 #\${HOME_EMBLEM_ID}:hover .gk-he-stage {
-  transform: rotateX(var(--gk-gem-rx, 0deg)) rotateY(var(--gk-gem-ry, 0deg)) scale(1.04) translateZ(6px) !important;
+  transform: rotateX(var(--gk-gem-rx, 0deg)) rotateY(var(--gk-gem-ry, 0deg)) scale(1.035) translateZ(6px) !important;
 }
 #\${HOME_EMBLEM_ID}.is-sparkling .gk-he-stage {
   animation: none !important;
-  transform: rotateX(var(--gk-gem-rx, 0deg)) rotateY(var(--gk-gem-ry, 0deg)) scale(1.09) translateZ(10px) !important;
+  transform: rotateX(var(--gk-gem-rx, 0deg)) rotateY(var(--gk-gem-ry, 0deg)) scale(1.07) translateZ(10px) !important;
 }
 #\${HOME_EMBLEM_ID} .gk-he-caustic {
   position: absolute;
-  inset: 90px 18px -6px;
+  inset: 158px 30px -8px;
   border-radius: 999px;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 50%, rgba(56, 189, 248, 0.24) 0%, rgba(168, 85, 247, 0.16) 55%, transparent 82%);
-  filter: blur(11px);
-  opacity: 0.56;
+  background: radial-gradient(ellipse at 50% 50%, rgba(56, 189, 248, 0.22) 0%, rgba(168, 85, 247, 0.14) 55%, transparent 82%);
+  filter: blur(14px);
+  opacity: 0.54;
   transform: translate3d(var(--gk-gem-cx, 0px), var(--gk-gem-cy, 0px), -18px);
   transition: transform 0.18s ease-out, opacity 0.24s ease;
 }
@@ -1747,8 +1735,8 @@ html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-caustic {
 #\${HOME_EMBLEM_ID} .gk-he-gem {
   position: relative;
   z-index: 1;
-  width: 128px;
-  height: 128px;
+  width: 208px;
+  height: 208px;
   border-radius: 0;
   display: block;
   pointer-events: none;
@@ -1757,9 +1745,10 @@ html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-caustic {
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
+  image-rendering: -webkit-optimize-contrast;
   border: none;
   box-shadow: none;
-  filter: drop-shadow(0 12px 22px rgba(56, 189, 248, 0.24)) drop-shadow(0 4px 12px rgba(139, 92, 246, 0.16));
+  filter: drop-shadow(0 14px 26px rgba(56, 189, 248, 0.22)) drop-shadow(0 5px 14px rgba(139, 92, 246, 0.14));
   animation: gkGemIridescence 7.5s ease-in-out infinite;
   transition: filter 0.24s ease;
 }
@@ -1767,11 +1756,11 @@ html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-gem {
   background-image: \${HOME_GEM_DARK_URI};
   border: none;
   box-shadow: none;
-  filter: drop-shadow(0 14px 28px rgba(56, 189, 248, 0.36)) drop-shadow(0 0 18px rgba(139, 92, 246, 0.30));
+  filter: drop-shadow(0 16px 32px rgba(56, 189, 248, 0.36)) drop-shadow(0 0 20px rgba(139, 92, 246, 0.30));
   animation: gkGemIridescenceDark 7.5s ease-in-out infinite;
 }
 #\${HOME_EMBLEM_ID}.is-sparkling .gk-he-gem {
-  filter: brightness(1.08) saturate(1.14) drop-shadow(0 0 16px rgba(56, 189, 248, 0.54)) drop-shadow(0 8px 24px rgba(236, 72, 153, 0.40)) !important;
+  filter: brightness(1.08) saturate(1.14) drop-shadow(0 0 18px rgba(56, 189, 248, 0.54)) drop-shadow(0 8px 26px rgba(236, 72, 153, 0.40)) !important;
   box-shadow: none !important;
 }
 #\${HOME_EMBLEM_ID} .gk-he-sheen {
@@ -1781,35 +1770,40 @@ html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-gem {
   border-radius: 0;
   pointer-events: none;
   transform: translateZ(8px);
-  background: radial-gradient(circle 50px at var(--gk-gem-gx, 32%) var(--gk-gem-gy, 22%), rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.08) 48%, transparent 74%);
-  -webkit-mask-image: \${HOME_GEM_LIGHT_URI};
-  mask-image: \${HOME_GEM_LIGHT_URI};
+  background: radial-gradient(circle 66px at var(--gk-gem-gx, 32%) var(--gk-gem-gy, 22%), rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 48%, transparent 74%);
+  -webkit-mask-image: \${HOME_GEM_MASK_URI};
+  mask-image: \${HOME_GEM_MASK_URI};
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-position: center;
   mask-position: center;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
-  mix-blend-mode: screen;
+  mix-blend-mode: overlay;
   overflow: hidden;
 }
 html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-sheen {
-  -webkit-mask-image: \${HOME_GEM_DARK_URI};
-  mask-image: \${HOME_GEM_DARK_URI};
+  background: radial-gradient(circle 66px at var(--gk-gem-gx, 32%) var(--gk-gem-gy, 22%), rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.08) 48%, transparent 74%);
+  mix-blend-mode: screen;
 }
 #\${HOME_EMBLEM_ID} .gk-he-sheen::before {
   content: "";
   position: absolute;
   inset: -42%;
-  background: linear-gradient(122deg, transparent 36%, rgba(56, 189, 248, 0.34) 44%, rgba(255, 255, 255, 0.72) 50%, rgba(236, 72, 153, 0.32) 56%, transparent 64%);
-  animation: gkGemSheenSweep 4.8s ease-in-out infinite;
+  background: linear-gradient(122deg, transparent 38%, rgba(56, 189, 248, 0.24) 45%, rgba(255, 255, 255, 0.44) 50%, rgba(236, 72, 153, 0.22) 55%, transparent 62%);
+  animation: gkGemSheenSweep 5.4s ease-in-out infinite;
+}
+html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-sheen::before {
+  background: linear-gradient(122deg, transparent 36%, rgba(56, 189, 248, 0.34) 44%, rgba(255, 255, 255, 0.68) 50%, rgba(236, 72, 153, 0.32) 56%, transparent 64%);
 }
 #\${HOME_EMBLEM_ID} .gk-he-sheen::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(132deg, rgba(56, 189, 248, 0) 0%, rgba(56, 189, 248, 0.24) 24%, rgba(168, 85, 247, 0.28) 48%, rgba(244, 114, 182, 0.24) 68%, rgba(251, 191, 36, 0.18) 84%, rgba(56, 189, 248, 0) 100%);
+  background: linear-gradient(132deg, rgba(56, 189, 248, 0) 0%, rgba(56, 189, 248, 0.28) 24%, rgba(168, 85, 247, 0.32) 48%, rgba(244, 114, 182, 0.28) 68%, rgba(251, 191, 36, 0.22) 84%, rgba(56, 189, 248, 0) 100%);
   background-size: 260% 260%;
+  -webkit-mask-image: radial-gradient(circle, transparent 42%, #000 78%);
+  mask-image: radial-gradient(circle, transparent 42%, #000 78%);
   animation: gkPrismFacetFlow 7.2s ease-in-out infinite;
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark {
@@ -1820,17 +1814,17 @@ html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-sheen {
   user-select: none;
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark-a {
-  top: 10px;
-  right: 10px;
-  font-size: 12px;
+  top: 16px;
+  right: 16px;
+  font-size: 14px;
   color: #38BDF8;
   text-shadow: 0 0 8px rgba(56, 189, 248, 0.75), 0 0 14px rgba(168, 85, 247, 0.45);
   animation: gkStarTwinkle 3.2s ease-in-out infinite;
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark-b {
-  bottom: 14px;
-  left: 10px;
-  font-size: 10px;
+  bottom: 22px;
+  left: 16px;
+  font-size: 12px;
   color: #EC4899;
   text-shadow: 0 0 8px rgba(236, 72, 153, 0.72), 0 0 14px rgba(251, 191, 36, 0.42);
   animation: gkStarTwinkle 3.8s ease-in-out 1.4s infinite;
@@ -1839,8 +1833,10 @@ html[data-gk-theme] .agy-home > :not(#\${AURORA_HOST_ID}):not(#\${WATERMARK_ID})
   position: relative;
   z-index: 1;
 }
-html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1),
-html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1) {
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1, h2),
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1, h2),
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-gk-home-title="1"],
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-gk-home-title="1"] span {
   background: linear-gradient(110deg, #1E1B4B 0%, #4F46E5 22%, #9333EA 46%, #DB2777 68%, #0284C7 88%, #1E1B4B 100%) !important;
   background-size: 240% 100% !important;
   -webkit-background-clip: text !important;
@@ -1852,8 +1848,10 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-gk-home-greeting-ho
   text-align: center !important;
   animation: gkPrismHairlineFlow 9s linear infinite !important;
 }
-html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1),
-html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1) {
+html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1, h2),
+html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1, h2),
+html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) [data-gk-home-title="1"],
+html[data-gk-theme][data-gk-scheme="dark"]:not([data-gk-intensity="minimal"]) [data-gk-home-title="1"] span {
   background: linear-gradient(110deg, #F8FAFC 0%, #7DD3FC 22%, #C4B5FD 46%, #F9A8D4 68%, #FDE68A 88%, #F8FAFC 100%) !important;
   background-size: 240% 100% !important;
   -webkit-background-clip: text !important;
@@ -2336,8 +2334,10 @@ html[data-gk-theme]:is([data-gk-focus="1"], [data-gk-motion="off"]) :is(
   #\${HOME_EMBLEM_ID} .gk-he-sheen::before,
   #\${HOME_EMBLEM_ID} .gk-he-sheen::after,
   #\${HOME_EMBLEM_ID} .gk-he-spark,
-  .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1),
-  [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1)
+  .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1, h2),
+  [data-gk-home-greeting-host="1"] :is(.home-greeting-title, h1, h2),
+  [data-gk-home-title="1"],
+  [data-gk-home-title="1"] span
 ) {
   animation: none !important;
 }
@@ -2536,6 +2536,11 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       const host = greetingEl || markEl?.parentElement;
       if (!host) return;
       host.setAttribute('data-gk-home-greeting-host', '1');
+      const titleEl = host.querySelector('.home-greeting-title, h1, h2, h3, p')
+        || Array.from(host.children).find((el) => el.id !== HOME_EMBLEM_ID && el.tagName !== 'SVG' && (el.textContent || '').trim().length > 0);
+      if (titleEl && titleEl.getAttribute('data-gk-home-title') !== '1') {
+        titleEl.setAttribute('data-gk-home-title', '1');
+      }
 
       let emblem = document.getElementById(HOME_EMBLEM_ID);
       if (!emblem) {
@@ -2612,8 +2617,8 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         : 'thinking';
       const spriteUrl = isCustom
         ? \`\${ctx.server}/api/watermark/file?v=\${encodeURIComponent(String(cfg.updatedAt || 1))}\`
-        : \`\${ctx.server}/gemineko-sprites/\${wmRole}-\${actName}.png?v=0.5.1\`;
-      const fallbackUrl = \`\${ctx.server}/gemineko-sprites/\${wmRole}-thinking.png?v=0.5.1\`;
+        : \`\${ctx.server}/gemineko-sprites/\${wmRole}-\${actName}.png?v=0.7.6\`;
+      const fallbackUrl = \`\${ctx.server}/gemineko-sprites/\${wmRole}-thinking.png?v=0.7.6\`;
 
       let wm = document.getElementById(WATERMARK_ID);
       if (!wm) {
@@ -2637,7 +2642,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           img.addEventListener('error', () => {
             if (img.dataset.gkFb === '1') return;
             img.dataset.gkFb = '1';
-            img.src = img.dataset.gkFallbackSrc || \`\${ctx.server}/gemineko-sprites/neon-thinking.png?v=0.5.1\`;
+            img.src = img.dataset.gkFallbackSrc || \`\${ctx.server}/gemineko-sprites/neon-thinking.png?v=0.7.6\`;
           });
         }
         img.dataset.gkFallbackSrc = fallbackUrl;
@@ -2946,7 +2951,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           <div class="gk-home-cast">
             \${HOME_ROLES.map((r) => \`
               <button type="button" class="gk-home-actor" data-home-role="\${r.id}" title="\${r.tip}">
-                <img src="\${ctx.server}/gemineko-sprites/\${r.sprite}?v=0.5.1" alt="\${r.name}" />
+                <img src="\${ctx.server}/gemineko-sprites/\${r.sprite}?v=0.7.6" alt="\${r.name}" />
                 <span>\${r.name}</span>
               </button>
             \`).join('')}
@@ -2958,7 +2963,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           img.addEventListener('error', () => {
             if (img.dataset.gkFallback === '1') return;
             img.dataset.gkFallback = '1';
-            img.src = \`\${ctx.server}/gemineko-sprites/\${rId}-thinking.png?v=0.5.1\`;
+            img.src = \`\${ctx.server}/gemineko-sprites/\${rId}-thinking.png?v=0.7.6\`;
           });
         });
         stage.addEventListener('click', (e) => {
@@ -3392,7 +3397,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       track.className = 'gk-parade-track';
       for (const r of ['neon', 'hydrogen', 'carbon', 'claude', 'gpt']) {
         const img = document.createElement('img');
-        img.src = \`\${ctx.server}/gemineko-sprites/\${r}-running.png?v=0.5.1\`;
+        img.src = \`\${ctx.server}/gemineko-sprites/\${r}-running.png?v=0.7.6\`;
         img.alt = r;
         track.appendChild(img);
       }

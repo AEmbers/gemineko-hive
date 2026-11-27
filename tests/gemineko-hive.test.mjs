@@ -125,7 +125,7 @@ function createFakeSwarmSandbox() {
   return { root, swarmDir, origIndex, origMain, origLogoSvg, logoSvgPath: path.join(assetsDir, 'logo.svg'), appDataDir, convDir, convId };
 }
 
-test('35 张角色×动作 128x128 PNG 立绘全部就绪且具备 RGBA 透明通道（含抱臂仰头思考 ponder）', () => {
+test('35 张角色×动作 384x384 PNG 立绘全部就绪且具备 RGBA 透明通道（含抱臂仰头思考 ponder）', () => {
   const roles = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'];
   const actions = ['thinking', 'reading', 'editing', 'running', 'asking', 'ponder', 'idle'];
   const spritesDir = path.join(REPO_ROOT, 'assets', 'sprites');
@@ -136,8 +136,8 @@ test('35 张角色×动作 128x128 PNG 立绘全部就绪且具备 RGBA 透明�
       assert.ok(fs.existsSync(filePath), `缺少精灵图: ${role}-${action}.png`);
       const buf = fs.readFileSync(filePath);
       assert.equal(buf.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', `${role}-${action}.png 不是合法 PNG`);
-      assert.equal(buf.readUInt32BE(16), 128, `${role}-${action}.png 宽度应为 128`);
-      assert.equal(buf.readUInt32BE(20), 128, `${role}-${action}.png 高度应为 128`);
+      assert.equal(buf.readUInt32BE(16), 384, `${role}-${action}.png 宽度应为 384`);
+      assert.equal(buf.readUInt32BE(20), 384, `${role}-${action}.png 高度应为 384`);
       // PNG IHDR byte 25 为 colorType，6 表示带 Alpha 透明通道的 RGBA
       assert.equal(buf[25], 6, `${role}-${action}.png 应为 RGBA(colorType=6) 透明 PNG`);
       // 校验包含 APNG acTL 动画块且帧数 >= 2
@@ -153,8 +153,8 @@ test('35 张角色×动作 128x128 PNG 立绘全部就绪且具备 RGBA 透明�
     assert.ok(fs.existsSync(gemPath), `缺少首页 3D 星钻素材: ${gemName}`);
     const buf = fs.readFileSync(gemPath);
     assert.equal(buf.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', `${gemName} 不是合法 PNG`);
-    assert.equal(buf.readUInt32BE(16), 256, `${gemName} 宽度应为 256`);
-    assert.equal(buf.readUInt32BE(20), 256, `${gemName} 高度应为 256`);
+    assert.equal(buf.readUInt32BE(16), 1024, `${gemName} 宽度应为 1024`);
+    assert.equal(buf.readUInt32BE(20), 1024, `${gemName} 高度应为 1024`);
     assert.equal(buf[25], 6, `${gemName} 应为 RGBA(colorType=6) 透明 PNG`);
   }
 });
@@ -673,7 +673,8 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /gk-he-caustic/);
     assert.match(cdpScript, /gkGem3DFloat/);
     assert.match(cdpScript, /--gk-gem-ry/);
-    assert.match(cdpScript, /data:image\/png;base64/);
+    assert.match(cdpScript, /home-star-gem-light\.png/);
+    assert.match(cdpScript, /home-star-gem-dark\.png/);
     assert.match(cdpScript, /gkGemSheenSweep/);
     assert.match(cdpScript, /gkStarTwinkle/);
     assert.match(cdpScript, /syncHomeBrandEmblem/);

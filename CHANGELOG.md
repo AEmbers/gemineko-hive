@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.6] - 2026-11-27
+
+### Changed & Fixed
+- **全量 35 张角色×动作动态 APNG 立绘（+ 5 张别名）无损升级至 `384×384` 超清分辨率**：
+  - 升级 [build-animated-sprites.mjs](scripts/build-animated-sprites.mjs) 默认导出尺寸为 `384×384`（等比 `2.5%` 安全边距 + `LANCZOS` 锐利重采样 + `compress_level=9`），直接从 `621~1024px` 原始高清动图/精灵表重新精抠导出；
+  - 同步刷新 [host-injector.mjs](src/cdp/host-injector.mjs)、[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs) 与 [gemineko-runtime.js](src/theme/gemineko-runtime.js) 中所有立绘 URL 缓存版本号为 `?v=0.7.6`，并升级 [gemineko-hive.test.mjs](tests/gemineko-hive.test.mjs) 校验全部 35 张 `384×384` APNG。
+
 ## [0.7.5] - 2026-11-27
 
 ### Fixed
@@ -18,10 +25,10 @@
   - 将 [host-injector.mjs](src/cdp/host-injector.mjs)、[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs) 与 [host-meme-runtime.mjs](src/cdp/host-meme-runtime.mjs) 中的 Dock 猫娘、行内小猫、首页角色、猫爪大纲球与表情缩略图全部联动 `var(--gk-host-font-scale)` 缩放。
 
 ### Changed & Upgraded
-- **品牌视觉终极升级（「钻石级四芒光学棱镜沉睡 Neon 哈基米」× 四层光学流光动效）**：
-  - **首页大 Logo（`assets/sprites/home-star-gem-light.png` / `home-star-gem-dark.png`）**：将精绘钻石级凹弧四角光学棱镜内沉睡的炫彩 Neon 哈基米经纯黑底手术级泛洪抠图与去黑边色溢（Black-Matte Decontamination）处理，生成 `256×256` RGBA 纯净双底透明大徽章（深色版外轮廓叠冰蓝→极光紫柔和辉光）；
+- **品牌视觉终极升级（「钻石级四芒光学棱镜沉睡 Neon 哈基米」原生 `1024×1024` 无损直出 × `208×208` 中心透空防冲白流光）**：
+  - **首页大 Logo（`assets/sprites/home-star-gem-light.png` / `home-star-gem-dark.png`）**：保持原画原生 **`1024×1024` RGBA 满分辨率** 零压缩精抠（去黑边色溢，深色版外轮廓叠 `10px` 冰蓝→极光紫辉光），并改为由 Sidecar `/gemineko-sprites/*.png` 本地 HTTP 直接加载（彻底消除巨型 Base64 对 CDP 注入脚本的体积膨胀）；
   - **插件图标（`assets/logo.png`）**：同款钻石棱镜沉睡猫娘置入深邃星夜靛紫微光玻璃底，保持高对比度与多尺寸辨识；
-  - **四层光学流光引擎（[src/cdp/host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs)）**：首页 `#gemineko-home-emblem` 升级为 `128×128px` 无框悬浮舞台，实装「16s 自转极光锥形背光晕（`gkPrismHaloOrbit`） + 7.5s 钻石火彩微呼吸（`gkGemIridescence` / `gkGemIridescenceDark`） + `mask-image` 严格贴合轮廓的三色色散白晶光刃扫光（`gkGemSheenSweep`）与极光切面呼吸流波（`gkPrismFacetFlow`） + 右上/左下错相呼吸星尘（`gkStarTwinkle`）」，同时保留左上角 `28px` 发光纯白猫爪按钮不变。
+  - **四层不糊脸流光引擎 & 炫彩标题加固（[src/cdp/host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs)）**：首页 `#gemineko-home-emblem` 升格为 `208×208px` Hero 级悬浮舞台，浅色采用 `mix-blend-mode: overlay` 配合中心镂空径向遮罩（仅在棱镜外圈切面流转极光，100% 透出清晰哈基米五官）；同时为欢迎问候标题自动注入 `data-gk-home-title="1"` 并全节点恢复流动炫彩棱镜渐变字效，左上角 `28px` 发光纯白猫爪按钮保持不变。
 
 ## [0.7.4] - 2026-11-27
 
