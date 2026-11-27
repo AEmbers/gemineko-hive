@@ -10,6 +10,14 @@
   - 新增 **工作台高频效率增强**：悬浮猫爪对话大纲（支持搜索过滤、一键滚动跳转高亮）、超长代码块（`>= 32` 行）吸顶顶栏+折叠/展开、非输入区毛玻璃右键快捷菜单（`/btw` 快问、复制路径、`@引用` 填入、主题快切；`Shift+右键` 与输入区直接放行原生）；
   - 在 `hive_board` 侧边栏新增 `src/theme/theme-workshop.js`「🎨 主题工坊」控制台及输入框 Dock `🎨` 迷你快切按钮，调整后通过 `/api/theme/config` 推送宿主 `< 50ms` 热刷新。
 
+### Fixed
+- **补齐 `asking`（「等你拍板」）5 角色动态 APNG 与全链路 404 防护**：
+  - 基于锁定三视图补齐 `neon/hydrogen/carbon/claude/gpt-asking.png`（4 帧透明循环 APNG）；
+  - `src/activity-tracker.mjs` 新增并统一使用 `resolveSpriteFile(role, action)`，后端 `server.mjs` `/gemineko-sprites/` 与前端 `host-injector.mjs` / `gemineko-runtime.js` 均加入白名单校验与 `onerror` 回退至 `<role>-thinking.png`，彻底杜绝 `404` 裂图。
+- **修复无 Swarm 普通对话下侧边栏卡在 `Looking for this conversation's swarm…` 骨架屏**：
+  - `src/sidecar/server.mjs` 在无自有 Swarm 时回退历史快照仍保持请求的 `conversationId` 对齐并标记 `isFallbackSwarm`；
+  - `src/theme/gemineko-runtime.js` 与 `theme-workshop.js` 将侧边栏工具栏和主题工坊挂载到常驻顶部容器 `#gemineko-sidecar-shell`，并加入骨架屏防卡死守护逻辑（空对话 1.2s 内切入空态/演示体验）。
+
 ## [0.4.1] - 2026-11-27
 
 ### Changed

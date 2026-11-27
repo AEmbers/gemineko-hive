@@ -4,7 +4,32 @@
  */
 
 import { existsSync, openSync, readSync, closeSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __trackerDir = dirname(fileURLToPath(import.meta.url));
+const DEFAULT_SPRITES_DIR = resolve(__trackerDir, '..', 'assets', 'sprites');
+
+export const ALLOWED_SPRITE_ROLES = new Set(['neon', 'hydrogen', 'carbon', 'claude', 'gpt']);
+export const ALLOWED_SPRITE_ACTIONS = new Set(['thinking', 'reading', 'editing', 'running', 'asking', 'idle']);
+
+/**
+ * 解析并校验角色×动作精灵文件名：仅允许白名单角色与动作，
+ * 且若 `<role>-<action>.png` 在磁盘上不存在，自动回退到 `<role>-thinking.png`，杜绝 404 裂图。
+ * @param {string} role
+ * @param {string} action
+ * @param {string} [spritesDir]
+ * @returns {string}
+ */
+export function resolveSpriteFile(role = 'neon', action = 'thinking', spritesDir = DEFAULT_SPRITES_DIR) {
+  const safeRole = ALLOWED_SPRITE_ROLES.has(role) ? role : 'neon';
+  const safeAction = ALLOWED_SPRITE_ACTIONS.has(action) ? action : 'thinking';
+  const candidate = `${safeRole}-${safeAction}.png`;
+  if (spritesDir && !existsSync(join(spritesDir, candidate))) {
+    return `${safeRole}-thinking.png`;
+  }
+  return candidate;
+}
 
 /** 默认判定为“静默/打盹”的无更新毫秒阈值（45 秒） */
 export const DEFAULT_ACTIVE_WINDOW_MS = 45_000;
@@ -339,7 +364,7 @@ export function readConversationLiveActivity(
     hasError,
     errorSeq: hasError ? lastErrorSeq : '',
     turnCompletedAt: turnCompletedAtMs > 0 ? new Date(turnCompletedAtMs).toISOString() : '',
-    spriteFile: `${role}-${action}.png`,
+    spriteFile: resolveSpriteFile(role, action),
   };
 }
 
@@ -457,7 +482,7 @@ export function enrichSwarmMembersWithActivity(snapshot, appDataDirs = [], nowMs
       phase,
       phaseLabel: PHASE_LABELS[phase] || PHASE_LABELS.idle,
       lastTool: live?.lastTool || member.lastTool || '',
-      spriteFile: `${role}-${action}.png`,
+      spriteFile: resolveSpriteFile(role, action),
     };
   });
 

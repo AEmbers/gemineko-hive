@@ -87,6 +87,7 @@ function findAppDataDirs(overrideAppDataDirs) {
 function readReadOnlySwarmSnapshot(requestedConv, overrideAppDataDirs) {
   const dirs = findAppDataDirs(overrideAppDataDirs);
   let chosen = null;
+  let matchedDirect = false;
 
   for (const appData of dirs) {
     const brainDir = path.join(appData, 'brain');
@@ -94,6 +95,7 @@ function readReadOnlySwarmSnapshot(requestedConv, overrideAppDataDirs) {
       const direct = path.join(brainDir, requestedConv, '.system_generated', 'swarm');
       if (fs.existsSync(path.join(direct, 'members.json'))) {
         chosen = { conv: requestedConv, swarmDir: direct, mtimeMs: fs.statSync(path.join(direct, 'members.json')).mtimeMs };
+        matchedDirect = true;
         break;
       }
     }
@@ -177,9 +179,11 @@ function readReadOnlySwarmSnapshot(requestedConv, overrideAppDataDirs) {
   }
 
   const snapshot = {
-    conversationId: chosen.conv,
+    conversationId: requestedConv || chosen.conv,
     swarm: chosen.conv,
     id: chosen.conv,
+    isFallbackSwarm: Boolean(requestedConv && !matchedDirect),
+    sourceConversationId: chosen.conv,
     member: 'coordinator',
     title: membersDoc.title || 'Gemineko Hive · 基米窝',
     finished: Boolean(membersDoc.finished),
@@ -451,7 +455,7 @@ export async function createHiveSidecarServer(options = {}) {
       return;
     }
 
-    // 精灵 PNG 图片路由（禁止路径穿越）
+    // 精灵 PNG 图片路由（禁止路径穿越；缺失动作精灵自动回退至同角色 thinking 或 neon-thinking，杜绝 404）
     if (req.method === 'GET' && pathname.startsWith('/gemineko-sprites/')) {
       const fileName = pathname.slice('/gemineko-sprites/'.length);
       if (!/^[a-z0-9_-]+\.png$/i.test(fileName)) {
@@ -459,16 +463,29 @@ export async function createHiveSidecarServer(options = {}) {
         res.end('Invalid sprite name');
         return;
       }
-      const absFile = path.join(swarmPaths.spritesSourceDir, fileName);
+      let absFile = path.join(swarmPaths.spritesSourceDir, fileName);
+      let isFallback = false;
       if (!fs.existsSync(absFile)) {
-        res.writeHead(404, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
-        res.end('Sprite not found');
-        return;
+        const m = /^(neon|hydrogen|carbon|claude|gpt)-[a-z0-9_-]+\.png$/i.exec(fileName);
+        const roleFallback = m ? path.join(swarmPaths.spritesSourceDir, `${m[1].toLowerCase()}-thinking.png`) : '';
+        const defaultFallback = path.join(swarmPaths.spritesSourceDir, 'neon-thinking.png');
+        if (roleFallback && fs.existsSync(roleFallback)) {
+          absFile = roleFallback;
+          isFallback = true;
+        } else if (fs.existsSync(defaultFallback)) {
+          absFile = defaultFallback;
+          isFallback = true;
+        } else {
+          res.writeHead(404, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end('Sprite not found');
+          return;
+        }
       }
       res.writeHead(200, {
         ...CORS_HEADERS,
         'Content-Type': 'image/png',
         'Cache-Control': 'no-cache',
+        ...(isFallback ? { 'X-Gemineko-Fallback': '1' } : {}),
       });
       res.end(fs.readFileSync(absFile));
       return;

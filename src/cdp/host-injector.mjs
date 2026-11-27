@@ -588,11 +588,35 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     return '✨';
   }
 
+  function sanitizeSpriteFile(rawFile, role, action) {
+    const safeRole = /^(neon|hydrogen|carbon|claude|gpt)$/.test(String(role || '')) ? String(role) : 'neon';
+    const rawAct = String(action || '').toLowerCase();
+    const safeAct = /^(thinking|reading|editing|running|asking|idle)$/.test(rawAct)
+      ? rawAct
+      : (latestState.active ? 'thinking' : 'idle');
+    const clean = String(rawFile || '').trim();
+    if (/^(neon|hydrogen|carbon|claude|gpt)-(thinking|reading|editing|running|asking|idle)\.png$/i.test(clean)) {
+      return clean.toLowerCase();
+    }
+    return \`\${safeRole}-\${safeAct}.png\`;
+  }
+
+  function bindImgFallback(imgEl, role) {
+    if (!imgEl || imgEl.dataset.gkErrBound === '1') return;
+    imgEl.dataset.gkErrBound = '1';
+    imgEl.addEventListener('error', () => {
+      if (imgEl.dataset.gkFallback === '1') return;
+      imgEl.dataset.gkFallback = '1';
+      const safeRole = /^(neon|hydrogen|carbon|claude|gpt)$/.test(String(role || '')) ? String(role) : 'neon';
+      imgEl.src = \`\${SERVER}/gemineko-sprites/\${safeRole}-thinking.png?v=0.5.0\`;
+    });
+  }
+
   function getActiveSpriteUrl() {
     const role = latestState.role || 'neon';
-    const act = latestState.action && latestState.action !== 'asking' ? latestState.action : (latestState.active ? 'thinking' : 'idle');
-    const spriteName = latestState.spriteFile || \`\${role}-\${act}.png\`;
-    return \`\${SERVER}/gemineko-sprites/\${spriteName}?v=0.4.0\`;
+    const act = latestState.action || (latestState.active ? 'thinking' : 'idle');
+    const spriteName = sanitizeSpriteFile(latestState.spriteFile, role, act);
+    return \`\${SERVER}/gemineko-sprites/\${spriteName}?v=0.5.0\`;
   }
 
   function renderDockState() {
@@ -604,8 +628,10 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     const modelEl = dock.querySelector('.gk-model');
     const toolEl = dock.querySelector('.gk-tool');
 
+    bindImgFallback(img, latestState.role);
     const nextSrc = getActiveSpriteUrl();
     if (img.getAttribute('data-src') !== nextSrc) {
+      img.dataset.gkFallback = '0';
       img.setAttribute('data-src', nextSrc);
       img.src = nextSrc;
     }
@@ -687,7 +713,9 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     const effectiveAction = latestState.active ? (latestState.action || 'thinking') : 'thinking';
     const img = wrap.querySelector('img.gk-inline-sprite');
     const spark = wrap.querySelector('.gk-inline-spark');
+    bindImgFallback(img, latestState.role);
     if (img && img.getAttribute('data-src') !== spriteUrl) {
+      img.dataset.gkFallback = '0';
       img.setAttribute('data-src', spriteUrl);
       img.src = spriteUrl;
     }

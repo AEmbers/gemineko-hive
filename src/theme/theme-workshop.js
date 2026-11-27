@@ -24,6 +24,11 @@ export function createThemeWorkshopController(deps) {
     el = document.createElement('section');
     el.id = 'gn-theme-workshop';
     el.className = 'gn-workshop-drawer hidden';
+    const sidecarShell = document.getElementById('gemineko-sidecar-shell');
+    if (sidecarShell) {
+      sidecarShell.appendChild(el);
+      return el;
+    }
     const hdr = document.querySelector('#board > header.header') || document.body.firstChild;
     if (hdr && hdr.parentElement) {
       hdr.parentElement.insertBefore(el, hdr.nextSibling);

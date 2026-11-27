@@ -11,6 +11,7 @@ import {
   enrichSwarmMembersWithActivity,
   findActiveConversationActivity,
   readConversationLiveActivity,
+  resolveSpriteFile,
 } from '../src/activity-tracker.mjs';
 import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../src/native-patcher.mjs';
 import { buildCdpOverlayScript } from '../src/cdp/host-injector.mjs';
@@ -116,7 +117,7 @@ function createFakeSwarmSandbox() {
 
 test('30 张角色×动作 128x128 PNG 立绘全部就绪且具备 RGBA 透明通道', () => {
   const roles = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'];
-  const actions = ['thinking', 'reading', 'editing', 'running', 'idle'];
+  const actions = ['thinking', 'reading', 'editing', 'running', 'asking', 'idle'];
   const spritesDir = path.join(REPO_ROOT, 'assets', 'sprites');
 
   for (const role of roles) {
@@ -168,6 +169,9 @@ test('activity-tracker 正确识别 5 大模型、工具动作与编排/执行�
   assert.equal(classifyToolAction('mcp_agy-dart_fast_apply_edits', false, true), 'editing');
   assert.equal(classifyToolAction('run_checks', false, true), 'running');
   assert.equal(classifyToolAction('ask_question', false, true), 'asking');
+  assert.equal(resolveSpriteFile('neon', 'asking'), 'neon-asking.png');
+  assert.equal(resolveSpriteFile('claude', 'nonexistent-action'), 'claude-thinking.png');
+  assert.equal(resolveSpriteFile('unknown-role', 'reading'), 'neon-reading.png');
   assert.equal(classifyToolAction('', true, true), 'thinking');
   assert.equal(classifyToolAction('edit_file', true, false), 'idle');
 
@@ -554,6 +558,22 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     const bundleContent = fs.readFileSync(bundleRes.outPath, 'utf8');
     assert.match(bundleContent, /createThemeWorkshopController/);
     assert.match(bundleContent, /主题工坊/);
+    assert.match(bundleContent, /gemineko-sidecar-shell/);
+    assert.match(bundleContent, /guardLoadingSkeleton/);
+
+    // Bug #1 回归验证：缺失动作精灵不返回 404，安全回退 <role>-thinking.png
+    const fallbackSprite = await srv.inject({ url: '/gemineko-sprites/gpt-unknown.png' });
+    assert.equal(fallbackSprite.statusCode, 200);
+    assert.equal(fallbackSprite.headers['content-type'], 'image/png');
+    assert.equal(fallbackSprite.headers['x-gemineko-fallback'], '1');
+
+    // Bug #2 回归验证：无 Swarm 的对话回退历史 Swarm 时保留请求 conversationId
+    const fallbackConv = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    const fbSwarmRes = await srv.inject({ url: `/api/swarm?conversationId=${fallbackConv}` });
+    assert.equal(fbSwarmRes.statusCode, 200);
+    assert.equal(fbSwarmRes.json().conversationId, fallbackConv);
+    assert.equal(fbSwarmRes.json().isFallbackSwarm, true);
+    assert.equal(fbSwarmRes.json().swarm, sb.convId);
   } finally {
     await srv.close();
     fs.rmSync(sb.root, { recursive: true, force: true });

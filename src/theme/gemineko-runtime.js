@@ -253,10 +253,9 @@ export function bootGeminekoHive() {
 
   function normalizeSpriteAction(explicitAction, explicitState, info) {
     const raw = String(explicitAction || info?.action || '').toLowerCase();
-    if (raw === 'thinking' || raw === 'reading' || raw === 'editing' || raw === 'running' || raw === 'idle') {
+    if (raw === 'thinking' || raw === 'reading' || raw === 'editing' || raw === 'running' || raw === 'asking' || raw === 'idle') {
       return raw;
     }
-    if (raw === 'asking') return 'thinking';
     const st = String(explicitState || info?.status || 'working').toLowerCase();
     if (st === 'parked' || st === 'landed' || st === 'done' || st === 'idle' || st === 'waiting' || st === 'retired') {
       return 'idle';
@@ -348,8 +347,29 @@ export function bootGeminekoHive() {
 
   function getChibiSpriteUrl(role, action) {
     const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
-    const a = ['thinking', 'reading', 'editing', 'running', 'idle'].includes(action) ? action : 'thinking';
-    return `${getSpriteBaseUrl()}/${r}-${a}.png?v=0.4.0`;
+    const a = ['thinking', 'reading', 'editing', 'running', 'asking', 'idle'].includes(action) ? action : 'thinking';
+    return `${getSpriteBaseUrl()}/${r}-${a}.png?v=0.5.0`;
+  }
+
+  function resolveLiveSpriteUrl(act) {
+    const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(act?.role) ? act.role : 'neon';
+    const a = ['thinking', 'reading', 'editing', 'running', 'asking', 'idle'].includes(act?.action) ? act.action : 'thinking';
+    const rawFile = String(act?.spriteFile || '').trim();
+    const validFile = /^(neon|hydrogen|carbon|claude|gpt)-(thinking|reading|editing|running|asking|idle)\.png$/i.test(rawFile)
+      ? rawFile.toLowerCase()
+      : `${r}-${a}.png`;
+    return `${getSpriteBaseUrl()}/${validFile}?v=0.5.0`;
+  }
+
+  function attachSpriteFallback(imgEl, role) {
+    if (!imgEl || imgEl.dataset.gnErrBound === '1') return;
+    imgEl.dataset.gnErrBound = '1';
+    imgEl.addEventListener('error', () => {
+      if (imgEl.dataset.gnFallback === '1') return;
+      imgEl.dataset.gnFallback = '1';
+      const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
+      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?v=0.5.0`;
+    });
   }
 
   // 离屏透明底圆环精灵缓存（仅绘轻盈彩色光环，绝不填充白色底）
@@ -702,6 +722,10 @@ export function bootGeminekoHive() {
     setTextIfChanged(document.getElementById('live-label'), L.live);
     setTextIfChanged(document.getElementById('empty-title'), L.emptyTitle);
     setNodeTextEdge(document.querySelector('#empty .empty-hint'), L.emptyHint, true);
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl && /Looking for/i.test(loadingEl.textContent || '')) {
+      loadingEl.textContent = prefs.locale === 'en' ? 'Scanning for conversation swarm…' : '正在扫描当前对话的基米窝…';
+    }
 
     // Graph 控件 & 选项汉化
     setTextIfChanged(document.getElementById('gview-hive'), L.graphHive);
@@ -1224,7 +1248,7 @@ export function bootGeminekoHive() {
       lastTool: '',
       spriteFile: 'neon-idle.png',
     };
-    const spriteUrl = `${getSpriteBaseUrl()}/${act.spriteFile || `${act.role}-${act.action}.png`}?v=0.4.0`;
+    const spriteUrl = resolveLiveSpriteUrl(act);
     const phaseCls = act.phase === 'executor' ? 'is-executor' : act.phase === 'idle' ? 'is-idle' : '';
 
     let cdpText = '主对话挂件: 待机';
@@ -1260,15 +1284,30 @@ export function bootGeminekoHive() {
     return `<div class="gn-setting-row"><span class="gn-setting-label">${label}</span><div class="gn-seg-group" role="group" aria-label="${label}">${btns}</div></div>`;
   }
 
+  function ensureSidecarShell() {
+    if (!window.__GEMINEKO_SIDECAR_MODE__) return null;
+    let shell = document.getElementById('gemineko-sidecar-shell');
+    if (!shell && document.body) {
+      shell = document.createElement('div');
+      shell.id = 'gemineko-sidecar-shell';
+      document.body.prepend(shell);
+    }
+    return shell;
+  }
+
   function renderToolbar() {
+    const shell = ensureSidecarShell();
     const boardHeader = document.querySelector('#board .header');
-    if (!boardHeader) return;
+    const mountParent = shell || boardHeader;
+    if (!mountParent) return;
     let bar = document.getElementById('gemineko-toolbar');
     if (!bar) {
       bar = document.createElement('div');
       bar.id = 'gemineko-toolbar';
       bar.className = 'gn-bar';
-      boardHeader.insertBefore(bar, boardHeader.firstChild);
+      mountParent.insertBefore(bar, mountParent.firstChild);
+    } else if (shell && bar.parentElement !== shell) {
+      shell.insertBefore(bar, shell.firstChild);
     }
 
     const L = LOCALE_TEXT[prefs.locale] || LOCALE_TEXT['neko-zh'];
@@ -1358,6 +1397,9 @@ export function bootGeminekoHive() {
       ${settingsHtml}
       ${renderLiveBannerHtml()}
     `;
+
+    const liveAvatarEl = bar.querySelector('.gn-live-avatar');
+    if (liveAvatarEl) attachSpriteFallback(liveAvatarEl, lastLiveActivity?.role);
 
     bar.querySelectorAll('[data-gn-set]').forEach((segBtn) => {
       segBtn.addEventListener('click', () => {
@@ -1634,6 +1676,51 @@ export function bootGeminekoHive() {
         }
       };
       fetchSidecarMeta(syncBanner);
+
+      // 防止无 Swarm 的普通对话在侧边栏一直停留在 #loading 骨架屏
+      const guardLoadingSkeleton = () => {
+        const loadingEl = document.getElementById('loading');
+        const boardEl = document.getElementById('board');
+        const emptyEl = document.getElementById('empty');
+        if (!loadingEl || loadingEl.classList.contains('hidden')) return;
+        const boardHidden = !boardEl || boardEl.classList.contains('hidden');
+        const emptyHidden = !emptyEl || emptyEl.classList.contains('hidden');
+        if (!boardHidden || !emptyHidden) return;
+
+        const convId = getSidecarConversationId();
+        const probeUrl = convId ? `/api/swarm?conversationId=${encodeURIComponent(convId)}` : '/api/swarm';
+        originalFetch(probeUrl)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((snap) => {
+            if (!loadingEl.classList.contains('hidden')) {
+              if (snap && snap.swarm) {
+                try {
+                  window.dispatchEvent(new Event('focus'));
+                  document.dispatchEvent(new Event('visibilitychange'));
+                } catch {}
+                setTimeout(() => {
+                  if (!loadingEl.classList.contains('hidden') && boardEl?.classList.contains('hidden')) {
+                    loadingEl.classList.add('hidden');
+                    boardEl.classList.remove('hidden');
+                    renderToolbar();
+                  }
+                }, 650);
+              } else {
+                loadingEl.classList.add('hidden');
+                if (boardEl) boardEl.classList.add('hidden');
+                if (emptyEl) emptyEl.classList.remove('hidden');
+                ensureEmptyStateDemoButton();
+                renderToolbar();
+              }
+            }
+          })
+          .catch(() => {});
+      };
+      setTimeout(guardLoadingSkeleton, 1200);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) setTimeout(guardLoadingSkeleton, 350);
+      });
+
       setInterval(() => {
         const convId = getSidecarConversationId();
         const liveUrl = convId ? `/api/live-activity?conversationId=${encodeURIComponent(convId)}` : '/api/live-activity';
@@ -1644,8 +1731,10 @@ export function bootGeminekoHive() {
               lastLiveActivity = d.activity;
               const liveImg = document.querySelector('.gn-live-avatar');
               if (liveImg) {
-                const nextSrc = `${getSpriteBaseUrl()}/${d.activity.spriteFile || `${d.activity.role}-${d.activity.action}.png`}?v=0.5.0`;
+                attachSpriteFallback(liveImg, d.activity.role);
+                const nextSrc = resolveLiveSpriteUrl(d.activity);
                 if (liveImg.getAttribute('data-src') !== nextSrc) {
+                  liveImg.dataset.gnFallback = '0';
                   liveImg.setAttribute('data-src', nextSrc);
                   liveImg.src = nextSrc;
                 }
