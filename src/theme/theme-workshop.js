@@ -22,6 +22,7 @@ export function createThemeWorkshopController(deps) {
     config: null,
     presets: {},
     rolePalettes: {},
+    eggCatalog: [],
     brand: null,
     registry: [],
     registrySource: 'bundled',
@@ -30,6 +31,7 @@ export function createThemeWorkshopController(deps) {
     loading: false,
     warning: '',
     exportedPack: null,
+    alchemy: null,
   };
 
   const TYPO_STORAGE_KEY = 'gemineko_typography_v1';
@@ -203,6 +205,7 @@ export function createThemeWorkshopController(deps) {
         state.config = withLocalTypo(cfgRes.config);
         state.presets = cfgRes.presets || {};
         state.rolePalettes = cfgRes.rolePalettes || {};
+        if (Array.isArray(cfgRes.eggCatalog)) state.eggCatalog = cfgRes.eggCatalog;
         if (cfgRes.brand) state.brand = cfgRes.brand;
         notifyHostTheme(state.config, cfgRes.hostScheme);
       }
@@ -370,17 +373,107 @@ export function createThemeWorkshopController(deps) {
     }
   }
 
-  async function triggerSidecarEgg(type) {
+  async function triggerSidecarEgg(type, extra = {}) {
     try {
       await deps.hostApi('/api/theme/event', {
         method: 'POST',
-        body: JSON.stringify({ type, role: 'neon', source: 'sidecar' }),
+        body: JSON.stringify({ type, role: 'neon', source: 'sidecar', ...extra }),
       });
       deps.sidecarBanner(
         type === 'hive-poke-burst'
           ? '💥 已从基米窝发出全员集结信号，快看主窗口下方 5 只哈基米巡游！'
-          : '🐾 爪印星尘雨已在主对话区飘落喵~',
+          : (type === 'replay-egg'
+            ? '▶ 已在主对话区召唤该哈基米彩蛋重温 ✨'
+            : (type === 'supreme-maodie-parade'
+              ? '👑 至尊圆头耄耋星河大阅兵双端开启！'
+              : '🐾 爪印星尘雨已在主对话区飘落喵~')),
       );
+    } catch {}
+  }
+
+  let alchemyTimer = null;
+  function clearAlchemyTimer() {
+    if (alchemyTimer) {
+      clearTimeout(alchemyTimer);
+      alchemyTimer = null;
+    }
+  }
+  function triggerAlchemy() {
+    if (!state.config || state.config.enabled === false || state.config.focusMode === true) return;
+    clearAlchemyTimer();
+    const cur = state.config;
+    if (!state.alchemy?.snapshot) {
+      state.alchemy = {
+        snapshot: {
+          preset: cur.preset,
+          themeIntensity: cur.themeIntensity,
+          accentMode: cur.accentMode,
+        },
+        label: '',
+      };
+    }
+    const presetChoices = ['nebula-day', 'cream-paper', 'starry-nest', 'carbon-obsidian'];
+    const intChoices = ['optical-neko', 'vivid'];
+    const roleChoices = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'];
+    const pick = (arr, curVal) => {
+      const alt = arr.filter((x) => x !== curVal);
+      return (alt.length ? alt : arr)[Math.floor(Math.random() * (alt.length ? alt.length : arr.length))];
+    };
+    const nextPatch = {
+      enabled: true,
+      activeThemePackId: 'official-gemineko',
+      preset: pick(presetChoices, cur.preset),
+      themeIntensity: pick(intChoices, cur.themeIntensity),
+      accentMode: pick(roleChoices, cur.accentMode),
+    };
+    state.alchemy.label = `${nextPatch.preset} × ${nextPatch.accentMode}`;
+    state.config = { ...cur, ...nextPatch };
+    notifyHostTheme(state.config);
+    const root = document.getElementById('gn-theme-workshop');
+    if (root) {
+      root.classList.remove('gn-egg-alchemy-glow');
+      void root.offsetWidth;
+      root.classList.add('gn-egg-alchemy-glow');
+    }
+    render();
+    deps.onWorkshopEggUnlock?.('workshop-alchemy', '哈基米炼丹盲盒试妆');
+    alchemyTimer = setTimeout(() => {
+      void revertAlchemy();
+    }, 6200);
+  }
+  async function keepAlchemy() {
+    clearAlchemyTimer();
+    const cur = state.config;
+    state.alchemy = null;
+    if (cur) {
+      await savePatch({
+        enabled: true,
+        activeThemePackId: 'official-gemineko',
+        preset: cur.preset,
+        themeIntensity: cur.themeIntensity,
+        accentMode: cur.accentMode,
+      });
+    }
+  }
+  function revertAlchemy() {
+    clearAlchemyTimer();
+    const snap = state.alchemy?.snapshot;
+    state.alchemy = null;
+    if (snap && state.config) {
+      state.config = { ...state.config, ...snap };
+      notifyHostTheme(state.config);
+    }
+    render();
+  }
+  async function resetEggProgress() {
+    try {
+      const data = await deps.hostApi('/api/theme/egg/reset', { method: 'POST', body: '{}' });
+      if (data?.ok && data.config) {
+        state.config = withLocalTypo(data.config);
+        notifyHostTheme(state.config);
+        render();
+        showWorkshopToast('已重置 13 枚彩蛋图鉴，重新探索吧 🥚');
+      }
     } catch {}
   }
 
@@ -665,6 +758,7 @@ export function createThemeWorkshopController(deps) {
             ${renderSwitchRow('报错「哈气」微抖', 'data-ws-link="errorHissShake"', Boolean(c.linkages?.errorHissShake))}
             ${renderSwitchRow('捅基米窝全员巡游', 'data-ws-link="pokeBurst"', Boolean(c.linkages?.pokeBurst))}
             ${renderSwitchRow('深夜模式小夜灯', 'data-ws-link="nightLamp"', Boolean(c.linkages?.nightLamp))}
+            ${renderSwitchRow('彩蛋专属合成音效', 'data-ws-egg-sound="1"', c.easterEggs?.soundEnabled !== false)}
           </div>
           <div class="gn-ws-row" style="margin-top:4px;">
             <span>水印角色</span>
@@ -737,6 +831,45 @@ export function createThemeWorkshopController(deps) {
           </div>
           <div class="gn-ws-sub" style="margin-top:4px;">保留 Antigravity / Gemini 品牌与代码正文原样，切回「关闭」无损还原英文。</div>
         </div>
+
+        ${renderEggDexCardHtml(c)}
+      </div>
+    `;
+  }
+
+  function renderEggDexCardHtml(c) {
+    const catalog = Array.isArray(state.eggCatalog) ? state.eggCatalog : [];
+    const unlockedSet = new Set(Array.isArray(c.easterEggs?.unlocked) ? c.easterEggs.unlocked : []);
+    const total = catalog.length || 13;
+    const found = catalog.length ? catalog.filter((e) => unlockedSet.has(e.id)).length : unlockedSet.size;
+    const pct = Math.min(100, Math.round((found / Math.max(1, total)) * 100));
+    const allDone = found >= total && total > 0;
+
+    const cardsHtml = catalog.map((egg) => {
+      const done = unlockedSet.has(egg.id);
+      return `
+        <div class="gn-egg-card ${done ? 'is-unlocked' : ''}">
+          <div class="gn-egg-card-top">
+            <span>${done ? '✨' : '🔒'} ${escWorkshopHtml(done ? egg.title : '？？？待发掘')}</span>
+            ${done ? `<button type="button" class="gn-pill" data-ws-replay-egg="${escWorkshopHtml(egg.id)}" data-ws-replay-scope="${escWorkshopHtml(egg.scope)}">▶ 重温</button>` : ''}
+          </div>
+          <div class="gn-egg-card-widget">${escWorkshopHtml(egg.widget)} · ${egg.scope === 'sidecar' ? '侧边栏' : '主窗口'}</div>
+          <div class="gn-egg-card-hint">${escWorkshopHtml(done ? `${egg.gesture}（${egg.meme}）` : egg.hint)}</div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="gn-ws-card">
+        <div class="gn-ws-card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>🥚 5. 哈基米彩蛋图鉴（已发现 ${found} / ${total}）</span>
+          <div style="display:flex;gap:6px;align-items:center;">
+            ${allDone ? `<button type="button" class="gn-pill is-primary" data-ws-act="supreme-parade">👑 召唤至尊圆头耄耋阅兵</button>` : '<span class="gn-ws-sub">集齐 13 枚解锁终极隐藏彩蛋</span>'}
+            <button type="button" class="gn-pill" data-ws-act="reset-eggs" title="清空收集记录">↺ 重置图鉴</button>
+          </div>
+        </div>
+        <div class="gn-egg-progress-track"><div class="gn-egg-progress-fill" style="width:${pct}%"></div></div>
+        <div class="gn-egg-grid">${cardsHtml || '<div class="gn-ws-sub">图鉴目录加载中…</div>'}</div>
       </div>
     `;
   }
@@ -756,7 +889,7 @@ export function createThemeWorkshopController(deps) {
     root.innerHTML = `
       <div class="gn-ws-head">
         <div>
-          <div class="gn-ws-title">✦ Gemineko Hive · 高定光学主题引擎</div>
+          <div class="gn-ws-title" title="双击试试炼丹炉盲盒试妆 ⚗️">✦ Gemineko Hive · 高定光学主题引擎</div>
           <div class="gn-ws-sub">社区主题热插拔 × 5 角色流光联动 × 一键打包投稿</div>
         </div>
         <div class="gn-ws-actions">
@@ -772,6 +905,15 @@ export function createThemeWorkshopController(deps) {
       </div>
 
       <div class="gn-ws-status ${state.warning ? 'is-warn' : ''}">${escWorkshopHtml(state.warning || '调整或启用主题后实时无损作用于主窗口与基米窝侧栏')}</div>
+      ${state.alchemy ? `
+        <div class="gn-alchemy-bar">
+          <span>⚗️ 哈基米炼丹炉限时盲盒试妆：<strong>${escWorkshopHtml(state.alchemy.label)}</strong>（6 秒未保留将自动还原）</span>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="gn-pill is-primary" data-ws-act="keep-alchemy">保留这套</button>
+            <button type="button" class="gn-pill" data-ws-act="revert-alchemy">立即还原</button>
+          </div>
+        </div>
+      ` : ''}
 
       ${state.tab === 'store' ? renderStoreTabHtml(c) : renderWorkshopTabHtml(c)}
 
@@ -825,6 +967,13 @@ export function createThemeWorkshopController(deps) {
           const fp = String(inp?.value || '').trim();
           void savePatch({ wallpaper: { ...(c.wallpaper || {}), mode: fp ? 'custom' : 'off', filePath: fp } });
         }
+        else if (act === 'keep-alchemy') void keepAlchemy();
+        else if (act === 'revert-alchemy') revertAlchemy();
+        else if (act === 'reset-eggs') void resetEggProgress();
+        else if (act === 'supreme-parade') {
+          deps.onReplaySidecarEgg?.('supreme');
+          void triggerSidecarEgg('supreme-maodie-parade');
+        }
         return;
       }
       const actPackBtn = e.target.closest('[data-ws-activate]');
@@ -871,6 +1020,17 @@ export function createThemeWorkshopController(deps) {
       const eggBtn = e.target.closest('[data-ws-egg]');
       if (eggBtn) {
         void triggerSidecarEgg(eggBtn.getAttribute('data-ws-egg'));
+        return;
+      }
+      const replayBtn = e.target.closest('[data-ws-replay-egg]');
+      if (replayBtn) {
+        const eggId = replayBtn.getAttribute('data-ws-replay-egg');
+        const scope = replayBtn.getAttribute('data-ws-replay-scope');
+        if (scope === 'sidecar') {
+          deps.onReplaySidecarEgg?.(eggId);
+        } else {
+          void triggerSidecarEgg('replay-egg', { eggId });
+        }
       }
     };
 
@@ -930,6 +1090,10 @@ export function createThemeWorkshopController(deps) {
       const boolField = target.getAttribute('data-ws-bool');
       if (boolField) {
         void savePatch({ [boolField]: Boolean(target.checked) });
+        return;
+      }
+      if (target.getAttribute('data-ws-egg-sound') === '1') {
+        void savePatch({ easterEggs: { ...(c.easterEggs || {}), soundEnabled: Boolean(target.checked) } });
         return;
       }
       const memeKey = target.getAttribute('data-ws-meme');
@@ -1060,6 +1224,7 @@ export function createThemeWorkshopController(deps) {
     loadConfig,
     pollEvents,
     triggerSidecarEgg,
+    triggerAlchemy,
     syncExternalTypography,
     syncExternalConfig,
   };

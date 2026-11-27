@@ -21,7 +21,9 @@ import { BRAND_META } from '../meta/brand.mjs';
 import { applyNativePatch, getNativePatchStatus, resolveSwarmPaths, restoreNativePatch } from '../native-patcher.mjs';
 import { buildDemoSwarmSnapshot } from '../theme/demo-data.js';
 import {
+  ALLOWED_EASTER_EGG_IDS,
   ALLOWED_SPRITE_QUALITIES,
+  EASTER_EGG_CATALOG,
   ROLE_PALETTES,
   THEME_PRESETS,
   createThemeConfigStore,
@@ -781,6 +783,17 @@ export async function createHiveSidecarServer(options = {}) {
           return;
         }
       }
+      if (fileName.startsWith('egg-')) {
+        res.writeHead(200, {
+          ...CORS_HEADERS,
+          'Content-Type': 'image/png',
+          'Cache-Control': 'no-cache',
+          'X-Gemineko-Sprite-Quality': '512',
+          'X-Gemineko-Sprite-Cache': 'static-egg',
+        });
+        res.end(fs.readFileSync(absFile));
+        return;
+      }
       const rawQ = String(urlObj.searchParams.get('q') || themeStore.get()?.spriteQuality || '1024');
       const requestedQ = ALLOWED_SPRITE_QUALITIES.has(rawQ) ? rawQ : '1024';
       const resolved = await resolveTieredSpriteBuffer(absFile, path.basename(absFile), requestedQ);
@@ -826,6 +839,7 @@ export async function createHiveSidecarServer(options = {}) {
         hostScheme: reportedHostScheme || null,
         presets: THEME_PRESETS,
         rolePalettes: ROLE_PALETTES,
+        eggCatalog: EASTER_EGG_CATALOG,
         brand: BRAND_META,
       });
       return;
@@ -880,6 +894,71 @@ export async function createHiveSidecarServer(options = {}) {
         return;
       }
       const next = getEnrichedThemeConfig(themeStore.reset());
+      if (cdpInjector) {
+        cdpInjector.pushThemeConfig(next).catch(() => {});
+      }
+      sendJson(res, 200, { ok: true, config: next });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/theme/egg/unlock') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const eggId = String(body?.id || '').trim();
+      if (!ALLOWED_EASTER_EGG_IDS.has(eggId)) {
+        sendJson(res, 400, { ok: false, error: `Invalid easter egg id: ${eggId}` });
+        return;
+      }
+      const curCfg = themeStore.get();
+      const curUnlocked = Array.isArray(curCfg?.easterEggs?.unlocked) ? curCfg.easterEggs.unlocked : [];
+      const set = new Set(curUnlocked.filter((x) => ALLOWED_EASTER_EGG_IDS.has(x)));
+      const newlyUnlocked = !set.has(eggId);
+      set.add(eggId);
+      const nextUnlocked = Array.from(set);
+      const completedAll = nextUnlocked.length === ALLOWED_EASTER_EGG_IDS.size;
+      let next = getEnrichedThemeConfig(curCfg);
+      if (newlyUnlocked) {
+        next = getEnrichedThemeConfig(
+          themeStore.update({
+            easterEggs: {
+              ...(curCfg?.easterEggs || {}),
+              unlocked: nextUnlocked,
+            },
+          }),
+        );
+        if (cdpInjector) {
+          cdpInjector.pushThemeConfig(next).catch(() => {});
+        }
+      }
+      sendJson(res, 200, {
+        ok: true,
+        id: eggId,
+        newlyUnlocked,
+        completedAll,
+        unlocked: nextUnlocked,
+        total: ALLOWED_EASTER_EGG_IDS.size,
+        config: next,
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/theme/egg/reset') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const curCfg = themeStore.get();
+      const next = getEnrichedThemeConfig(
+        themeStore.update({
+          easterEggs: {
+            ...(curCfg?.easterEggs || {}),
+            unlocked: [],
+          },
+        }),
+      );
       if (cdpInjector) {
         cdpInjector.pushThemeConfig(next).catch(() => {});
       }
@@ -1039,6 +1118,7 @@ export async function createHiveSidecarServer(options = {}) {
       themeEvents.latest = {
         seq: themeEvents.seq,
         type: evtType,
+        eggId: String(body?.eggId || '').trim(),
         role: String(body?.role || 'neon'),
         combo: Number(body?.combo) || 0,
         source: String(body?.source || 'unknown'),

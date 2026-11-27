@@ -335,6 +335,7 @@ export function bootGeminekoHive() {
       cfg.spriteQuality || '',
       cfg.dock || null,
       cfg.typography || null,
+      cfg.easterEggs || null,
     ]);
   }
 
@@ -594,7 +595,7 @@ export function bootGeminekoHive() {
   function getChibiSpriteUrl(role, action) {
     const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
     const a = ['thinking', 'reading', 'editing', 'running', 'asking', 'idle'].includes(action) ? action : 'thinking';
-    return `${getSpriteBaseUrl()}/${r}-${a}.png?q=${getActiveSpriteQuality()}&v=0.7.10`;
+    return `${getSpriteBaseUrl()}/${r}-${a}.png?q=${getActiveSpriteQuality()}&v=0.8.0`;
   }
 
   function resolveLiveSpriteUrl(act) {
@@ -604,7 +605,7 @@ export function bootGeminekoHive() {
     const validFile = /^(neon|hydrogen|carbon|claude|gpt)-(thinking|reading|editing|running|asking|idle)\.png$/i.test(rawFile)
       ? rawFile.toLowerCase()
       : `${r}-${a}.png`;
-    return `${getSpriteBaseUrl()}/${validFile}?q=${getActiveSpriteQuality()}&v=0.7.10`;
+    return `${getSpriteBaseUrl()}/${validFile}?q=${getActiveSpriteQuality()}&v=0.8.0`;
   }
 
   function attachSpriteFallback(imgEl, role) {
@@ -614,7 +615,7 @@ export function bootGeminekoHive() {
       if (imgEl.dataset.gnFallback === '1') return;
       imgEl.dataset.gnFallback = '1';
       const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
-      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?q=${getActiveSpriteQuality()}&v=0.7.10`;
+      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?q=${getActiveSpriteQuality()}&v=0.8.0`;
     });
   }
 
@@ -662,35 +663,56 @@ export function bootGeminekoHive() {
     return rawUrl;
   }
 
-  // Web Audio 轻量喵呜/叮咚合成音效
+  // Web Audio 轻量喵呜/叮咚/侧栏彩蛋合成音效
   let audioCtx = null;
+  function isSidecarEggAllowed() {
+    const c = lastSidecarThemeConfig;
+    if (c && (c.enabled === false || c.focusMode === true)) return false;
+    return true;
+  }
+  function isSidecarEggSoundOn() {
+    if (!prefs.sound || !isSidecarEggAllowed()) return false;
+    if (lastSidecarThemeConfig?.easterEggs?.soundEnabled === false) return false;
+    return true;
+  }
   function playMeow(variant = 'pat') {
     if (!prefs.sound) return;
+    if ((variant === 'zoomies' || variant === 'crunch' || variant === 'alchemy') && !isSidecarEggSoundOn()) return;
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       if (!audioCtx) audioCtx = new AC();
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = variant === 'poke' ? 'triangle' : 'sine';
-      if (variant === 'poke') {
-        osc.frequency.setValueAtTime(520, now);
-        osc.frequency.exponentialRampToValueAtTime(920, now + 0.08);
-        osc.frequency.exponentialRampToValueAtTime(640, now + 0.22);
+      const playFreq = (type, f0, f1, dur, peak = 0.08, delay = 0) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const t0 = now + delay;
+        osc.type = type;
+        osc.frequency.setValueAtTime(f0, t0);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
+        gain.gain.setValueAtTime(0.001, t0);
+        gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t0);
+        osc.stop(t0 + dur + 0.02);
+      };
+      if (variant === 'zoomies') {
+        [0, 0.16, 0.34].forEach((d, i) => playFreq('sawtooth', 420 + i * 110, 1180, 0.14, 0.055, d));
+      } else if (variant === 'crunch') {
+        [0, 0.11, 0.22].forEach((d) => playFreq('square', 780, 260, 0.07, 0.06, d));
+        playFreq('triangle', 880, 1174, 0.16, 0.06, 0.32);
+      } else if (variant === 'alchemy') {
+        [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => playFreq('triangle', f, f * 1.03, 0.18, 0.06, i * 0.07));
+      } else if (variant === 'poke') {
+        playFreq('triangle', 520, 920, 0.08, 0.08, 0);
+        playFreq('triangle', 920, 640, 0.14, 0.07, 0.08);
       } else {
-        osc.frequency.setValueAtTime(680, now);
-        osc.frequency.exponentialRampToValueAtTime(880, now + 0.07);
-        osc.frequency.exponentialRampToValueAtTime(740, now + 0.16);
+        playFreq('sine', 680, 880, 0.08, 0.08, 0);
+        playFreq('sine', 880, 740, 0.09, 0.07, 0.07);
       }
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.exponentialRampToValueAtTime(0.08, now + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.23);
     } catch {
       /* ignore */
     }
@@ -762,6 +784,107 @@ export function bootGeminekoHive() {
         spawnBubbleAt(rect.left + rect.width / 2, rect.top, line);
       }, idx * 90);
     });
+  }
+
+  async function unlockSidecarEgg(eggId, label) {
+    if (!isSidecarEggAllowed() || !window.__GEMINEKO_SIDECAR_MODE__) return;
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (window.__SIDECAR_TOKEN__) headers['X-Sidecar-Token'] = window.__SIDECAR_TOKEN__;
+      const resp = await originalFetch('/api/theme/egg/unlock', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ id: eggId }),
+      });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (data?.config) {
+        syncSidecarHostTheme(data.config);
+        workshop?.syncExternalConfig?.(data.config);
+      }
+      if (data?.newlyUnlocked) {
+        const count = Array.isArray(data.unlocked) ? data.unlocked.length : 1;
+        spawnBubbleAt(window.innerWidth / 2, 74, `🥚 解锁彩蛋（${count}/${data.total || 13}）：${label}`);
+      }
+      if (data?.completedAll && data?.newlyUnlocked) {
+        setTimeout(() => {
+          triggerSidecarSupremeShowcase();
+          originalFetch('/api/theme/event', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ type: 'supreme-maodie-parade', source: 'sidecar' }),
+          }).catch(() => {});
+        }, 700);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function triggerSidecarZoomies() {
+    if (!isSidecarEggAllowed()) return;
+    const avatar = document.querySelector('.gn-live-avatar');
+    const banner = avatar?.closest('.gn-live-banner');
+    if (avatar && banner) {
+      avatar.classList.remove('gn-egg-zoomies-run');
+      void avatar.offsetWidth;
+      avatar.classList.add('gn-egg-zoomies-run');
+      const ghost = document.createElement('img');
+      ghost.src = avatar.src;
+      ghost.className = 'gn-zoomies-ghost';
+      banner.appendChild(ghost);
+      setTimeout(() => {
+        avatar.classList.remove('gn-egg-zoomies-run');
+        if (ghost.isConnected) ghost.remove();
+      }, 2650);
+      const r = avatar.getBoundingClientRect();
+      spawnBubbleAt(r.left + 80, r.top, '喵嗷——！基米窝凌晨三点跑酷模式启动！！💨');
+    } else {
+      spawnBubbleAt(window.innerWidth / 2, 92, '喵嗷——！基米窝凌晨三点跑酷模式启动！！💨');
+    }
+    playMeow('zoomies');
+    void unlockSidecarEgg('sidecar-zoomies', '凌晨三点·哈基米跑酷');
+  }
+
+  function triggerSidecarDriedFish(targetEl) {
+    if (!isSidecarEggAllowed()) return;
+    const picked = targetEl || document.querySelector('.gn-sprite-host, .gn-msg-avatar');
+    const r = picked && picked.getBoundingClientRect ? picked.getBoundingClientRect() : { left: window.innerWidth / 2, top: 180, width: 48, height: 48 };
+    const cx = r.left + r.width / 2;
+    const cy = r.top;
+
+    const fish = document.createElement('div');
+    fish.className = 'gn-egg-fish-drop';
+    fish.textContent = '🐟';
+    fish.style.left = `${Math.round(cx - 12)}px`;
+    fish.style.top = `${Math.round(cy - 8)}px`;
+    document.body.appendChild(fish);
+    setTimeout(() => { if (fish.isConnected) fish.remove(); }, 1400);
+
+    spawnBubbleAt(cx, cy, '咔嚓！美味烤小鱼干收到喵 ✨');
+
+    const others = [...document.querySelectorAll('.gn-sprite-host, .gn-msg-avatar')].filter((n) => n !== picked);
+    const onlookers = others.slice(0, 3);
+    const lines = ['盯——分我一口喵！🐟', '居然是绿豆味小鱼干？', '哈基米闻香赶来围观~'];
+    onlookers.forEach((node, idx) => {
+      const nr = node.getBoundingClientRect();
+      if (nr.width > 0 && nr.top >= 0 && nr.bottom <= (window.innerHeight || 900)) {
+        setTimeout(() => spawnBubbleAt(nr.left + nr.width / 2, nr.top, lines[idx % lines.length]), 160 + idx * 140);
+      }
+    });
+
+    playMeow('crunch');
+    void unlockSidecarEgg('sidecar-dried-fish', '投喂小鱼干·全窝围观');
+  }
+
+  function triggerSidecarSupremeShowcase() {
+    document.querySelectorAll('.gn-egg-supreme-banner').forEach((n) => n.remove());
+    const el = document.createElement('div');
+    el.className = 'gn-egg-supreme-banner';
+    el.innerHTML = `<img src="${getSpriteBaseUrl()}/egg-maodie-boss.png?v=0.8.0" alt="至尊圆头耄耋" /><div>👑 13/13 全彩蛋收集完成 · 至尊圆头耄耋降临基米窝！</div>`;
+    document.body.appendChild(el);
+    setTimeout(() => { if (el.isConnected) el.remove(); }, 4600);
+    playMeow('alchemy');
   }
 
   const LOCALE_TEXT = {
@@ -2025,11 +2148,48 @@ export function bootGeminekoHive() {
       onThemeConfigChange: (nextCfg, hostScheme) => {
         syncSidecarHostTheme(nextCfg, hostScheme);
       },
+      onWorkshopEggUnlock: (eggId, label) => {
+        playMeow('alchemy');
+        void unlockSidecarEgg(eggId, label);
+      },
+      onReplaySidecarEgg: (eggId) => {
+        if (eggId === 'sidecar-zoomies') triggerSidecarZoomies();
+        else if (eggId === 'sidecar-dried-fish') triggerSidecarDriedFish();
+        else if (eggId === 'workshop-alchemy') workshop?.triggerAlchemy?.();
+        else if (eggId === 'supreme') triggerSidecarSupremeShowcase();
+      },
     });
   }
 
+  window.__GEMINEKO_SIDECAR_EGG_REPLAY__ = (eggId) => {
+    if (eggId === 'sidecar-zoomies') triggerSidecarZoomies();
+    else if (eggId === 'sidecar-dried-fish') triggerSidecarDriedFish();
+    else if (eggId === 'workshop-alchemy') workshop?.triggerAlchemy?.();
+    else if (eggId === 'supreme') triggerSidecarSupremeShowcase();
+  };
+
   // 启动 DOM 观察、Sidecar 实时活动轮询与初始渲染
   const start = () => {
+    document.addEventListener('dblclick', (e) => {
+      if (!isSidecarEggAllowed()) return;
+      const t = e.target;
+      if (!t || !t.closest) return;
+      if (t.closest('.gn-live-avatar')) {
+        e.stopPropagation();
+        triggerSidecarZoomies();
+        return;
+      }
+      const memberAvatar = t.closest('.gn-sprite-host, .gn-msg-avatar, .beebox');
+      if (memberAvatar && !t.closest('#gemineko-toolbar')) {
+        e.stopPropagation();
+        triggerSidecarDriedFish(memberAvatar);
+        return;
+      }
+      if (t.closest('.gn-ws-title')) {
+        e.stopPropagation();
+        workshop?.triggerAlchemy?.();
+      }
+    }, true);
     installSwarmHiveHooks();
     applyThemeAndLocale();
     renderToolbar();

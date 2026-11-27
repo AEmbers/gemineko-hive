@@ -9,6 +9,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { buildHostEasterEggsRuntimeSnippet } from './host-easter-eggs-runtime.mjs';
 import { buildHostI18nRuntimeSnippet } from './host-i18n-runtime.mjs';
 import { buildHostMemeRuntimeSnippet } from './host-meme-runtime.mjs';
 import { buildHostThemeRuntimeSnippet } from './host-theme-runtime.mjs';
@@ -179,6 +180,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   const themeSnippet = buildHostThemeRuntimeSnippet();
   const i18nSnippet = buildHostI18nRuntimeSnippet();
   const memeSnippet = buildHostMemeRuntimeSnippet();
+  const eggsSnippet = buildHostEasterEggsRuntimeSnippet();
   return `(() => {
   const SERVER = ${baseJson};
   const LOGO_URI = ${logoJson};
@@ -731,7 +733,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       if (imgEl.dataset.gkFallback === '1') return;
       imgEl.dataset.gkFallback = '1';
       const safeRole = /^(neon|hydrogen|carbon|claude|gpt)$/.test(String(role || '')) ? String(role) : 'neon';
-      imgEl.src = \`\${SERVER}/gemineko-sprites/\${safeRole}-thinking.png?q=\${getHostSpriteQuality()}&v=0.7.10\`;
+      imgEl.src = \`\${SERVER}/gemineko-sprites/\${safeRole}-thinking.png?q=\${getHostSpriteQuality()}&v=0.8.0\`;
     });
   }
 
@@ -739,7 +741,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     const role = latestState.role || 'neon';
     const act = latestState.action || (latestState.active ? 'thinking' : 'idle');
     const spriteName = sanitizeSpriteFile(latestState.spriteFile, role, act);
-    return \`\${SERVER}/gemineko-sprites/\${spriteName}?q=\${getHostSpriteQuality()}&v=0.7.10\`;
+    return \`\${SERVER}/gemineko-sprites/\${spriteName}?q=\${getHostSpriteQuality()}&v=0.8.0\`;
   }
 
   const formatDockModelDisplay = ${formatDockModelDisplay.toString()};
@@ -766,12 +768,12 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     if (img.className !== nextImgCls) img.className = nextImgCls;
 
     const nextPhaseText = latestState.phaseLabel || '编排模式';
-    if (phaseEl.textContent !== nextPhaseText) phaseEl.textContent = nextPhaseText;
+    if (!dock.classList.contains('gk-egg-spino-active') && phaseEl.textContent !== nextPhaseText) phaseEl.textContent = nextPhaseText;
     const nextPhaseCls = 'gk-phase ' + (latestState.phase === 'executor' ? 'is-executor' : latestState.phase === 'idle' ? 'is-idle' : '');
     if (phaseEl.className !== nextPhaseCls) phaseEl.className = nextPhaseCls;
 
     const nextActText = latestState.actionLabel || '思考中';
-    if (actionEl.textContent !== nextActText) actionEl.textContent = nextActText;
+    if (!dock.classList.contains('gk-egg-spino-active') && actionEl.textContent !== nextActText) actionEl.textContent = nextActText;
 
     const fullModel = String(latestState.model || 'gemini-4-neon').replace(/-preview$/i, '');
     const isEnglish = window.__GEMINEKO_I18N_API__?.resolveEffectiveStyle?.() === 'off';
@@ -1043,6 +1045,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   ${i18nSnippet}
   ${memeSnippet}
   ${themeSnippet}
+  ${eggsSnippet}
 
   const i18nEngine = initHostI18nEngine(INITIAL_THEME_CONFIG);
   const memeEngine = initHostMemeEngine({
@@ -1050,6 +1053,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     dockId: DOCK_ID,
     initialConfig: INITIAL_THEME_CONFIG,
   });
+  let eggEngine = null;
   const themeSuite = initHostThemeSuite({
     server: SERVER,
     token: SIDE_TOKEN,
@@ -1059,6 +1063,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     onConfigApplied: (nextCfg) => {
       i18nEngine?.applyConfig?.(nextCfg);
       memeEngine?.applyConfig?.(nextCfg);
+      eggEngine?.applyConfig?.(nextCfg);
       renderDockState();
       syncActiveStatusSprite();
       syncDockPosition();
@@ -1066,6 +1071,16 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     },
     onLongTaskFinished: () => memeEngine?.triggerFinishSticker?.(),
     openMemePicker: (anchorEl) => memeEngine?.toggleMemePicker?.(anchorEl),
+  });
+  eggEngine = initHostEasterEggs({
+    server: SERVER,
+    token: SIDE_TOKEN,
+    dockId: DOCK_ID,
+    initialConfig: INITIAL_THEME_CONFIG,
+    getActivity: () => latestState,
+    showSpeechBubble: themeSuite?.showSpeechBubble,
+    spawnStardust: themeSuite?.spawnStardust,
+    triggerHiveParadeBurst: themeSuite?.triggerHiveParadeBurst,
   });
   fetch(\`\${SERVER}/api/theme/config\`)
     .then((r) => (r.ok ? r.json() : null))
@@ -1106,6 +1121,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     window.removeEventListener('popstate', onUrlCheck);
     i18nEngine?.unmount?.();
     memeEngine?.unmount?.();
+    eggEngine?.unmount?.();
     themeSuite?.unmount?.();
     cleanupLegacyNodes();
     const dock = document.getElementById(DOCK_ID);

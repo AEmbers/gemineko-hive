@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.8.0] - 2026-11-27
+
+### Added
+- **13 大自研特殊控件专属「哈基米热梗」彩蛋与全收集图鉴（#6）**：
+  - **新增 3 张 512×512 高清透明 PNG 梗图贴纸**：[egg-spinosaurus-hiss.png](assets/sprites/egg-spinosaurus-hiss.png)（脊背龙形态·极怒哈气）、[egg-maodie-boss.png](assets/sprites/egg-maodie-boss.png)（圆头耄耋·金色小皇冠战猫）与 [egg-greenbean-soy.png](assets/sprites/egg-greenbean-soy.png)（哈基米南北绿豆浆），由 [server.mjs](src/sidecar/server.mjs) `/gemineko-sprites/egg-*.png` 零延迟直出；
+  - **主窗口 10 大控件差异化哈基米彩蛋**（[host-easter-eggs-runtime.mjs](src/cdp/host-easter-eggs-runtime.mjs) 独立注入、零增加主包体，含统一 WebAudio 合成音效、`cfg.focusMode` 专注 0fps 自动静默与防误触手势）：
+    1. 输入栏小猫挂件（双击小猫）→ **脊背龙形态·极怒哈气**（霓虹脊背鳍+三段气浪+状态胶囊红黑警报）；
+    2. 首页 3D 星钻徽章（点击/长按，独立重做）→ **南北绿豆浆·绿豆折射雨**（高速棱镜+24 颗发光绿豆+「既见哈基，为何不咪」）；
+    3. 首页 5 角色迎宾舞台（6s 内连点 ≥3 位或双击标题）→ **哈基米曼波大合唱**（5 音阶唱名+全员机械曼波舞）；
+    4. 右下角角色水印（保持 `pointer-events: none` 下双击坐标命中）→ **圆头耄耋·博古架降临**；
+    5. 右侧悬浮猫爪大纲（双击或快速上下甩动）→ **液体猫·果冻拉长回弹**；
+    6. 提问选择思考舞台（点击沉思猫或气泡）→ **哈基米抓阄·猫爪拍板**（轮盘高亮推荐、绝不代点提交）；
+    7. 长代码块吸顶折叠条（双击左侧行数标题）→ **哈基米踩奶质检·盖章**；
+    8. 主题与汉化快切浮层（连点标题 3 次）→ **哈基米私人电音霓虹秀**（边框跑马灯+12 根音波柱+零改动配置，另增 `🔊 彩蛋音 / 🔇 已静音` 开关）；
+    9. 玻璃右键菜单（底部神秘行或 `Alt+右键`）→ **叮咚鸡·哈基米运势盲盒**（10 条程序员×哈基米签文）；
+    10. 聊天气泡内联贴纸 / 行内活跃小猫（连点）→ **胖宝宝充气膨胀**（4 连击「啵！」炸出小鱼干与星星）；
+  - **侧边栏 3 大控件专属彩蛋 & 「🥚 哈基米彩蛋图鉴（X/13）」**（[gemineko-runtime.js](src/theme/gemineko-runtime.js)、[theme-workshop.js](src/theme/theme-workshop.js)、[gemineko-theme.css](src/theme/gemineko-theme.css)）：
+    11. 侧栏实时状态横幅（双击小猫头像）→ **凌晨三点·哈基米跑酷**（带残影折返冲刺 3 圈）；
+    12. Swarm 猫窝 / 消息头像（双击任意成员头像）→ **投喂小鱼干·全窝围观**（邻近头像同步冒围观气泡）；
+    13. 主题商店与精细工坊（双击工坊顶部标题）→ **哈基米炼丹盲盒试妆**（魔法阵试穿 + 6s 未点保留自动无损还原）；
+  - **跨端持久化与全收集终极联动**：[host-theme-config.mjs](src/theme/host-theme-config.mjs) 与 [server.mjs](src/sidecar/server.mjs) 新增 `EASTER_EGG_CATALOG`、`POST /api/theme/egg/unlock`、`POST /api/theme/egg/reset` 与 `replay-egg` 事件路由，精细工坊支持实时点亮、模糊线索提示、一键重温及 13/13 全集齐触发终极联动 **「👑 至尊圆头耄耋·哈基米星河大阅兵」**。
+
 ## [0.7.10] - 2026-11-27
 
 ### Fixed

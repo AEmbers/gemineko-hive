@@ -32,7 +32,9 @@ import {
   parseHexPathGeometry,
 } from '../src/theme/gemineko-runtime.js';
 import {
+  ALLOWED_EASTER_EGG_IDS,
   DEFAULT_HOST_THEME_CONFIG,
+  EASTER_EGG_CATALOG,
   ROLE_PALETTES,
   THEME_PRESETS,
   createThemeConfigStore,
@@ -967,7 +969,7 @@ test('Sidecar 社区商店接口、GitHub Star 与版本更新推送缓存闭环
       return {
         ok: true,
         status: 200,
-        json: async () => ({ tag_name: 'v0.8.0', body: 'Open Theme Store 0.8.0', html_url: 'https://github.com/AEmbers/gemineko-hive/releases/tag/v0.8.0' }),
+        json: async () => ({ tag_name: 'v0.9.0', body: 'Open Theme Store 0.9.0', html_url: 'https://github.com/AEmbers/gemineko-hive/releases/tag/v0.9.0' }),
       };
     }
     if (String(url).includes('/repos/AEmbers/gemineko-hive')) {
@@ -999,7 +1001,7 @@ test('Sidecar 社区商店接口、GitHub Star 与版本更新推送缓存闭环
     const gh1 = await srv.inject({ url: '/api/github/status' });
     assert.equal(gh1.statusCode, 200);
     assert.equal(gh1.json().stars, 88);
-    assert.equal(gh1.json().latestVersion, '0.8.0');
+    assert.equal(gh1.json().latestVersion, '0.9.0');
     assert.equal(gh1.json().hasUpdate, true);
     assert.equal(gh1.json().source, 'github-live');
     const callsAfterFirst = fetchCount;
@@ -1050,6 +1052,122 @@ test('Sidecar 社区商店接口、GitHub Star 与版本更新推送缓存闭环
     const offStatus = await offlinePulse.getStatus();
     assert.equal(offStatus.ok, true);
     assert.equal(offStatus.source, 'offline-fallback');
+  } finally {
+    await srv.close();
+    fs.rmSync(sb.root, { recursive: true, force: true });
+  }
+});
+
+test('13 控件哈基米专属彩蛋目录、3 张专属 PNG、配置清洗、解锁接口与 CDP/侧栏注入闭环', async () => {
+  assert.equal(EASTER_EGG_CATALOG.length, 13);
+  assert.equal(ALLOWED_EASTER_EGG_IDS.size, 13);
+
+  for (const fname of ['egg-spinosaurus-hiss.png', 'egg-maodie-boss.png', 'egg-greenbean-soy.png']) {
+    const abs = path.join(REPO_ROOT, 'assets', 'sprites', fname);
+    assert.ok(fs.existsSync(abs), `缺少专属彩蛋贴图 ${fname}`);
+    assert.ok(fs.statSync(abs).size > 10_000, `贴图 ${fname} 过小`);
+  }
+
+  const sanitized = sanitizeHostThemeConfig({
+    easterEggs: {
+      soundEnabled: false,
+      unlocked: ['dock-spinosaurus', 'dock-spinosaurus', 'invalid-egg-id', 'watermark-maodie'],
+    },
+  });
+  assert.equal(sanitized.easterEggs.soundEnabled, false);
+  assert.deepEqual(sanitized.easterEggs.unlocked, ['dock-spinosaurus', 'watermark-maodie']);
+
+  const cdpScript = buildCdpOverlayScript('http://127.0.0.1:19876', 'data:image/png;base64,AA==', {
+    sideToken: 'test-token',
+    themeConfig: DEFAULT_HOST_THEME_CONFIG,
+  });
+  assert.match(cdpScript, /initHostEasterEggs/);
+  for (const egg of EASTER_EGG_CATALOG.filter((e) => e.scope === 'host')) {
+    assert.ok(cdpScript.includes(egg.id), `CDP 脚本缺少主窗口彩蛋 ${egg.id}`);
+  }
+
+  const bundleRes = buildGeminekoBundle();
+  assert.ok(bundleRes.bytes < 420_000, `主包体超出上限: ${bundleRes.bytes}`);
+  const bundleContent = fs.readFileSync(bundleRes.outPath, 'utf8');
+  assert.match(bundleContent, /sidecar-zoomies/);
+  assert.match(bundleContent, /sidecar-dried-fish/);
+  assert.match(bundleContent, /workshop-alchemy/);
+  assert.match(bundleContent, /哈基米彩蛋图鉴/);
+
+  const sb = createFakeSwarmSandbox();
+  const cfgPath = path.join(sb.root, 'theme-config.json');
+  const srv = await createHiveSidecarServer({
+    port: 0,
+    appDataDirs: [sb.appDataDir],
+    swarmDir: sb.swarmDir,
+    bundlePath: path.join(REPO_ROOT, 'dist', 'gemineko-hive.js'),
+    spritesSourceDir: path.join(REPO_ROOT, 'assets', 'sprites'),
+    logoPngPath: path.join(REPO_ROOT, 'assets', 'logo.png'),
+    themeConfigPath: cfgPath,
+    themePacksDir: path.join(sb.root, 'packs'),
+    githubCachePath: path.join(sb.root, 'gh-cache.json'),
+    sideToken: 'test-egg-secret',
+    enableCdp: false,
+  });
+
+  try {
+    const eggImg = await srv.inject({ url: '/gemineko-sprites/egg-maodie-boss.png?v=0.8.0' });
+    assert.equal(eggImg.statusCode, 200);
+    assert.equal(eggImg.headers['content-type'], 'image/png');
+    assert.equal(eggImg.headers['x-gemineko-sprite-cache'], 'static-egg');
+
+    const cfgRes = await srv.inject({ url: '/api/theme/config' });
+    assert.equal(cfgRes.statusCode, 200);
+    assert.equal(cfgRes.json().eggCatalog.length, 13);
+
+    const badUnlock = await srv.inject({
+      method: 'POST',
+      url: '/api/theme/egg/unlock',
+      headers: { 'x-sidecar-token': 'test-egg-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'non-existent' }),
+    });
+    assert.equal(badUnlock.statusCode, 400);
+
+    const u1 = await srv.inject({
+      method: 'POST',
+      url: '/api/theme/egg/unlock',
+      headers: { 'x-sidecar-token': 'test-egg-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'dock-spinosaurus' }),
+    });
+    assert.equal(u1.statusCode, 200);
+    assert.equal(u1.json().newlyUnlocked, true);
+    assert.equal(u1.json().completedAll, false);
+    assert.deepEqual(u1.json().unlocked, ['dock-spinosaurus']);
+
+    const uDup = await srv.inject({
+      method: 'POST',
+      url: '/api/theme/egg/unlock',
+      headers: { 'x-sidecar-token': 'test-egg-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'dock-spinosaurus' }),
+    });
+    assert.equal(uDup.statusCode, 200);
+    assert.equal(uDup.json().newlyUnlocked, false);
+
+    let lastRes = null;
+    for (const egg of EASTER_EGG_CATALOG) {
+      lastRes = await srv.inject({
+        method: 'POST',
+        url: '/api/theme/egg/unlock',
+        headers: { 'x-sidecar-token': 'test-egg-secret', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: egg.id }),
+      });
+    }
+    assert.equal(lastRes.json().completedAll, true);
+    assert.equal(lastRes.json().unlocked.length, 13);
+
+    const resetRes = await srv.inject({
+      method: 'POST',
+      url: '/api/theme/egg/reset',
+      headers: { 'x-sidecar-token': 'test-egg-secret', 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(resetRes.statusCode, 200);
+    assert.deepEqual(resetRes.json().config.easterEggs.unlocked, []);
   } finally {
     await srv.close();
     fs.rmSync(sb.root, { recursive: true, force: true });

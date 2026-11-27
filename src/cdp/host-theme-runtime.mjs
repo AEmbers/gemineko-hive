@@ -464,6 +464,10 @@ export function buildHostThemeRuntimeSnippet() {
         wallpaper: { ...DEFAULT_CFG.wallpaper, ...(c.wallpaper || {}) },
         typography: { ...(DEFAULT_CFG.typography || { sidecarFontSize: 14, hostFontScale: 100 }), ...(c.typography || localTypo || {}) },
         dock: normDockCfg(c.dock, localDock || DEFAULT_CFG.dock),
+        easterEggs: {
+          soundEnabled: typeof c.easterEggs?.soundEnabled === 'boolean' ? c.easterEggs.soundEnabled : true,
+          unlocked: Array.isArray(c.easterEggs?.unlocked) ? c.easterEggs.unlocked : [],
+        },
         spriteQuality: cleanQ,
       };
     }
@@ -2649,7 +2653,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       if (!emblem) {
         emblem = document.createElement('div');
         emblem.id = HOME_EMBLEM_ID;
-        emblem.title = '点击摸摸基米窝徽章';
+        emblem.title = '戳戳星钻 · 南北绿豆浆盲盒 🫛';
         emblem.innerHTML = '<span class="gk-he-halo"></span><div class="gk-he-stage"><span class="gk-he-caustic"></span><span class="gk-he-gem"></span><span class="gk-he-sheen"></span><span class="gk-he-spark gk-he-spark-a">✦</span><span class="gk-he-spark gk-he-spark-b">✦</span></div>';
         emblem.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -2657,6 +2661,9 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           void emblem.offsetWidth;
           emblem.classList.add('is-sparkling');
           setTimeout(() => emblem.classList.remove('is-sparkling'), 520);
+          if (window.__GEMINEKO_EGG_API__?.triggerById?.('emblem-greenbean', { x: e.clientX, y: e.clientY, el: emblem })) {
+            return;
+          }
           spawnStardust(e.clientX, e.clientY, 18, 'confetti');
           onDockPoke(resolveActiveRoleId(ctx.getActivity()), e.clientX, e.clientY, emblem);
         });
@@ -3082,6 +3089,12 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           const btn = e.target.closest('[data-home-role]');
           if (!btn) return;
           const rId = btn.getAttribute('data-home-role') || 'neon';
+          const actors = [...stage.querySelectorAll('.gk-home-actor')];
+          const idx = Math.max(0, actors.indexOf(btn));
+          if (window.__GEMINEKO_EGG_API__?.onHomeStageActorClick) {
+            window.__GEMINEKO_EGG_API__.onHomeStageActorClick(rId, idx, e.clientX, e.clientY, btn);
+            return;
+          }
           onDockPoke(rId, e.clientX, e.clientY, btn);
         });
         parentWrap.insertBefore(stage, inputBox);
@@ -3655,7 +3668,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       bar.id = MINI_BAR_ID;
       bar.innerHTML = \`
         <div style="display:flex;justify-content:space-between;align-items:center;font-weight:700;">
-          <span>🎨 基米窝主题与汉化快切</span>
+          <span data-egg-rave-title="1" style="cursor:pointer;" title="连点三次试试？🎧">🎨 基米窝主题与汉化快切</span>
           <button class="gk-mini-chip" data-act="open-workshop" title="在基米窝侧边栏打开完整工坊">完整工坊 ↗</button>
         </div>
         <div class="gk-mini-label">基底配色：</div>
@@ -3715,6 +3728,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         <div class="gk-mini-row" style="margin-top:2px;">
           <button class="gk-mini-chip" data-act="meme-picker">😸 表情库</button>
           <button class="gk-mini-chip" data-act="toggle-focus">专注 0fps</button>
+          <button class="gk-mini-chip" data-act="toggle-egg-sound">🔊 彩蛋音</button>
           <button class="gk-mini-chip" data-act="rain">🐾 爪印雨</button>
           <button class="gk-mini-chip" data-act="burst">💥 捅基米窝</button>
           <button class="gk-mini-chip" data-act="toggle-enabled">总开关</button>
@@ -3763,6 +3777,11 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           const next = !cfg.focusMode;
           applyConfig({ ...cfg, focusMode: next });
           persistPatch({ focusMode: next });
+        } else if (act === 'toggle-egg-sound') {
+          const nextSound = cfg.easterEggs?.soundEnabled === false;
+          const nextEggs = { ...(cfg.easterEggs || {}), soundEnabled: nextSound };
+          applyConfig({ ...cfg, easterEggs: nextEggs });
+          persistPatch({ easterEggs: nextEggs });
         } else if (act === 'toggle-enabled') {
           const next = !cfg.enabled;
           applyConfig({ ...cfg, enabled: next });
@@ -3859,6 +3878,12 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       });
       const focusBtn = bar.querySelector('[data-act="toggle-focus"]');
       if (focusBtn) focusBtn.classList.toggle('is-active', Boolean(cfg.focusMode));
+      const soundBtn = bar.querySelector('[data-act="toggle-egg-sound"]');
+      if (soundBtn) {
+        const sOn = cfg.easterEggs?.soundEnabled !== false;
+        soundBtn.textContent = sOn ? '🔊 彩蛋音' : '🔇 已静音';
+        soundBtn.classList.toggle('is-active', sOn);
+      }
       const enBtn = bar.querySelector('[data-act="toggle-enabled"]');
       if (enBtn) enBtn.classList.toggle('is-active', Boolean(cfg.enabled));
     }
@@ -3992,6 +4017,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           fab.classList.add('is-dragging');
           curRatio = Math.max(0.18, Math.min(0.78, (e.clientY - convTop - 21) / Math.max(200, convH)));
           positionOutlineElements(curRatio);
+          window.__GEMINEKO_EGG_API__?.onOutlineDragY?.(e.clientY);
         });
         const finishDrag = (e) => {
           if (!outlineDragging) return;
@@ -4136,6 +4162,11 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       const target = e.target;
       if (!target || target.closest('input, textarea, [contenteditable="true"], .monaco-editor')) return;
 
+      if (e.altKey) {
+        e.preventDefault();
+        window.__GEMINEKO_EGG_API__?.triggerById?.('ctx-dingdong-box', { x: e.clientX, y: e.clientY });
+        return;
+      }
       e.preventDefault();
       let menu = document.getElementById(CTX_MENU_ID);
       if (!menu) {
@@ -4153,6 +4184,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         <button type="button" data-c="copy">📋 \${selText ? '复制选中内容' : (pickedPath ? '复制识别路径' : '复制当前片段')}</button>
         <button type="button" data-c="ref">📎 作为 @引用填入输入框</button>
         <button type="button" data-c="theme">🎨 切换基米窝皮肤 / 浓度 / 汉化</button>
+        <button type="button" data-c="egg-box" style="opacity:0.72;border-top:1px dashed rgba(148,163,184,0.22);margin-top:2px;padding-top:6px;">🥚 ???（叮咚鸡盲盒）</button>
       \`;
       menu.onclick = (ev) => {
         const b = ev.target.closest('button');
@@ -4170,6 +4202,8 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         } else if (c === 'theme') {
           const dockBtn = document.querySelector('#' + ctx.dockId + ' .gk-dock-theme-btn');
           toggleMiniBar(dockBtn);
+        } else if (c === 'egg-box') {
+          window.__GEMINEKO_EGG_API__?.triggerById?.('ctx-dingdong-box', { x: ev.clientX, y: ev.clientY });
         }
         menu.classList.remove('is-open');
       };
@@ -4246,6 +4280,10 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       } else if (evt.type === 'stardust-rain') {
         spawnStardust(window.innerWidth / 2, 0, 36, 'paw');
         showSpeechBubble('✨ 来自基米窝的炫彩爪印星尘雨~', 2200);
+      } else if (evt.type === 'replay-egg' && evt.eggId) {
+        window.__GEMINEKO_EGG_API__?.triggerById?.(evt.eggId);
+      } else if (evt.type === 'supreme-maodie-parade') {
+        window.__GEMINEKO_EGG_API__?.triggerSupremeParade?.('sidecar');
       }
     }
 
@@ -4301,7 +4339,20 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
     applyConfig(cfg);
     decorateLongCodeBlocks();
 
-    const api = { applyConfig, onActivityUpdate, onDockPoke, triggerEvent, toggleMiniBar, syncAskQuestionStage, getSpriteQuality, getDockConfig, unmount };
+    const api = {
+      applyConfig,
+      onActivityUpdate,
+      onDockPoke,
+      triggerEvent,
+      toggleMiniBar,
+      syncAskQuestionStage,
+      getSpriteQuality,
+      getDockConfig,
+      showSpeechBubble,
+      spawnStardust,
+      triggerHiveParadeBurst,
+      unmount,
+    };
     window.__GEMINEKO_THEME_API__ = api;
 
     function unmount() {

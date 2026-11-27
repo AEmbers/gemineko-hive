@@ -210,6 +210,10 @@ export function buildHostMemeRuntimeSnippet() {
           card.setAttribute(RENDERED_ATTR, '1');
           card.setAttribute('data-gk-orig-meme', it.raw);
           card.innerHTML = \`<img src="\${meme.url}" alt="\${it.caption.replace(/"/g, '&quot;')}" loading="lazy" /><span class="gk-meme-cap">\${meme.caption}</span>\`;
+          card.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.__GEMINEKO_EGG_API__?.onInlineMemeClick?.(card, e.clientX, e.clientY);
+          });
           it.node.replaceWith(card);
         }
       }

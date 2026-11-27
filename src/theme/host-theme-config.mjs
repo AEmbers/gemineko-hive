@@ -46,6 +46,129 @@ export const ALLOWED_I18N_MODES = new Set(['auto', 'neko-zh', 'zh', 'off']);
 export const ALLOWED_I18N_AUTO_STYLES = new Set(['neko-zh', 'zh']);
 export const ALLOWED_SPRITE_QUALITIES = new Set(['384', '512', '1024']);
 export const ALLOWED_DOCK_SIDES = new Set(['left', 'right']);
+
+/** 13 个自研控件专属哈基米热梗彩蛋目录（全收集解锁终极圆头耄耋星河大阅兵） */
+export const EASTER_EGG_CATALOG = [
+  {
+    id: 'dock-spinosaurus',
+    scope: 'host',
+    widget: '输入栏小猫挂件',
+    title: '脊背龙形态·极怒哈气',
+    meme: '脊背龙形态 / 极怒哈气',
+    gesture: '双击输入栏小猫立绘',
+    hint: '对着输入框边的小猫连点两下试试，当心炸毛…',
+  },
+  {
+    id: 'emblem-greenbean',
+    scope: 'host',
+    widget: '首页 3D 星钻徽章',
+    title: '南北绿豆浆·绿豆折射雨',
+    meme: '南北绿豆浆',
+    gesture: '点击或长按首页中央星钻',
+    hint: '戳一戳空白首页中央发光的星钻宝石…',
+  },
+  {
+    id: 'stage-mambo-choir',
+    scope: 'host',
+    widget: '首页 5 角色迎宾舞台',
+    title: '哈基米曼波大合唱',
+    meme: '哈基米曼波 / 阿西嘎',
+    gesture: '6 秒内连点 ≥3 位角色或双击舞台横幅',
+    hint: '依次点亮首页舞台上的哈基米们，或双击舞台横幅…',
+  },
+  {
+    id: 'watermark-maodie',
+    scope: 'host',
+    widget: '右下角角色水印',
+    title: '圆头耄耋·博古架降临',
+    meme: '圆头耄耋',
+    gesture: '双击对话区右下角水印位置',
+    hint: '在对话区右下角半透明水印处空白位置双击…',
+  },
+  {
+    id: 'outline-liquid-cat',
+    scope: 'host',
+    widget: '右侧悬浮猫爪大纲',
+    title: '液体猫·果冻拉长回弹',
+    meme: '液体猫',
+    gesture: '双击悬浮猫爪或快速上下甩动 ≥3 次',
+    hint: '双击右侧悬浮猫爪按钮，或快速上下甩动它…',
+  },
+  {
+    id: 'ask-claw-lottery',
+    scope: 'host',
+    widget: '提问选择思考舞台',
+    title: '哈基米抓阄·猫爪拍板',
+    meme: '抓阄占卜',
+    gesture: '点击沉思小猫或思考气泡',
+    hint: '遇到多选提问时，点一下左边沉思的小猫或选项气泡…',
+  },
+  {
+    id: 'code-knead-stamp',
+    scope: 'host',
+    widget: '长代码块吸顶折叠条',
+    title: '哈基米踩奶质检·盖章',
+    meme: '踩奶质检',
+    gesture: '双击吸顶条左侧代码行数标题',
+    hint: '双击超长代码块吸顶条左侧的代码行数标题…',
+  },
+  {
+    id: 'minibar-cyber-rave',
+    scope: 'host',
+    widget: '主题与汉化快切浮层',
+    title: '哈基米私人电音霓虹秀',
+    meme: '哈基米私人音乐 / 阿西嘎',
+    gesture: '2 秒内连点快切面板顶部标题 3 次',
+    hint: '打开快切面板后，连点顶部标题三次…',
+  },
+  {
+    id: 'ctx-dingdong-box',
+    scope: 'host',
+    widget: '玻璃右键菜单',
+    title: '叮咚鸡·哈基米运势盲盒',
+    meme: '叮咚鸡运势签',
+    gesture: '点击右键菜单底部神秘彩蛋行或 Alt+右键',
+    hint: '呼出猫窝右键菜单，留意最底部藏着的神秘彩蛋行…',
+  },
+  {
+    id: 'meme-chubby-pop',
+    scope: 'host',
+    widget: '内联贴纸与行内小猫',
+    title: '胖宝宝充气膨胀',
+    meme: '胖宝宝爆小鱼干',
+    gesture: '连点聊天气泡内联贴纸或活跃行内小猫',
+    hint: '连续点击对话里的猫娘内联贴纸或活跃行内小猫…',
+  },
+  {
+    id: 'sidecar-zoomies',
+    scope: 'sidecar',
+    widget: '侧栏实时状态横幅',
+    title: '凌晨三点·哈基米跑酷',
+    meme: '凌晨三点跑酷',
+    gesture: '双击侧栏顶部实时小猫头像',
+    hint: '在基米窝侧栏顶部实时横幅中双击那只小猫头像…',
+  },
+  {
+    id: 'sidecar-dried-fish',
+    scope: 'sidecar',
+    widget: 'Swarm 猫窝/消息头像',
+    title: '投喂小鱼干·全窝围观',
+    meme: '小鱼干全窝围观',
+    gesture: '双击猫窝或消息板任意成员头像',
+    hint: '双击基米窝消息板或猫窝图谱里的任意成员头像…',
+  },
+  {
+    id: 'workshop-alchemy',
+    scope: 'sidecar',
+    widget: '主题商店与精细工坊',
+    title: '哈基米炼丹盲盒试妆',
+    meme: '炼丹盲盒试妆',
+    gesture: '双击精细工坊顶部引擎大标题',
+    hint: '在精细工坊里双击顶部的引擎大标题…',
+  },
+];
+
+export const ALLOWED_EASTER_EGG_IDS = new Set(EASTER_EGG_CATALOG.map((e) => e.id));
 export const ALLOWED_WALLPAPER_MODES = new Set([
   'off',
   'builtin-starry',
@@ -488,6 +611,10 @@ export const DEFAULT_HOST_THEME_CONFIG = {
     badgeScale: 120,
     sidecarAvatarSize: 64,
   },
+  easterEggs: {
+    soundEnabled: true,
+    unlocked: [],
+  },
   spriteQuality: '1024',
   updatedAt: 0,
 };
@@ -665,6 +792,18 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
   const dockSide = ALLOWED_DOCK_SIDES.has(srcDock.side)
     ? srcDock.side
     : (ALLOWED_DOCK_SIDES.has(bDock.side) ? bDock.side : 'left');
+  const srcEggs = src.easterEggs && typeof src.easterEggs === 'object' ? src.easterEggs : {};
+  const bEggs = b.easterEggs || DEFAULT_HOST_THEME_CONFIG.easterEggs;
+  const rawUnlocked = Array.isArray(srcEggs.unlocked)
+    ? srcEggs.unlocked
+    : (Array.isArray(bEggs.unlocked) ? bEggs.unlocked : []);
+  const unlockedSet = new Set();
+  for (const rawId of rawUnlocked) {
+    const cleanId = String(rawId || '').trim();
+    if (ALLOWED_EASTER_EGG_IDS.has(cleanId)) {
+      unlockedSet.add(cleanId);
+    }
+  }
 
   let wpMode = ALLOWED_WALLPAPER_MODES.has(srcWp.mode)
     ? srcWp.mode
@@ -743,6 +882,10 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
       catSize: Math.round(clampNumber(srcDock.catSize, 52, 140, bDock.catSize ?? 100)),
       badgeScale: Math.round(clampNumber(srcDock.badgeScale, 85, 150, bDock.badgeScale ?? 120)),
       sidecarAvatarSize: Math.round(clampNumber(srcDock.sidecarAvatarSize, 44, 112, bDock.sidecarAvatarSize ?? 64)),
+    },
+    easterEggs: {
+      soundEnabled: asBool(srcEggs.soundEnabled, asBool(bEggs.soundEnabled, true)),
+      unlocked: Array.from(unlockedSet),
     },
     spriteQuality: ALLOWED_SPRITE_QUALITIES.has(String(src.spriteQuality || ''))
       ? String(src.spriteQuality)
