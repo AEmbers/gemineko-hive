@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.3] - 2026-11-27
+
+### Fixed & Refined
+- **去除 `optical-neko` 下思考折叠条/文件变更卡/行内代码的突兀紫框**：
+  - 将 `[data-testid="thinking-collapsible-trigger"]`、`[data-testid="worked-for-collapsible"]`、`[data-testid="tool-group-collapsible"]`、`[data-testid="changed-files-card"]` 与行内 `code`/胶囊在 `optical-neko` 模式下收敛为极净透明或中性玻璃边框（保留 `vivid` 浓郁模式原样）；
+- **提升浅色 `optical-neko` 下右下角水印猫娘清晰度**：
+  - 浅色模式下 `#gemineko-corner-watermark` 透明度提升至 `clamp(0.32, var(--gk-watermark-opacity) * 2.8, 0.52)`，配合 `saturate(1.22) contrast(1.06)` 与白底玻璃名牌，深色模式保持不变；
+- **消除小猫 Dock 与最后一条消息操作按钮拥挤**：
+  - `[data-testid="autoscroll-viewport"] > div:last-child` 增加 `padding-bottom: 72px`，同时将左下小猫 Dock 立绘精炼至 `58×58` 贴肩坐姿；
+- **全量补齐 Settings 多标签页与对话流折叠工具条汉化（`src/cdp/host-i18n-runtime.mjs`）**：
+  - 覆盖 `Models & Usage`（模型与配额/订阅方案/AI 额度/`Orchestrator Settings`/配额重置时间 `天/小时/分钟` 换算）、`Appearance`、`Notifications`、`Browser`、`Application`、`Shortcuts` 全部设置内页，并补齐 `Explored` / `Explored files` / `Ran commands` 等工具条译文（严格保留 `Ctrl`/`Shift`/`Alt`/`Enter`/`Antigravity`/`Gemini`/`Claude`/`GPT` 原文）。
+
 ## [0.6.2] - 2026-11-27
 
 ### Fixed & Changed

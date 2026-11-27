@@ -2003,6 +2003,58 @@ html[data-gk-theme]:is([data-gk-focus="1"], [data-gk-motion="off"]) :is(
 ) {
   animation: none !important;
 }
+
+/* v0.6.3：1. 去 optical-neko 思考条/文件卡/行内代码突兀紫框；2. 提浅色右下水印清晰度；3. 滚动底端留白防 Dock 挤占操作按钮 */
+html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="worked-for-collapsible"], [data-testid="thinking-collapsible-trigger"], [data-testid="tool-group-collapsible"]) {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  padding: 3px 6px !important;
+  box-shadow: none !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] :is([data-testid="worked-for-collapsible"], [data-testid="thinking-collapsible-trigger"], [data-testid="tool-group-collapsible"]):hover {
+  background: rgba(15, 23, 42, 0.04) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] :is([data-testid="worked-for-collapsible"], [data-testid="thinking-collapsible-trigger"], [data-testid="tool-group-collapsible"]):hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="changed-files-card"], [data-testid="changed-files-card"] + div > div, [data-testid="artifact-card"], [data-testid="bubble-artifact-card"], .artifact-card, [data-testid="running-items-panel"]) {
+  background-color: var(--gk-optical-card-fill) !important;
+  background-image: var(--gk-optical-sheen) !important;
+  border: 1px solid var(--gk-optical-border-base) !important;
+  box-shadow: var(--gk-optical-shadow-card) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] :is([data-testid="planner-response-text"], [data-testid="agent-response"]) :not(pre) > code {
+  background: rgba(15, 23, 42, 0.048) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] :is([data-testid="planner-response-text"], [data-testid="agent-response"]) :not(pre) > code {
+  background: rgba(255, 255, 255, 0.068) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] :is([data-testid="entity-pill"], .inline-pill, [data-testid="step-plan-chip"]) {
+  background-color: rgba(15, 23, 42, 0.045) !important;
+  border: 1px solid rgba(15, 23, 42, 0.085) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] :is([data-testid="entity-pill"], .inline-pill, [data-testid="step-plan-chip"]) {
+  background-color: rgba(255, 255, 255, 0.065) !important;
+  border: 1px solid rgba(255, 255, 255, 0.11) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] #\${WATERMARK_ID} {
+  opacity: clamp(0.32, calc(var(--gk-watermark-opacity, 0.14) * 2.8), 0.52) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] #\${WATERMARK_ID} img.gk-wm-sprite {
+  filter: saturate(1.22) contrast(1.06) drop-shadow(0 6px 18px color-mix(in srgb, var(--gk-role-primary) 26%, transparent)) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] #\${WATERMARK_ID} .gk-wm-tag {
+  background: rgba(255, 255, 255, 0.78) !important;
+  border-color: color-mix(in srgb, var(--gk-role-primary) 28%, transparent) !important;
+  opacity: 0.92 !important;
+}
+html[data-gk-theme] [data-testid="autoscroll-viewport"] > div:last-child {
+  padding-bottom: 72px !important;
+}
 html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [data-gk-wallpaper="on"]) #\${AURORA_HOST_ID} {
   opacity: 0 !important;
 }

@@ -302,6 +302,169 @@ export const HOST_I18N_EXACT_ZH = {
   'What should we build today?': '今天想构建什么？',
   'What can I help with?': '有什么我可以帮你的？',
   'Ready when you are.': '准备就绪，随时可以开始。',
+
+  // 对话流折叠工具条
+  Explored: '已探索',
+  'Explored files': '已探索文件',
+  'Ran command': '已运行命令',
+  'Ran commands': '已运行命令',
+  'Edited file': '已编辑文件',
+  'Edited files': '已编辑文件',
+  'Read file': '已读取文件',
+  'Read files': '已读取文件',
+
+  // Models & Usage（模型与配额）
+  'Models & Usage': '模型与配额',
+  'Manage your model quota and credits.': '管理你的模型配额与 AI 额度。',
+  'Refresh quota and credits data': '刷新配额与额度数据',
+  'No quota information available.': '暂无可用配额信息。',
+  Plan: '订阅方案',
+  'Your plan:': '当前方案：',
+  Upgrade: '升级',
+  'Model Credits': '模型额度',
+  'Enable AI credit overages': '启用 AI 额度超额抵扣',
+  "When toggled on, Antigravity will use your AI credits to fulfill model requests once you're out of model quota. Antigravity will always use your model quota first before using AI credits.": '开启后，当模型配额耗尽时，Antigravity 将使用你的 AI 额度继续响应请求（始终优先消耗模型配额）。',
+  'Available AI credits:': '可用 AI 额度：',
+  'See Activity': '查看明细',
+  'Get More AI Credits': '获取更多 AI 额度',
+  'Model Quota': '模型配额',
+  'For Antigravity Business consumption options, see': '关于 Antigravity Business 用量选项，请参阅',
+  'Orchestrator Settings': '编排器设置',
+  'Choose the models Orchestrator uses. A larger, smarter orchestrator model with a faster, cheaper executor gives high quality for fewer tokens.': '选择编排器使用的模型组合：更强的规划模型搭配更快的执行模型，可用更少 Token 获得高质量产出。',
+  'Model selection': '模型选择',
+  'Default uses server-managed routing and Orchestrator quota. Custom pins specific models for orchestration and execution.': '默认模式由服务端自动路由并使用编排器配额；自定义模式可为规划与执行固定指定模型。',
+  'Orchestrator model selection': '编排器模型选择',
+  'Orchestrator Model': '规划编排模型',
+  'Plans the work, makes design decisions, and reviews the result. Pick a top-tier model. You can also pick one per conversation from the Orchestrator row in the model menu.': '负责规划任务、制定设计决策与复核结果，建议选择旗舰模型（也可在单次对话的模型菜单中按需切换）。',
+  'Executor Model': '代码执行模型',
+  'Carries out the plan: searches, edits, builds, and tests. Pick a faster, cheaper model.': '负责按计划检索、编辑、构建与验证，建议选择更快更轻量的模型。',
+  'Gemini Models': 'Gemini 模型',
+  'Claude and GPT models': 'Claude 与 GPT 模型',
+  'Weekly Limit Remaining': '每周剩余配额',
+  'Five Hour Limit Remaining': '5 小时剩余配额',
+
+  // Appearance（外观）
+  Chat: '对话',
+  'Chat Layout': '对话布局',
+  Accessibility: '无障碍辅助',
+  'Conversation steps': '对话步骤详情',
+  'Choose how much detail is shown during a conversation.': '选择对话过程中展示的步骤详细程度。',
+  Verbose: '详细',
+  'Custom context menus': '自定义右键菜单',
+  'Replace the default browser right-click menu with quick actions.': '使用快捷操作菜单替代默认浏览器右键菜单。',
+  'Screen reader mode': '屏幕阅读器模式',
+  'Optimize the interface and terminal output for screen readers.': '针对屏幕阅读器优化界面与终端输出。',
+  'Conversation width': '对话区宽度',
+  'Configure the maximum width of the conversation panel.': '配置对话面板的最大内容宽度。',
+  Narrow: '窄',
+  Wide: '宽',
+  Fill: '铺满',
+  'Terminal placement': '终端位置',
+  'Choose where terminal sessions appear.': '选择终端会话显示的面板位置。',
+  'Bottom Panel': '底部面板',
+  'Side Panel': '侧边面板',
+  'Side Panel Preview': '侧边栏预览',
+  'Markdown artifact width': 'Markdown 产物宽度',
+  'Configure the default width of markdown artifacts.': '配置 Markdown 文档产物的默认显示宽度。',
+  'Context and quota indicator': '上下文与配额指示器',
+  'Show how full the context window is next to the send button. Click it for a breakdown and to see your model quota.': '在发送按钮旁显示上下文窗口占用率，点击可查看详细构成与模型配额。',
+
+  // Notifications & Sound（通知与音效）
+  'Manage your notification preferences.': '管理通知与提示偏好。',
+  Sound: '音效',
+  'Chime volume': '提示音音量',
+  'Set the volume of agent sounds.': '调节智能体提示音音量。',
+  'Enable sounds for agent': '开启智能体提示音',
+  'Play a sound when your action is needed or the agent finishes.': '在需要你确认或任务完成时播放提示音。',
+  'Enable notifications for agent': '开启智能体系统通知',
+  'Show system notifications when your action is needed or the agent finishes.': '在需要你确认或任务完成时发送系统桌面通知。',
+
+  // Browser（浏览器）
+  'Built-in Browser': '内置浏览器',
+  'Open links in': '链接打开方式',
+  'Choose where links open by default when clicked.': '选择点击链接时的默认打开位置。',
+  'New Tab': '新标签页',
+  'External Browser': '外部浏览器',
+  'Download location': '下载保存路径',
+  'Enable browser agent': '启用浏览器智能体',
+  'Browser JavaScript execution policy': '浏览器 JavaScript 执行策略',
+  'Controls whether the agent can run custom JavaScript to automate complex browser actions.': '控制智能体是否允许执行自定义 JavaScript 以完成复杂浏览器自动化操作。',
+  Disabled: '已禁用',
+  'Block all browser JavaScript execution.': '拦截所有浏览器 JavaScript 执行。',
+  'Prompt for approval before running browser scripts.': '运行浏览器脚本前均需请求确认。',
+  'Allow full browser script execution without prompting.': '允许直接执行浏览器脚本，不再弹窗询问。',
+
+  // Application & Terminal（应用程序与终端）
+  App: '应用',
+  Workspaces: '工作区',
+  Environments: '环境',
+  Account: '账号',
+  Developer: '开发者',
+  Shortcuts: '快捷键',
+  'Prevent sleep': '防止系统休眠',
+  'Prevent the computer from sleeping while the app is running.': '在应用运行期间阻止电脑自动休眠。',
+  'Keep in menu bar': '常驻菜单栏/托盘',
+  'Keep the app accessible from the menu bar and running in the background when all windows are closed.': '关闭全部窗口后保持应用在后台运行并可从托盘快速唤起。',
+  'Automatic check for updates': '自动检查更新',
+  'Automatically prompt you to restart the app when a new update is available. When disabled, you can check for updates manually from the app menu.': '发现新版本时自动提示重启更新；关闭后可在应用菜单手动检查。',
+  'Enable Remote Control': '启用远程控制',
+  'Manage your conversations from the companion website.': '支持通过配套网页端远程管理你的对话。',
+  Nickname: '设备昵称',
+  'A nickname for identifying this application in the companion website. Changing this will restart the connection.': '用于在配套网页端识别当前设备的昵称（修改后会重连服务）。',
+  'Default workspace VCS': '默认工作区版本控制 (VCS)',
+  'Command setup script': '命令前置初始化脚本',
+  'A shell setup script run before every command the agent executes.': '智能体每次执行终端命令前都会运行的 Shell 初始化脚本。',
+  'Enable terminal sandbox': '启用终端沙箱',
+  'Run terminal commands with sandbox restrictions.': '在沙箱隔离限制下运行终端命令。',
+  'Terminal command auto execution': '终端命令自动执行策略',
+  'Always Proceed': '始终自动放行',
+  Auto: '自动',
+  'Request Review': '请求审阅确认',
+  'Proceed in Sandbox': '沙箱内自动放行',
+  'Terminal commands automatically proceed inside the sandbox. A command that needs to leave the sandbox proceeds only if an agent judges it reversible, and otherwise requests review.': '沙箱内的终端命令自动放行；需要突破沙箱的命令仅在智能体判定可逆时继续，否则请求确认。',
+  'The agent always asks for confirmation before executing terminal commands (except those in the Allow list).': '智能体在执行终端命令前始终请求确认（白名单内的命令除外）。',
+  'Terminal command automatically proceeds if the command runs inside the sandbox. Otherwise, it requests review.': '命令在沙箱内执行时自动放行，否则请求确认。',
+  'Interrupt the agent and send immediately.': '打断智能体当前步骤并立即发送。',
+  'Queue until after the current turn.': '加入队列，等本轮结束后发送。',
+  'Enter to send': '按 Enter 发送',
+  "Send messages with the keyboard's Enter key instead of starting a new line.": '按 Enter 键直接发送消息，而非换行。',
+  'Include Jetski default customizations': '包含默认内置定制项',
+  'Include default customizations, such as default skills.': '包含默认技能等官方内置定制内容。',
+  'Telemetry is turned off for your account.': '你的账号已关闭遥测数据上报。',
+  'This setting is turned off for your account.': '此设置已在你的账号中关闭。',
+  'Provide Feedback': '提供反馈',
+
+  // Keybindings（快捷键动作名，保留 Ctrl/Shift/Alt/Enter/Tab/Esc 按键名不翻译）
+  'Open Keyboard Shortcuts': '打开快捷键设置',
+  'Toggle Sidebar': '切换侧边栏',
+  'Copy Conversation Markdown': '复制对话 Markdown',
+  'Archive This Conversation': '归档此对话',
+  'Pin This Conversation': '置顶此对话',
+  'Unpin This Conversation': '取消置顶此对话',
+  'Find in Conversation': '在对话中查找',
+  'Jump to Previous Prompt': '跳转到上一条提问',
+  'Jump to Next Prompt': '跳转到下一条提问',
+  'Mark All as Read': '全部标为已读',
+  'Mark This Conversation as Read': '将此对话标为已读',
+  'Mark This Conversation as Unread': '将此对话标为未读',
+  'Rename This Conversation': '重命名此对话',
+  'Move to New Group': '移动到新分组',
+  'Remove from Group': '从分组移除',
+  'Move Conversation Up': '上移对话',
+  'Move Conversation Down': '下移对话',
+  'Copy Conversation ID': '复制对话 ID',
+  'Copy Trajectory ID': '复制轨迹 ID',
+  'Download Diagnostics': '下载诊断日志',
+  'Toggle Between Light/Dark Themes': '切换浅色/深色主题',
+  'Switch to This Computer': '切换到本机电脑',
+  'Previous Side Panel Tab': '上一个侧边栏标签页',
+  'Next Side Panel Tab': '下一个侧边栏标签页',
+  'Collapse All Folders': '折叠所有文件夹',
+  'Expand All Folders': '展开所有文件夹',
+  'Select All': '全选',
+  'Cancel Generation': '取消生成',
+  'Submit Prompt (Alternate to Enter)': '提交提问（Enter 备选快捷键）',
+  'Terminal: Add to Chat': '终端：添加到对话',
 };
 
 /** 哈基米萌系中文精确覆盖词条（在标准中文基础上做二次元猫窝趣味化） */
@@ -369,6 +532,12 @@ export const HOST_I18N_EXACT_NEKO = {
   'What should we build today?': '今天想带哈基米造点什么喵？✦',
   'What can I help with?': '今天想让猫窝帮你搞定什么喵？',
   'Ready when you are.': '哈基米已蹲好待命，随时开工喵！',
+  Explored: '已探路喵',
+  'Explored files': '翻看过的文件',
+  'Models & Usage': '模型与猫粮配额',
+  'Your plan:': '当前猫窝方案：',
+  'Weekly Limit Remaining': '本周剩余猫粮',
+  'Five Hour Limit Remaining': '5 小时剩余猫粮',
 };
 
 /** 动态正则模板定义（以字面串数组存放，便于无损耗注入与直接单测） */
@@ -381,6 +550,15 @@ export const HOST_I18N_PATTERN_SPECS = [
   { id: 'good-to-see-you-next', source: "^Good to see you,\\s*(.+?)\\.\\s*What's next\\?$", flags: 'i', zh: '很高兴见到你，$1，接下来做什么？', neko: '见到你真开心，$1 喵！接下来干点啥？✦' },
   { id: 'good-to-see-you', source: '^Good to see you,\\s*(.+?)[.!?]?$', flags: 'i', zh: '很高兴见到你，$1！', neko: '见到你真开心，$1 喵！✦' },
   { id: 'good-time-greeting', source: '^(?:Good\\s+(?:morning|afternoon|evening)),\\s*(.+?)[.!?]?$', flags: 'i', zh: '你好，$1！', neko: '哈基米向你问好，$1 喵！✦' },
+  { id: 'plan-name', source: '^Your plan:\\s*(.+)$', flags: 'i', zh: '当前订阅：$1', neko: '当前猫窝方案：$1' },
+  { id: 'upgrade-plan', source: '^You can upgrade to a higher\\s+(.+?)\\s+plan to receive the highest rate limits\\.$', flags: 'i', zh: '可升级至更高档位的 $1 方案以获取最高速率限额。', neko: '升级更高档位 $1 方案即可解锁最高速率限额喵。' },
+  { id: 'available-credits', source: '^Available AI credits:\\s*(.+)$', flags: 'i', zh: '可用 AI 额度：$1', neko: '可用 AI 额度：$1' },
+  { id: 'quota-refresh-weekly', source: '^You have used some of your weekly limit,\\s*it will fully refresh in\\s+(.+?)\\.?$', flags: 'i', zh: '已消耗部分每周配额，将在 $1 后完全重置。', neko: '本周猫粮已消耗一部分，将在 $1 后满血补齐喵。' },
+  { id: 'quota-refresh-5h', source: '^You have used some of your 5-hour limit,\\s*it will fully refresh in\\s+(.+?)\\.?$', flags: 'i', zh: '已消耗部分 5 小时配额，将在 $1 后完全重置。', neko: '5 小时猫粮已消耗一部分，将在 $1 后满血补齐喵。' },
+  { id: 'explored-n-files', source: '^Explored\\s+(\\d+)\\s+files?$', flags: 'i', zh: '已探索 $1 个文件', neko: '翻看了 $1 个文件喵' },
+  { id: 'read-n-files', source: '^Read\\s+(\\d+)\\s+files?$', flags: 'i', zh: '已读取 $1 个文件', neko: '凑近看了 $1 个文件' },
+  { id: 'edited-n-files', source: '^Edited\\s+(\\d+)\\s+files?$', flags: 'i', zh: '已编辑 $1 个文件', neko: '爪子改了 $1 个文件' },
+  { id: 'ran-n-commands', source: '^Ran\\s+(\\d+)\\s+commands?$', flags: 'i', zh: '已运行 $1 条命令', neko: '跑了 $1 条命令喵' },
   { id: 'worked-for', source: '^Worked for\\s+(.+)$', flags: 'i', zh: '已工作 $1', neko: '猫猫打工 $1' },
   { id: 'thought-for', source: '^Thought for\\s+(.+)$', flags: 'i', zh: '已思考 $1', neko: '转猫脑 $1' },
   { id: 'thinking-for', source: '^Thinking for\\s+(.+)$', flags: 'i', zh: '思考中 $1', neko: '猫脑运转 $1' },
@@ -393,6 +571,16 @@ export const HOST_I18N_PATTERN_SPECS = [
   { id: 'ago-hr', source: '^(\\d+)\\s*h(?:rs?)?\\s+ago$', flags: 'i', zh: '$1 小时前', neko: '$1 小时前喵' },
   { id: 'ago-day', source: '^(\\d+)\\s*d(?:ays?)?\\s+ago$', flags: 'i', zh: '$1 天前', neko: '$1 天前喵' },
 ];
+
+function formatDurationZh(text) {
+  return String(text)
+    .replace(/(\d+)\s*days?\s*,\s*/gi, '$1 天 ')
+    .replace(/(\d+)\s*hours?\s*,\s*/gi, '$1 小时 ')
+    .replace(/\b(\d+)\s*days?\b/gi, '$1 天')
+    .replace(/\b(\d+)\s*hours?\b/gi, '$1 小时')
+    .replace(/\b(\d+)\s*minutes?\b/gi, '$1 分钟')
+    .replace(/\s{2,}/g, ' ');
+}
 
 const COMPILED_PATTERNS = HOST_I18N_PATTERN_SPECS.map((sp) => ({
   ...sp,
@@ -408,7 +596,7 @@ const COMPILED_PATTERNS = HOST_I18N_PATTERN_SPECS.map((sp) => ({
 export function translateHostText(rawText, style = 'neko-zh') {
   if (typeof rawText !== 'string' || !rawText) return null;
   const trimmed = rawText.trim();
-  if (!trimmed || trimmed.length > 240) return null;
+  if (!trimmed || trimmed.length > 260) return null;
   // 品牌名与无英文字母串跳过
   if (!/[A-Za-z]/.test(trimmed) || /^Antigravity$/i.test(trimmed)) return null;
 
@@ -423,6 +611,9 @@ export function translateHostText(rawText, style = 'neko-zh') {
       if (pat.regex.test(trimmed)) {
         const tpl = isNeko ? pat.neko : pat.zh;
         translated = trimmed.replace(pat.regex, tpl);
+        if (pat.id === 'quota-refresh-weekly' || pat.id === 'quota-refresh-5h') {
+          translated = formatDurationZh(translated);
+        }
         break;
       }
     }
@@ -450,6 +641,7 @@ export function buildHostI18nRuntimeSnippet() {
     const EXACT_NEKO = ${exactNekoJson};
     const PATTERN_SPECS = ${patternSpecsJson};
     const PATTERNS = PATTERN_SPECS.map((sp) => ({
+      id: sp.id,
       regex: new RegExp(sp.source, sp.flags),
       zh: sp.zh,
       neko: sp.neko,
@@ -496,10 +688,20 @@ export function buildHostI18nRuntimeSnippet() {
       return i18n.autoChineseStyle === 'zh' ? 'zh' : 'neko-zh';
     }
 
+    function formatDurationZh(text) {
+      return String(text)
+        .replace(/(\\d+)\\s*days?\\s*,\\s*/gi, '$1 天 ')
+        .replace(/(\\d+)\\s*hours?\\s*,\\s*/gi, '$1 小时 ')
+        .replace(/\\b(\\d+)\\s*days?\\b/gi, '$1 天')
+        .replace(/\\b(\\d+)\\s*hours?\\b/gi, '$1 小时')
+        .replace(/\\b(\\d+)\\s*minutes?\\b/gi, '$1 分钟')
+        .replace(/\\s{2,}/g, ' ');
+    }
+
     function translateRaw(rawText, style, elHint) {
       if (style === 'off' || typeof rawText !== 'string' || !rawText) return null;
       const trimmed = rawText.trim();
-      if (!trimmed || trimmed.length > 240 || !/[A-Za-z]/.test(trimmed) || /^Antigravity$/i.test(trimmed)) return null;
+      if (!trimmed || trimmed.length > 260 || !/[A-Za-z]/.test(trimmed) || /^Antigravity$/i.test(trimmed)) return null;
 
       const isNeko = style !== 'zh';
       const dict = isNeko ? EXACT_NEKO : EXACT_ZH;
@@ -511,6 +713,9 @@ export function buildHostI18nRuntimeSnippet() {
         for (const p of PATTERNS) {
           if (p.regex.test(trimmed)) {
             hit = trimmed.replace(p.regex, isNeko ? p.neko : p.zh);
+            if (p.id === 'quota-refresh-weekly' || p.id === 'quota-refresh-5h') {
+              hit = formatDurationZh(hit);
+            }
             break;
           }
         }

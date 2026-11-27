@@ -502,6 +502,11 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(translateHostText('This Computer', 'zh'), '本机电脑');
   assert.equal(translateHostText('just now', 'neko-zh'), '刚才喵');
   assert.equal(translateHostText('just now', 'zh'), '刚刚');
+  assert.equal(translateHostText('Models & Usage', 'zh'), '模型与配额');
+  assert.equal(translateHostText('Available AI credits: 0', 'zh'), '可用 AI 额度：0');
+  assert.equal(translateHostText('Your plan: Google AI Ultra', 'zh'), '当前订阅：Google AI Ultra');
+  assert.match(translateHostText('You have used some of your weekly limit, it will fully refresh in 5 days, 21 hours.', 'zh') || '', /5 天 21 小时/);
+  assert.equal(translateHostText('Explored files', 'neko-zh'), '翻看过的文件');
   assert.equal(formatDockModelDisplay('gemini-4-hydrogen-high', 'hydrogen', false), '氢基米');
   assert.equal(formatDockModelDisplay('gemini-4-hydrogen-high', 'hydrogen', true), 'Hydrogen');
   assert.equal(formatDockModelDisplay('gemini-4-carbon-high', 'carbon', false), '碳基米');

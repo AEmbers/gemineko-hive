@@ -242,8 +242,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       }
       #\${DOCK_ID} .gk-dock-cat {
         position: relative;
-        width: 68px;
-        height: 68px;
+        width: 58px;
+        height: 58px;
         flex-shrink: 0;
         pointer-events: auto;
         cursor: pointer;
@@ -255,8 +255,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         justify-content: center;
       }
       #\${DOCK_ID} img.gk-dock-sprite {
-        width: 68px;
-        height: 68px;
+        width: 58px;
+        height: 58px;
         object-fit: contain;
         background: transparent !important;
         border: none !important;
@@ -275,7 +275,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         display: flex;
         align-items: center;
         gap: 6px;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
         padding: 4px 8px 4px 9px;
         border-radius: 14px;
         background: rgba(255, 250, 255, 0.88);
@@ -618,10 +618,10 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     }
 
     dock.classList.remove('is-hidden');
-    const dockHeight = dock.offsetHeight || 68;
+    const dockHeight = dock.offsetHeight || 58;
     const left = Math.max(8, Math.min(window.innerWidth - 120, Math.round(r.left + 12)));
-    // 下摆轻轻坐落在输入栏顶部边框，与右侧系统像素小宠物底座齐平
-    const top = Math.max(40, Math.round(r.top - dockHeight + 10));
+    // 下摆轻轻坐落在输入栏顶部边框，与右侧系统像素小宠物底座齐平并留足上方操作键空间
+    const top = Math.max(40, Math.round(r.top - dockHeight + 12));
     if (dock.style.left !== left + 'px') dock.style.left = left + 'px';
     if (dock.style.top !== top + 'px') dock.style.top = top + 'px';
   }
