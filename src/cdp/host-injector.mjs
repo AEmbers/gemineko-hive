@@ -390,9 +390,9 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         display: inline-flex !important;
         align-items: center;
         justify-content: center;
-        width: calc(34px * var(--gk-host-font-scale, 1));
-        height: calc(34px * var(--gk-host-font-scale, 1));
-        margin-right: 6px;
+        width: calc(30px * var(--gk-host-font-scale, 1));
+        height: calc(30px * var(--gk-host-font-scale, 1));
+        margin-right: 4px;
         flex-shrink: 0;
         background: transparent !important;
         border: none !important;
@@ -401,8 +401,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         vertical-align: middle;
       }
       .\${INLINE_CLASS} img.gk-inline-sprite {
-        width: calc(34px * var(--gk-host-font-scale, 1));
-        height: calc(34px * var(--gk-host-font-scale, 1));
+        width: calc(30px * var(--gk-host-font-scale, 1));
+        height: calc(30px * var(--gk-host-font-scale, 1));
         object-fit: contain;
         image-rendering: auto;
         background: transparent !important;
@@ -746,8 +746,11 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
 
   function isInsideChecklistOrCard(el, scope) {
     if (!el) return false;
-    if (el.closest('ol, ul, li, [role="list"], [role="listitem"], [data-testid="tool-group-collapsible"], [data-testid="changed-files-card"], [data-testid="artifact-card"], [data-testid="bubble-artifact-card"], [data-testid="thinking-collapsible-trigger"]')) {
+    if (el.closest('ol, ul, li, [role="list"], [role="listitem"], [data-testid="changed-files-card"], [data-testid="artifact-card"], [data-testid="bubble-artifact-card"]')) {
       return true;
+    }
+    if (el.closest('[data-testid="tool-group-collapsible"], [data-testid="thinking-collapsible-trigger"]')) {
+      return false;
     }
     let cur = el.parentElement;
     for (let depth = 0; cur && cur !== scope && cur !== document.body && depth < 5; depth += 1) {
@@ -774,7 +777,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     let bestTop = -Infinity;
 
     if (scope) {
-      // 1. 优先识别宿主原生加载指示器 / 流光文本（排除步骤清单、圆角任务卡与历史折叠条）
+      // 1. 优先识别宿主原生加载指示器 / 流光文本（含收起态工具组/思考折叠触发行，排除步骤清单与历史折叠条）
       const liveSignals = scope.querySelectorAll('[data-testid="status-loading-spinner"], [class*="animate-shimmer"]');
       for (const sig of liveSignals) {
         if (!sig || !sig.isConnected) continue;
@@ -784,10 +787,13 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         if (sig.closest('aside.bg-sidebar, [data-testid="conversation-row-sidebar"]')) continue;
         if (isInsideChecklistOrCard(sig, scope)) continue;
 
+        const collapsibleBtn = sig.closest('[data-testid="tool-group-collapsible"], [data-testid="thinking-collapsible-trigger"]');
         const hostLine = sig.closest('div, span, p') || sig;
-        const p = hostLine.parentElement && /flex/.test(getComputedStyle(hostLine.parentElement).display) && getComputedStyle(hostLine.parentElement).flexDirection !== 'column'
-          ? hostLine.parentElement
-          : hostLine;
+        const p = collapsibleBtn
+          ? collapsibleBtn
+          : (hostLine.parentElement && /flex/.test(getComputedStyle(hostLine.parentElement).display) && getComputedStyle(hostLine.parentElement).flexDirection !== 'column'
+            ? hostLine.parentElement
+            : hostLine);
         if (isInsideChecklistOrCard(p, scope)) continue;
         const pText = (p.textContent || '').trim();
         if (/[+-]\\d+\\s+[+-]\\d+/.test(pText)) continue;
@@ -802,7 +808,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
 
       // 2. 空闲期绝不滞留；仅活跃运行态再走收敛文本兜底，彻底杜绝误挂到历史「爪子狂敲中 +6 -2」或步骤列表
       if (!bestCandidate && latestState.active) {
-        const activePattern = /^(?:Thinking(?:\\s+for\\s+\\d|\\s*\\d|$)|Working(?:\\b|\\s*$)|Running\\b|Planning\\b|思考中|猫脑运转|猫脑高速运转|处理中|认真干活|运行中|飞速狂奔|规划中|军师规划)/i;
+        const activePattern = /^(?:Thinking(?:\\s+for\\s+\\d|\\s*\\d|$)|Working(?:\\b|\\s*$)|Running\\b|Planning\\b|Editing\\b|Reading\\b|Searching\\b|Writing\\b|思考中|猫脑运转|猫脑高速运转|处理中|认真干活|运行中|飞速狂奔|规划中|军师规划|分析中|阅读中|修改中|改文件中)/i;
         const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
         let node;
         while ((node = walker.nextNode())) {

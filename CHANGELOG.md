@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.8] - 2026-11-27
+
+### Fixed
+- **修复主对话区活跃工具/思考折叠行处于收起态时不显示行内小猫立绘的 Bug**：
+  - [host-injector.mjs](src/cdp/host-injector.mjs) 中 `isInsideChecklistOrCard()` 放行活跃的 `[data-testid="tool-group-collapsible"]` 与 `[data-testid="thinking-collapsible-trigger"]` 触发按钮（继续保留对步骤清单 `ol/ul/li`、变更文件卡、产物卡及历史 `worked-for-collapsible` 折叠条的隔离）；
+  - `syncActiveStatusSprite()` 优先锚定收起态的 `tool-group-collapsible` / `thinking-collapsible-trigger` 按钮行，微调行内立绘至 `30px` 高度与按钮齐平，并补充 `Editing` / `Reading` / `Searching` / `Writing` 及对应中文进行时文本兜底。
+
 ## [0.7.7] - 2026-11-27
 
 ### Changed & Fixed

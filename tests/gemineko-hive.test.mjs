@@ -814,6 +814,10 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /data-dock-side/);
     assert.match(cdpScript, /data-dock-range/);
     assert.match(cdpScript, /is-right/);
+    const hostInjectorTxt = fs.readFileSync(path.join(REPO_ROOT, 'src/cdp/host-injector.mjs'), 'utf8');
+    const checklistBlock = hostInjectorTxt.match(/function isInsideChecklistOrCard[\s\S]{0,650}/)?.[0] || '';
+    assert.doesNotMatch(checklistBlock.split('return false;')[0], /tool-group-collapsible/, 'isInsideChecklistOrCard 不应一刀切排除活跃工具组折叠按钮');
+    assert.match(hostInjectorTxt, /collapsibleBtn\s*=\s*sig\.closest\(['"]\[data-testid="tool-group-collapsible"\],\s*\[data-testid="thinking-collapsible-trigger"\]['"]\)/, 'syncActiveStatusSprite 应优先识别收起态工具/思考折叠触发行');
     assert.match(bundleContent, /\.gn-live-sub[\s\S]{0,160}--gn-font-scale/);
     assert.match(bundleContent, /image-rendering:\s*auto\s*!important/);
     assert.match(bundleContent, /\.msg-av\.bee\s*\{[\s\S]{0,180}--gn-font-scale/);
