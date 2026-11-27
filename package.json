@@ -1,0 +1,25 @@
+{
+  "name": "gemineko-hive",
+  "version": "0.1.0",
+  "description": "Gemineko Hive · 基米窝：Google Antigravity 原生 Swarm 面板双模式美化插件（AI 娘宇宙 & 全员哈基米、高清 Q 版 & 32x32 像素双画风、捅窝彩蛋、GIF 同步与一键无损换肤）",
+  "type": "module",
+  "license": "MIT",
+  "author": "AEmbers",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AEmbers/gemineko-hive.git"
+  },
+  "bin": {
+    "gemineko-hive": "./bin/gemineko-hive.mjs"
+  },
+  "scripts": {
+    "build": "node scripts/build-bundle.mjs",
+    "test": "node --test tests/gemineko-hive.test.mjs",
+    "status": "node bin/gemineko-hive.mjs status",
+    "apply": "node bin/gemineko-hive.mjs apply",
+    "restore": "node bin/gemineko-hive.mjs restore"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

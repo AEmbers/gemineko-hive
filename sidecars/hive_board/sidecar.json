@@ -1,0 +1,21 @@
+{
+  "command": "node",
+  "args": ["main.mjs"],
+  "restart_policy": "on-failure",
+  "display_name": "Gemineko Hive · 基米窝",
+  "description": "把 Antigravity Swarm 变成一窝哈基米与 AI 娘宇宙（支持双画风、捅窝彩蛋、Demo 预览与原生 Swarm 一键换肤）。",
+  "has_web_ui": true,
+  "agent_permissions": {
+    "allows_user_interactions": false
+  },
+  "ui_config": {
+    "display_name": "基米窝",
+    "views": [
+      {
+        "path": "/",
+        "entrypoint": "SIDECAR_UI_ENTRYPOINT_AUX_PANE",
+        "title": "Gemineko Hive · 基米窝"
+      }
+    ]
+  }
+}

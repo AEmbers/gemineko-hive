@@ -1,0 +1,18 @@
+{
+  "name": "gemineko-hive",
+  "displayName": "Gemineko Hive · 基米窝",
+  "version": "0.1.0",
+  "description": "把 Google Antigravity 原生 Swarm 蜂巢面板变成一窝可爱的哈基米 / AI 娘宇宙！支持原生 Swarm 一键无损换肤与独立《基米窝》侧边栏、高清 Q 版/32×32 像素双画风、捅窝炸毛彩蛋、GIF 导出同步及模拟体验 Demo。",
+  "logo": "assets/logo.png",
+  "author": {
+    "name": "AEmbers",
+    "url": "https://github.com/AEmbers"
+  },
+  "homepage": "https://github.com/AEmbers/gemineko-hive",
+  "repository": "https://github.com/AEmbers/gemineko-hive",
+  "suggestedPrompts": [
+    "打开《Gemineko Hive · 基米窝》侧边栏，试玩模拟基米窝与“捅一捅”彩蛋",
+    "检查当前原生 Swarm 面板的基米窝换肤状态并一键套用最新皮肤",
+    "将原生 Swarm 面板无损还原回官方默认小蜜蜂样式"
+  ]
+}
