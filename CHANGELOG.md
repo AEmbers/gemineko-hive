@@ -9,9 +9,9 @@
   - **主窗口全量插件浮层联动缩放**：为 [host-injector.mjs](src/cdp/host-injector.mjs)、[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs) 与 [host-meme-runtime.mjs](src/cdp/host-meme-runtime.mjs) 内的 Dock 徽标、快切浮层、猫爪大纲、代码块吸顶栏、右键菜单、对话气泡与表情选择器全面接入 `var(--gk-host-font-scale)`。
 
 ### Changed & Upgraded
-- **品牌视觉同源双生重塑（Google Gemini 四色光学棱镜 × Neon 哈基米探身共生）**：
-  - **首页大 Logo（`assets/sprites/home-star-gem-light.png` / `home-star-gem-dark.png`）**：以正统 Google Gemini 四色全光谱光学玻璃棱镜星芒（宝蓝/翡翠青/暖阳金/珊瑚玫红）为视觉主骨，搭配 2.5~3 头身精致光感 Neon 哈基米探身倚靠共生，经四向泛洪精抠与去白边色溢处理生成 `256×256` RGBA 透明双底素材；
-  - **插件图标（`assets/logo.png`）**：同画风紧致特写重构（高透星夜靛蓝玻璃底 + 放大版四色棱镜星芒 + Neon 猫耳异色星瞳特写），兼顾 `24~48px` 小尺寸锐利辨识；
+- **品牌视觉同源双生重塑（锚定官方三视图 [q-neon.png](assets/triviews/q-neon.png) × Google Gemini 四色光学棱镜）**：
+  - **首页大 Logo（`assets/sprites/home-star-gem-light.png` / `home-star-gem-dark.png`）**：严格锚定正统 Neon 哈基米官方三视图（露肩白紫金边振袖礼服、双深蓝蝴蝶结、蓝→青→黄→粉紫彩虹波浪大卷发与猫尾、左玫粉右金琥珀异色星瞳）与正统 Google Gemini 四色光学玻璃棱镜星芒共生，经四向泛洪精抠、封闭缝隙镂空与去白边色溢生成 `256×256` RGBA 双底透明素材；
+  - **插件图标（`assets/logo.png`）**：同源双生无错位紧致特写重构（前景完整对称 Neon 猫耳双丸子头大特写 + 左下角独立锚定 Google 四色棱镜星芒，杜绝棱镜尖角劈裂双耳/头骨），兼顾 `24~48px` 小尺寸锐利辨识；
   - **无框端正悬浮重构（[src/cdp/host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs)）**：修复 `readHomeGemDataUri` 硬编码读取 `assets/logo.png` 导致始终带紫方框的 Bug，将 `#gemineko-home-emblem` 升级为 **`120×120px` 无框纯透明端正呼吸悬浮徽章**（轮廓 `drop-shadow` + `mask-image` 贴合扫光），移除常态歪斜旋转并收敛鼠标视差倾角至优雅的 `±8°/±10°`，同时完整保留左上角 `28px` 发光纯白猫爪按钮不变。
 
 ## [0.7.4] - 2026-11-27
