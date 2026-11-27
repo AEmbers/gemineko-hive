@@ -1,5 +1,5 @@
 /**
- * 原生 Swarm 面板（builtin/plugins/swarm/sidecars/swarm_board）无损换肤补丁引擎 v0.3.0。
+ * 原生 Swarm 面板（builtin/plugins/swarm/sidecars/swarm_board）无损换肤补丁引擎 v0.4.0。
  * 1. 只在 index.html 和 main.mjs 中插入带标记块的挂载点，绝不修改官方 app.js / hive.js / gif.js / styles.css。
  * 2. 将 assets/sprites/*.png 复制到 swarm_board/gemineko-sprites/，并在 main.mjs 的 app.run() 前注册独立 PNG 二进制路由（严禁放进 UTF-8 STATIC）。
  * 3. 无损备份并替换 builtin/plugins/swarm/assets/logo.svg，使对话流的 [Open the Swarm UI] 入口同步换装，还原时原样恢复。
@@ -177,7 +177,7 @@ export function getNativePatchStatus(opts = {}) {
 }
 
 /**
- * 为原生 Swarm 面板无损套用（或升级覆盖）《基米窝》v0.3.0 皮肤。
+ * 为原生 Swarm 面板无损套用（或升级覆盖）《基米窝》v0.4.0 皮肤。
  * @param {object} [opts]
  */
 export function applyNativePatch(opts = {}) {

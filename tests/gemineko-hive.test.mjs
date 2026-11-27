@@ -116,6 +116,11 @@ test('30 张角色×动作 128x128 PNG 立绘全部就绪且具备 RGBA 透明�
       assert.equal(buf.readUInt32BE(20), 128, `${role}-${action}.png 高度应为 128`);
       // PNG IHDR byte 25 为 colorType，6 表示带 Alpha 透明通道的 RGBA
       assert.equal(buf[25], 6, `${role}-${action}.png 应为 RGBA(colorType=6) 透明 PNG`);
+      // 校验包含 APNG acTL 动画块且帧数 >= 2
+      const actlIdx = buf.indexOf(Buffer.from('acTL'));
+      assert.ok(actlIdx > 0, `${role}-${action}.png 应包含 APNG acTL 动画块`);
+      const frameCount = buf.readUInt32BE(actlIdx + 4);
+      assert.ok(frameCount >= 2, `${role}-${action}.png 动画帧数应 >= 2，实际为 ${frameCount}`);
     }
   }
 });
@@ -272,7 +277,7 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
   try {
     const hz = await srv.inject({ url: '/healthz' });
     assert.equal(hz.statusCode, 200);
-    assert.equal(hz.json().version, '0.3.1');
+    assert.equal(hz.json().version, '0.4.0');
 
     const preloadRes = await srv.inject({ url: '/preload.js' });
     assert.equal(preloadRes.statusCode, 200);

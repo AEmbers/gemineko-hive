@@ -1,5 +1,5 @@
 /**
- * Gemineko Hive · 基米窝核心前端运行时 v0.3.0（原生 Swarm 与独立 Sidecar 共用）。
+ * Gemineko Hive · 基米窝核心前端运行时 v0.4.0（原生 Swarm 与独立 Sidecar 共用）。
  * 依赖同作用域中的 GEMINEKO_ASSETS, GEMINEKO_CSS, resolveMemeNickname, drawPixelSprite, getPixelSpriteDataUri, buildDemoSwarmSnapshot。
  */
 
@@ -235,7 +235,7 @@ export function bootGeminekoHive() {
   function getChibiSpriteUrl(role, action) {
     const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
     const a = ['thinking', 'reading', 'editing', 'running', 'idle'].includes(action) ? action : 'thinking';
-    return `${getSpriteBaseUrl()}/${r}-${a}.png?v=0.3.0`;
+    return `${getSpriteBaseUrl()}/${r}-${a}.png?v=0.4.0`;
   }
 
   // 离屏透明底圆环精灵缓存（仅绘轻盈彩色光环，绝不填充白色底）
@@ -278,38 +278,7 @@ export function bootGeminekoHive() {
     }
     const rawUrl = getChibiSpriteUrl(ch.kind, ch.action);
     warmChibiImg(rawUrl);
-    const cacheKey = `${rawUrl}|${ch.ringColor}`;
-    if (chibiAvatarCache.has(cacheKey)) {
-      return chibiAvatarCache.get(cacheKey);
-    }
-    const rec = chibiRawImgCache.get(rawUrl);
-    if (rec && rec.loaded) {
-      try {
-        const sz = 44;
-        const cv = document.createElement('canvas');
-        cv.width = sz;
-        cv.height = sz;
-        const ctx = cv.getContext('2d');
-        ctx.clearRect(0, 0, sz, sz);
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(sz / 2, sz / 2, sz / 2 - 2, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(rec.img, 0, 0, sz, sz);
-        ctx.restore();
-        ctx.beginPath();
-        ctx.arc(sz / 2, sz / 2, sz / 2 - 1.5, 0, Math.PI * 2);
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = ch.ringColor;
-        ctx.stroke();
-        const outUri = cv.toDataURL('image/png');
-        chibiAvatarCache.set(cacheKey, outUri);
-        return outUri;
-      } catch {
-        return rawUrl;
-      }
-    }
+    // 直接返回原生透明 4 帧 APNG，避免 canvas.toDataURL 压扁动效
     return rawUrl;
   }
 
@@ -1022,7 +991,7 @@ export function bootGeminekoHive() {
       lastTool: '',
       spriteFile: 'neon-idle.png',
     };
-    const spriteUrl = `${getSpriteBaseUrl()}/${act.spriteFile || `${act.role}-${act.action}.png`}?v=0.3.0`;
+    const spriteUrl = `${getSpriteBaseUrl()}/${act.spriteFile || `${act.role}-${act.action}.png`}?v=0.4.0`;
     const phaseCls = act.phase === 'executor' ? 'is-executor' : act.phase === 'idle' ? 'is-idle' : '';
 
     let cdpText = '主对话挂件: 待机';
@@ -1135,7 +1104,7 @@ export function bootGeminekoHive() {
       <div class="gn-bar-top">
         <span class="gn-brand" data-gn-act="collapse" title="展开/收起基米窝面板">
           <img class="gn-brand-dot" src="${GEMINEKO_ASSETS.logo}" alt="" />
-          <span>基米窝 v0.3</span>
+          <span>基米窝 v0.4</span>
         </span>
         <div class="gn-top-actions">
           <button type="button" class="gn-pill ${prefs.settingsOpen ? 'is-active' : ''}" data-gn-act="toggle-settings" title="展开或收起各项模式明确开关">⚙️ ${L.settingsBtn} ${prefs.settingsOpen ? '▴' : '▾'}</button>
@@ -1415,7 +1384,7 @@ export function bootGeminekoHive() {
               lastLiveActivity = d.activity;
               const liveImg = document.querySelector('.gn-live-avatar');
               if (liveImg) {
-                const nextSrc = `${getSpriteBaseUrl()}/${d.activity.spriteFile || `${d.activity.role}-${d.activity.action}.png`}?v=0.3.0`;
+                const nextSrc = `${getSpriteBaseUrl()}/${d.activity.spriteFile || `${d.activity.role}-${d.activity.action}.png`}?v=0.4.0`;
                 if (liveImg.getAttribute('data-src') !== nextSrc) {
                   liveImg.setAttribute('data-src', nextSrc);
                   liveImg.src = nextSrc;

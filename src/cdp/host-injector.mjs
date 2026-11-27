@@ -94,7 +94,7 @@ function pickPrimaryPageTarget(targets) {
 }
 
 /**
- * 构造向主聊天窗口注入的自包含幂等脚本 v0.3.0。
+ * 构造向主聊天窗口注入的自包含幂等脚本 v0.4.0。
  * 运行在宿主 Electron 渲染进程浏览器上下文中。
  * @param {string} serverBaseUrl 例如 http://127.0.0.1:19876
  * @param {string} logoDataUri
@@ -383,26 +383,26 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
         animation: gkActIdle 3.2s ease-in-out infinite;
       }
       @keyframes gkActThink {
-        0%, 100% { transform: translateY(0) rotate(-2deg); }
-        50% { transform: translateY(-3px) rotate(2.5deg); }
+        0%, 100% { transform: translateY(0) rotate(-1deg); }
+        50% { transform: translateY(-1.5px) rotate(1.2deg); }
       }
       @keyframes gkActRead {
         0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-        35% { transform: translateY(-2px) rotate(-2deg) scale(1.02); }
-        70% { transform: translateY(-1px) rotate(2deg) scale(1.02); }
+        35% { transform: translateY(-1px) rotate(-1deg) scale(1.01); }
+        70% { transform: translateY(-0.5px) rotate(1deg) scale(1.01); }
       }
       @keyframes gkActEdit {
         0%, 100% { transform: translateY(0) scale(1); }
-        50% { transform: translateY(-3.5px) scale(1.04, 0.97); }
+        50% { transform: translateY(-1.5px) scale(1.02, 0.99); }
       }
       @keyframes gkActRun {
         0%, 100% { transform: translateY(0) scale(1); }
-        25% { transform: translateY(-3px) rotate(-3deg) scale(1.03); }
-        75% { transform: translateY(-2px) rotate(3deg) scale(1.03); }
+        25% { transform: translateY(-1.5px) rotate(-1.2deg) scale(1.015); }
+        75% { transform: translateY(-1px) rotate(1.2deg) scale(1.015); }
       }
       @keyframes gkActIdle {
         0%, 100% { transform: translateY(0) scale(1); }
-        50% { transform: translateY(-2px) scale(1.015); }
+        50% { transform: translateY(-1px) scale(1.008); }
       }
       @keyframes gkSparkPulse {
         0%, 100% { opacity: 0.7; transform: scale(0.9); }
@@ -577,7 +577,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
     const role = latestState.role || 'neon';
     const act = latestState.action && latestState.action !== 'asking' ? latestState.action : (latestState.active ? 'thinking' : 'idle');
     const spriteName = latestState.spriteFile || \`\${role}-\${act}.png\`;
-    return \`\${SERVER}/gemineko-sprites/\${spriteName}?v=0.3.0\`;
+    return \`\${SERVER}/gemineko-sprites/\${spriteName}?v=0.4.0\`;
   }
 
   function renderDockState() {

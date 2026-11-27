@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0] - 2026-11-27
+
+### Changed & Added
+- **5 大模型社区同人官设 100% 纠偏重构与 25 态真·动态 APNG 升级**：
+  - 归档 5 套锁定 2.2 头身 Q 版三视图至 `assets/triviews/`（`q-neon.png`、`q-hydrogen.png`、`q-carbon.png`、`q-claude.png`、`q-gpt.jpg`），致敬原作者 **@ZipZipPipe（胖次狐）《大AI和小AI们》** 与 **`lmy414/ai-chan-sheets`**；
+  - 新增 `scripts/build-animated-sprites.mjs`，将 25 枚原生 4 帧循环动画逐帧去白底抗锯齿羽化并统一全局底中对齐，全部输出为 `128×128 32-bit RGBA` 无限循环 **APNG**（`.png` 含 `acTL` 动画块，覆盖 25 核心动作 + 5 兼容别名），并彻底清理了无文字（零 `"Zzz"`）要求；
+  - `src/theme/gemineko-runtime.js` 移除会压扁 APNG 动画的 `<canvas>` 重绘路径，`getSpriteSrcForGifOrMsg()` 在 Q 版模式下直接返回 `?v=0.4.0` 原生透明 APNG；
+  - `src/cdp/host-injector.mjs` 柔化 `.gk-act-*` 外层 CSS 位移/旋转幅度并更新 `?v=0.4.0`，突出原生逐帧微表情与手势动画；
+  - `tests/gemineko-hive.test.mjs` 新增 25 枚精灵图 `acTL` 动画块与帧数（`>= 2`）自动化断言。
+
 ## [0.3.1] - 2026-11-27
 
 ### Fixed

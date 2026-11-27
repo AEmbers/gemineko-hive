@@ -331,7 +331,7 @@ export async function createHiveSidecarServer(options = {}) {
     }
 
     if (req.method === 'GET' && pathname === '/healthz') {
-      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.3.1', sidecar: 'hive_board' });
+      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.4.0', sidecar: 'hive_board' });
       return;
     }
 
