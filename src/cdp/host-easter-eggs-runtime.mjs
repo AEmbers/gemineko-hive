@@ -616,7 +616,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
         return;
       }
       try {
-        const audio = new Audio(\`\${ctx.server}/gemineko-audio/\${encodeURIComponent(fileName)}?v=0.8.2\`);
+        const audio = new Audio(\`\${ctx.server}/gemineko-audio/\${encodeURIComponent(fileName)}?v=0.8.2-weak1\`);
         audio.volume = typeof opts.volume === 'number' ? Math.max(0.05, Math.min(1, opts.volume)) : 0.92;
         activeAudios.add(audio);
         const cleanup = () => {
@@ -846,7 +846,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
           const sp = document.createElement('span');
           sp.className = 'gk-egg-crystal-ch-char';
           sp.textContent = c;
-          sp.style.animationDelay = (idx * 75) + 'ms';
+          sp.style.animationDelay = (idx * 240) + 'ms';
           lineEl.appendChild(sp);
         });
 
@@ -861,7 +861,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
         setManagedTimeout(() => {
           if (bubble.isConnected) bubble.remove();
           crystalRescuing = false;
-        }, 4200);
+        }, 6200);
       }, 520);
     }
 
