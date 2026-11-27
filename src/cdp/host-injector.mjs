@@ -180,6 +180,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   let syncRaf = null;
   let domObserver = null;
   let anchorResizeObserver = null;
+  let dockResizeObserver = null;
   let currentAnchor = null;
   let lastPathname = location.pathname;
   let collapsed = false;
@@ -228,7 +229,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         z-index: 99980;
         display: flex;
         align-items: flex-end;
-        gap: 6px;
+        gap: calc(7px * var(--gk-dock-badge-scale, 1.15));
         pointer-events: none;
         user-select: none;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif !important;
@@ -236,14 +237,20 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         line-height: 1.25 !important;
         transition: opacity 0.16s ease;
       }
+      #\${DOCK_ID}.is-right {
+        flex-direction: row-reverse;
+      }
+      #\${DOCK_ID}.is-right .gk-dock-badge {
+        flex-direction: row-reverse;
+      }
       #\${DOCK_ID}.is-hidden {
         opacity: 0 !important;
         visibility: hidden !important;
       }
       #\${DOCK_ID} .gk-dock-cat {
         position: relative;
-        width: calc(58px * var(--gk-host-font-scale, 1));
-        height: calc(58px * var(--gk-host-font-scale, 1));
+        width: var(--gk-dock-cat-size, 88px);
+        height: var(--gk-dock-cat-size, 88px);
         flex-shrink: 0;
         pointer-events: auto;
         cursor: pointer;
@@ -255,70 +262,71 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         justify-content: center;
       }
       #\${DOCK_ID} img.gk-dock-sprite {
-        width: calc(58px * var(--gk-host-font-scale, 1));
-        height: calc(58px * var(--gk-host-font-scale, 1));
+        width: var(--gk-dock-cat-size, 88px);
+        height: var(--gk-dock-cat-size, 88px);
         object-fit: contain;
         image-rendering: auto;
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
         display: block;
-        filter: drop-shadow(0 4px 10px rgba(124, 108, 246, 0.28));
+        filter: drop-shadow(0 3px 6px rgba(124, 108, 246, 0.24));
         transform-origin: center bottom;
-        transition: transform 0.2s ease, filter 0.2s ease;
+        transition: transform 0.18s ease, filter 0.18s ease;
       }
       #\${DOCK_ID} .gk-dock-cat:hover img.gk-dock-sprite {
-        transform: scale(1.06) translateY(-2px);
-        filter: drop-shadow(0 6px 14px rgba(236, 72, 153, 0.36));
+        transform: translateY(-2px);
+        filter: drop-shadow(0 5px 10px rgba(236, 72, 153, 0.34));
       }
       #\${DOCK_ID} .gk-dock-badge {
         pointer-events: auto;
         display: flex;
         align-items: center;
-        gap: 6px;
-        margin-bottom: 8px;
-        padding: 4px 8px 4px 9px;
-        border-radius: 14px;
-        background: rgba(255, 250, 255, 0.88);
-        border: 1px solid rgba(139, 92, 246, 0.34);
-        box-shadow: 0 4px 14px rgba(103, 76, 178, 0.14);
-        backdrop-filter: blur(10px);
-        color: #2f2546;
-        max-width: min(calc(230px * var(--gk-host-font-scale, 1)), calc(100vw - 150px));
+        gap: calc(7px * var(--gk-dock-badge-scale, 1.15));
+        margin-bottom: 6px;
+        padding: calc(5px * var(--gk-dock-badge-scale, 1.15)) calc(9px * var(--gk-dock-badge-scale, 1.15)) calc(5px * var(--gk-dock-badge-scale, 1.15)) calc(10px * var(--gk-dock-badge-scale, 1.15));
+        border-radius: calc(14px * var(--gk-dock-badge-scale, 1.15));
+        background: rgba(255, 252, 255, 0.96);
+        border: 1px solid rgba(139, 92, 246, 0.38);
+        box-shadow: 0 4px 14px rgba(103, 76, 178, 0.16);
+        color: #261d3d;
+        -webkit-font-smoothing: auto;
+        text-rendering: geometricPrecision;
+        max-width: min(calc(270px * var(--gk-dock-badge-scale, 1.15)), calc(var(--gk-composer-w, 640px) - var(--gk-dock-cat-size, 88px) - 32px), calc(100vw - 120px));
         overflow: hidden;
       }
       #\${DOCK_ID}.is-dark .gk-dock-badge {
-        background: rgba(28, 23, 52, 0.86);
-        border-color: rgba(167, 139, 250, 0.42);
-        color: #ede9fe;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.38);
+        background: rgba(24, 20, 44, 0.94);
+        border-color: rgba(167, 139, 250, 0.48);
+        color: #f5f3ff;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.42);
       }
       #\${DOCK_ID}.is-collapsed .gk-dock-badge-body {
         display: none;
       }
       #\${DOCK_ID}.is-collapsed .gk-dock-badge {
-        padding: 3px;
+        padding: calc(3px * var(--gk-dock-badge-scale, 1.15));
         border-radius: 999px;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
       }
       #\${DOCK_ID} .gk-dock-badge-body {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: calc(2.5px * var(--gk-dock-badge-scale, 1.15));
         min-width: 0;
       }
       #\${DOCK_ID} .gk-top-row {
         display: flex;
         align-items: center;
-        gap: 5px;
-        font-size: calc(10.5px * var(--gk-host-font-scale, 1)) !important;
+        gap: calc(5px * var(--gk-dock-badge-scale, 1.15));
+        font-size: calc(11.5px * var(--gk-dock-badge-scale, 1.15)) !important;
         font-weight: 700;
         white-space: nowrap;
       }
       #\${DOCK_ID} .gk-phase {
-        padding: 1px 6px;
+        padding: calc(1.5px * var(--gk-dock-badge-scale, 1.15)) calc(7px * var(--gk-dock-badge-scale, 1.15));
         border-radius: 999px;
-        font-size: calc(10px * var(--gk-host-font-scale, 1)) !important;
+        font-size: calc(10.5px * var(--gk-dock-badge-scale, 1.15)) !important;
         color: #fff;
         background: linear-gradient(135deg, #8b5cf6, #ec4899);
         flex-shrink: 0;
@@ -330,26 +338,26 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         background: #94a3b8;
       }
       #\${DOCK_ID} .gk-action {
-        color: #7c3aed;
-        font-size: calc(10.5px * var(--gk-host-font-scale, 1)) !important;
+        color: #6d28d9;
+        font-size: calc(11.5px * var(--gk-dock-badge-scale, 1.15)) !important;
         overflow: hidden;
         text-overflow: ellipsis;
       }
       #\${DOCK_ID}.is-dark .gk-action {
-        color: #c4b5fd;
+        color: #d8b4fe;
       }
       #\${DOCK_ID} .gk-sub-row {
         display: flex;
         align-items: center;
-        gap: 5px;
-        font-size: calc(10.5px * var(--gk-host-font-scale, 1)) !important;
-        color: #5b4d78;
+        gap: calc(5px * var(--gk-dock-badge-scale, 1.15));
+        font-size: calc(11px * var(--gk-dock-badge-scale, 1.15)) !important;
+        color: #4c3e6b;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
       #\${DOCK_ID}.is-dark .gk-sub-row {
-        color: #cbd5e1;
+        color: #e2e8f0;
       }
       #\${DOCK_ID} .gk-model {
         font-weight: 600;
@@ -358,13 +366,13 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       }
       #\${DOCK_ID} .gk-collapse-btn {
         border: none;
-        background: rgba(139, 92, 246, 0.14);
+        background: rgba(139, 92, 246, 0.16);
         color: #6d28d9;
-        width: calc(18px * var(--gk-host-font-scale, 1));
-        height: calc(18px * var(--gk-host-font-scale, 1));
+        width: calc(21px * var(--gk-dock-badge-scale, 1.15));
+        height: calc(21px * var(--gk-dock-badge-scale, 1.15));
         border-radius: 999px;
         cursor: pointer;
-        font-size: calc(11px * var(--gk-host-font-scale, 1)) !important;
+        font-size: calc(12px * var(--gk-dock-badge-scale, 1.15)) !important;
         line-height: 1;
         padding: 0;
         flex-shrink: 0;
@@ -413,46 +421,14 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
         animation: gkSparkPulse 1.4s ease-in-out infinite;
       }
-      /* 5 动作专属生命感动画 */
-      .gk-act-thinking {
-        animation: gkActThink 2.2s ease-in-out infinite;
-      }
-      .gk-act-reading {
-        animation: gkActRead 1.8s ease-in-out infinite;
-      }
-      .gk-act-editing {
-        animation: gkActEdit 0.72s ease-in-out infinite;
-      }
-      .gk-act-running {
-        animation: gkActRun 0.9s ease-in-out infinite;
-      }
-      .gk-act-asking {
-        animation: gkActThink 1.3s ease-in-out infinite;
-      }
+      /* APNG 本身含 4 帧动作动画，去掉叠在立绘上的 CSS 小数位 scale/rotate 重采样避免小图发糊 */
+      .gk-act-thinking,
+      .gk-act-reading,
+      .gk-act-editing,
+      .gk-act-running,
+      .gk-act-asking,
       .gk-act-idle {
-        animation: gkActIdle 3.2s ease-in-out infinite;
-      }
-      @keyframes gkActThink {
-        0%, 100% { transform: translateY(0) rotate(-1deg); }
-        50% { transform: translateY(-1.5px) rotate(1.2deg); }
-      }
-      @keyframes gkActRead {
-        0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-        35% { transform: translateY(-1px) rotate(-1deg) scale(1.01); }
-        70% { transform: translateY(-0.5px) rotate(1deg) scale(1.01); }
-      }
-      @keyframes gkActEdit {
-        0%, 100% { transform: translateY(0) scale(1); }
-        50% { transform: translateY(-1.5px) scale(1.02, 0.99); }
-      }
-      @keyframes gkActRun {
-        0%, 100% { transform: translateY(0) scale(1); }
-        25% { transform: translateY(-1.5px) rotate(-1.2deg) scale(1.015); }
-        75% { transform: translateY(-1px) rotate(1.2deg) scale(1.015); }
-      }
-      @keyframes gkActIdle {
-        0%, 100% { transform: translateY(0) scale(1); }
-        50% { transform: translateY(-1px) scale(1.008); }
+        animation: none !important;
       }
       @keyframes gkSparkPulse {
         0%, 100% { opacity: 0.7; transform: scale(0.9); }
@@ -556,7 +532,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     catEl.addEventListener('click', (e) => {
       e.stopPropagation();
       spawnHeart(e.clientX - 8, e.clientY - 14);
-      themeSuite?.onDockPoke?.(latestState.role || 'neon', e.clientX, e.clientY);
+      themeSuite?.onDockPoke?.(latestState.role || 'neon', e.clientX, e.clientY, catEl);
     });
 
     themeBtn?.addEventListener('click', (e) => {
@@ -568,20 +544,57 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       e.stopPropagation();
       collapsed = !collapsed;
       dock.classList.toggle('is-collapsed', collapsed);
-      collapseBtn.textContent = collapsed ? '›' : '‹';
+      const isRight = dock.classList.contains('is-right');
+      collapseBtn.textContent = isRight ? (collapsed ? '‹' : '›') : (collapsed ? '›' : '‹');
       try { localStorage.setItem(COLLAPSE_PREF_KEY, collapsed ? '1' : '0'); } catch {}
       scheduleSync();
     });
 
     document.body.appendChild(dock);
+    if (typeof ResizeObserver === 'function') {
+      if (dockResizeObserver) dockResizeObserver.disconnect();
+      dockResizeObserver = new ResizeObserver(() => scheduleSync());
+      dockResizeObserver.observe(dock);
+    }
     renderDockState();
     return dock;
+  }
+
+  function getHostDockConfig() {
+    const fromApi = window.__GEMINEKO_THEME_API__?.getDockConfig?.();
+    if (fromApi && typeof fromApi === 'object') return fromApi;
+    try {
+      const raw = localStorage.getItem('gemineko_host_dock_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            side: parsed.side === 'right' ? 'right' : 'left',
+            catSize: Math.max(52, Math.min(140, Math.round(Number(parsed.catSize) || 88))),
+            badgeScale: Math.max(85, Math.min(150, Math.round(Number(parsed.badgeScale) || 115))),
+            sidecarAvatarSize: Math.max(44, Math.min(112, Math.round(Number(parsed.sidecarAvatarSize) || 64))),
+          };
+        }
+      }
+    } catch {}
+    return { side: 'left', catSize: 88, badgeScale: 115, sidecarAvatarSize: 64 };
   }
 
   function syncDockPosition() {
     if (stopped) return;
     const dock = ensureDock();
+    const dockCfg = getHostDockConfig();
+    const isRight = dockCfg.side === 'right';
     dock.classList.toggle('is-dark', isHostDarkTheme());
+    dock.classList.toggle('is-right', isRight);
+    const catEl = dock.querySelector('.gk-dock-cat');
+    if (catEl) {
+      catEl.title = isRight ? '点击摸头 💖（停靠在输入框右上方）' : '点击摸头 💖（停靠在输入框左上方）';
+    }
+    const collapseBtn = dock.querySelector('.gk-collapse-btn');
+    if (collapseBtn) {
+      collapseBtn.textContent = isRight ? (collapsed ? '‹' : '›') : (collapsed ? '›' : '‹');
+    }
 
     const anchor = findComposerAnchor();
     if (anchor !== currentAnchor) {
@@ -598,7 +611,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       return;
     }
 
-    // 空白首页迎宾舞台或活跃 ask_question 提问舞台出现时自动隐藏左上沿小猫 Dock，消除重叠
+    // 空白首页迎宾舞台或活跃 ask_question 提问舞台出现时自动隐藏小猫 Dock，消除重叠
     const homeStage = document.getElementById('gemineko-home-stage');
     if (homeStage && homeStage.isConnected) {
       const hr = homeStage.getBoundingClientRect();
@@ -620,10 +633,14 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     }
 
     dock.classList.remove('is-hidden');
-    const dockHeight = dock.offsetHeight || 58;
-    const left = Math.max(8, Math.min(window.innerWidth - 120, Math.round(r.left + 12)));
-    // 下摆轻轻坐落在输入栏顶部边框，与右侧系统像素小宠物底座齐平并留足上方操作键空间
-    const top = Math.max(40, Math.round(r.top - dockHeight + 12));
+    dock.style.setProperty('--gk-composer-w', Math.round(r.width) + 'px');
+    const dr = dock.getBoundingClientRect();
+    const dockW = Math.ceil(dr.width || dock.offsetWidth || 160);
+    const dockH = Math.ceil(dr.height || dock.offsetHeight || dockCfg.catSize || 88);
+    const rawLeft = isRight ? Math.round(r.right - dockW - 12) : Math.round(r.left + 12);
+    const left = Math.max(8, Math.min(Math.max(8, window.innerWidth - dockW - 8), rawLeft));
+    // 严格停靠在输入栏顶部 2px 之上，确保小猫与气泡无论放大缩小都不压入输入区
+    const top = Math.max(40, Math.round(r.top - dockH - 2));
     if (dock.style.left !== left + 'px') dock.style.left = left + 'px';
     if (dock.style.top !== top + 'px') dock.style.top = top + 'px';
   }
@@ -676,7 +693,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       if (imgEl.dataset.gkFallback === '1') return;
       imgEl.dataset.gkFallback = '1';
       const safeRole = /^(neon|hydrogen|carbon|claude|gpt)$/.test(String(role || '')) ? String(role) : 'neon';
-      imgEl.src = \`\${SERVER}/gemineko-sprites/\${safeRole}-thinking.png?q=\${getHostSpriteQuality()}&v=0.7.6\`;
+      imgEl.src = \`\${SERVER}/gemineko-sprites/\${safeRole}-thinking.png?q=\${getHostSpriteQuality()}&v=0.7.7\`;
     });
   }
 
@@ -684,7 +701,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     const role = latestState.role || 'neon';
     const act = latestState.action || (latestState.active ? 'thinking' : 'idle');
     const spriteName = sanitizeSpriteFile(latestState.spriteFile, role, act);
-    return \`\${SERVER}/gemineko-sprites/\${spriteName}?q=\${getHostSpriteQuality()}&v=0.7.6\`;
+    return \`\${SERVER}/gemineko-sprites/\${spriteName}?q=\${getHostSpriteQuality()}&v=0.7.7\`;
   }
 
   const formatDockModelDisplay = ${formatDockModelDisplay.toString()};
@@ -944,6 +961,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       memeEngine?.applyConfig?.(nextCfg);
       renderDockState();
       syncActiveStatusSprite();
+      syncDockPosition();
+      scheduleSync();
     },
     onLongTaskFinished: () => memeEngine?.triggerFinishSticker?.(),
     openMemePicker: (anchorEl) => memeEngine?.toggleMemePicker?.(anchorEl),
@@ -981,6 +1000,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     if (syncRaf) cancelAnimationFrame(syncRaf);
     if (domObserver) domObserver.disconnect();
     if (anchorResizeObserver) anchorResizeObserver.disconnect();
+    if (dockResizeObserver) dockResizeObserver.disconnect();
     window.removeEventListener('resize', onViewportChange);
     window.removeEventListener('scroll', onViewportChange, true);
     window.removeEventListener('popstate', onUrlCheck);

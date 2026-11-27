@@ -34,21 +34,46 @@ import { createGithubPulseService } from './github-pulse.mjs';
 const execFileAsync = promisify(execFile);
 const PY_RESIZE_APNG = String.raw`
 import os, sys, json
-from PIL import Image, ImageSequence
+from PIL import Image, ImageFilter, ImageSequence
 
 src_path, dst_path, size_str = sys.argv[1], sys.argv[2], sys.argv[3]
 target = int(size_str)
 os.makedirs(os.path.dirname(os.path.abspath(dst_path)), exist_ok=True)
 tmp_path = f"{dst_path}.{os.getpid()}.tmp"
 
+def resize_rgba_crisp(img_rgba, sz):
+    rgba = img_rgba.convert("RGBA")
+    if rgba.size == (sz, sz):
+        return rgba
+    r, g, b, a = rgba.split()
+    rgb_pre = Image.new("RGB", rgba.size, (0, 0, 0))
+    rgb_pre.paste(Image.merge("RGB", (r, g, b)), mask=a)
+    rgb_scaled = rgb_pre.resize((sz, sz), Image.Resampling.LANCZOS)
+    a_scaled = a.resize((sz, sz), Image.Resampling.LANCZOS)
+    r_s, g_s, b_s = rgb_scaled.split()
+    px_r, px_g, px_b, px_a = r_s.load(), g_s.load(), b_s.load(), a_scaled.load()
+    for y in range(sz):
+        for x in range(sz):
+            av = px_a[x, y]
+            if av == 0:
+                px_r[x, y] = 0
+                px_g[x, y] = 0
+                px_b[x, y] = 0
+            elif av < 255:
+                px_r[x, y] = min(255, (px_r[x, y] * 255 + (av >> 1)) // av)
+                px_g[x, y] = min(255, (px_g[x, y] * 255 + (av >> 1)) // av)
+                px_b[x, y] = min(255, (px_b[x, y] * 255 + (av >> 1)) // av)
+    rgb_unpre = Image.merge("RGB", (r_s, g_s, b_s)).filter(
+        ImageFilter.UnsharpMask(radius=0.9, percent=60, threshold=2)
+    )
+    ru, gu, bu = rgb_unpre.split()
+    return Image.merge("RGBA", (ru, gu, bu, a_scaled))
+
 im = Image.open(src_path)
 frames = []
 durations = []
 for f in ImageSequence.Iterator(im):
-    rgba = f.convert("RGBA")
-    if rgba.size != (target, target):
-        rgba = rgba.resize((target, target), Image.Resampling.LANCZOS)
-    frames.append(rgba)
+    frames.append(resize_rgba_crisp(f, target))
     durations.append(int(f.info.get("duration", 210) or 210))
 
 if len(frames) > 1:
@@ -404,7 +429,7 @@ export async function createHiveSidecarServer(options = {}) {
     }
     const tierDir = path.join(spriteCacheDir, q);
     const stem = path.parse(fileName).name;
-    const cacheFile = path.join(tierDir, `${stem}-${st.size}-${Math.trunc(st.mtimeMs)}.png`);
+    const cacheFile = path.join(tierDir, `${stem}-${st.size}-${Math.trunc(st.mtimeMs)}-v2.png`);
     if (fs.existsSync(cacheFile)) {
       return { buf: fs.readFileSync(cacheFile), quality: q, cache: 'hit' };
     }

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.7] - 2026-11-27
+
+### Changed & Fixed
+- **彻底消除小猫 Dock 立绘、状态气泡与侧栏头像发糊，开放三项尺寸可调滑条与左右停靠**：
+  - **消除立绘与气泡发糊**：默认将主窗口小猫放大至 `88×88px`、侧栏与消息板头像放大至 `64×64px`、状态气泡文字默认缩放 `115%`，移除叠在 4 帧 APNG 之上的 CSS 小数位 `scale/rotate` 亚像素抖动动画，提升气泡背景不透明度与字体清晰度（`text-rendering: geometricPrecision`），并在 [server.mjs](src/sidecar/server.mjs) 的 APNG 缩放流程引入 Premultiplied Alpha Lanczos + 轻度 RGB 锐化（缓存升级 `-v2` 后缀）；
+  - **支持立绘 / 气泡 / 侧栏头像尺寸自由调节**：[host-theme-config.mjs](src/theme/host-theme-config.mjs) 新增 `dock` 配置对象（`side`、`catSize`、`badgeScale`、`sidecarAvatarSize`），在侧栏「精细工坊」（[theme-workshop.js](src/theme/theme-workshop.js)）及主窗口 🎨 快切浮层（[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs)）提供 0 延迟实时预览滑条；
+  - **防压进输入框 + 开放输入框左右停靠切换**：[host-injector.mjs](src/cdp/host-injector.mjs) 新增 `ResizeObserver` 监听 Dock 尺寸变化，将 Dock 严格锚定在输入框正上方 `2px` 处（无论如何放大均向上生长、绝不压入输入区），新增 **`⬅ 输入框左侧` / `输入框右侧 ➡`** 停靠切换（右侧模式自动 `row-reverse` 镜像布局），同步修正快切浮层、摸头吐槽气泡、表情库弹窗与收工贴纸（[host-meme-runtime.mjs](src/cdp/host-meme-runtime.mjs)）的左右视口防溢出定位。
+
 ## [0.7.6] - 2026-11-27
 
 ### Changed & Fixed

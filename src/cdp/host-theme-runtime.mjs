@@ -411,9 +411,48 @@ export function buildHostThemeRuntimeSnippet() {
       return normSpriteQ(cfg?.spriteQuality) || readHostSpriteQ() || '512';
     }
 
+    const HOST_DOCK_KEY = 'gemineko_host_dock_v1';
+    function normDockCfg(raw, base) {
+      const d = raw && typeof raw === 'object' ? raw : {};
+      const b = base && typeof base === 'object' ? base : { side: 'left', catSize: 88, badgeScale: 115, sidecarAvatarSize: 64 };
+      const clampInt = (v, min, max, fb) => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return fb;
+        return Math.min(max, Math.max(min, Math.round(n)));
+      };
+      const side = d.side === 'right' || d.side === 'left'
+        ? d.side
+        : (b.side === 'right' ? 'right' : 'left');
+      return {
+        side,
+        catSize: clampInt(d.catSize, 52, 140, b.catSize ?? 88),
+        badgeScale: clampInt(d.badgeScale, 85, 150, b.badgeScale ?? 115),
+        sidecarAvatarSize: clampInt(d.sidecarAvatarSize, 44, 112, b.sidecarAvatarSize ?? 64),
+      };
+    }
+    function readHostDockCfg() {
+      try {
+        const raw = localStorage.getItem(HOST_DOCK_KEY);
+        if (!raw) return null;
+        return normDockCfg(JSON.parse(raw));
+      } catch {
+        return null;
+      }
+    }
+    function writeHostDockCfg(d) {
+      if (!d || typeof d !== 'object') return null;
+      const clean = normDockCfg(d, readHostDockCfg() || DEFAULT_CFG.dock);
+      try { localStorage.setItem(HOST_DOCK_KEY, JSON.stringify(clean)); } catch {}
+      return clean;
+    }
+    function getDockConfig() {
+      return normDockCfg(cfg?.dock, readHostDockCfg() || DEFAULT_CFG.dock);
+    }
+
     function sanitizeLocalCfg(input) {
       const c = input && typeof input === 'object' ? input : {};
       const localTypo = !c.typography ? readHostLocalTypo() : null;
+      const localDock = readHostDockCfg();
       const cleanQ = normSpriteQ(c.spriteQuality) || readHostSpriteQ() || '512';
       return {
         ...DEFAULT_CFG,
@@ -424,6 +463,7 @@ export function buildHostThemeRuntimeSnippet() {
         workbench: { ...DEFAULT_CFG.workbench, ...(c.workbench || {}) },
         wallpaper: { ...DEFAULT_CFG.wallpaper, ...(c.wallpaper || {}) },
         typography: { ...(DEFAULT_CFG.typography || { sidecarFontSize: 14, hostFontScale: 100 }), ...(c.typography || localTypo || {}) },
+        dock: normDockCfg(c.dock, localDock || DEFAULT_CFG.dock),
         spriteQuality: cleanQ,
       };
     }
@@ -1414,10 +1454,11 @@ html[data-gk-scheme="dark"] #\${NIGHT_LAYER_ID} {
 }
 .gk-hiss-shake { animation: gkHissShake 0.45s ease-in-out; }
 .gk-speech-bubble {
-  position: fixed; z-index: 2147483642; max-width: min(calc(280px * var(--gk-host-font-scale, 1)), calc(100vw - 24px)); padding: 8px 12px; border-radius: 14px;
-  font-size: calc(12px * var(--gk-host-font-scale, 1)) !important; line-height: 1.45; color: var(--foreground, #1e1b4b);
+  position: fixed; z-index: 2147483642; max-width: min(calc(300px * max(var(--gk-host-font-scale, 1), var(--gk-dock-badge-scale, 1.15))), calc(100vw - 24px)); padding: calc(8px * var(--gk-dock-badge-scale, 1.15)) calc(12px * var(--gk-dock-badge-scale, 1.15)); border-radius: 14px;
+  font-size: calc(12px * max(var(--gk-host-font-scale, 1), var(--gk-dock-badge-scale, 1.15))) !important; line-height: 1.45; color: var(--foreground, #1e1b4b); font-weight: 500;
   background: var(--gk-popover-bg, var(--glass)); border: 1.5px solid var(--gk-bubble-accent, var(--gk-role-primary, #8b5cf6));
-  box-shadow: 0 12px 28px -8px var(--gk-role-glow), var(--glass-shadow); backdrop-filter: blur(12px); pointer-events: auto;
+  box-shadow: 0 12px 28px -8px var(--gk-role-glow), var(--glass-shadow); pointer-events: auto;
+  text-rendering: geometricPrecision;
   animation: gkBubblePop 0.22s var(--gk-ease-spring);
 }
 .gk-speech-bubble::after {
@@ -1470,20 +1511,24 @@ html[data-gk-scheme="dark"] #\${NIGHT_LAYER_ID} {
   box-shadow: 0 10px 30px rgba(139, 92, 246, 0.42); pointer-events: none; animation: gkBubblePop 0.25s ease-out;
 }
 .gk-dock-theme-btn {
-  border: none; background: rgba(139, 92, 246, 0.16); color: inherit; width: calc(19px * var(--gk-host-font-scale, 1)); height: calc(19px * var(--gk-host-font-scale, 1));
-  border-radius: 999px; cursor: pointer; font-size: calc(11px * var(--gk-host-font-scale, 1)) !important; line-height: 1; padding: 0;
+  border: none; background: rgba(139, 92, 246, 0.16); color: inherit; width: calc(21px * var(--gk-dock-badge-scale, 1.15)); height: calc(21px * var(--gk-dock-badge-scale, 1.15));
+  border-radius: 999px; cursor: pointer; font-size: calc(12px * var(--gk-dock-badge-scale, 1.15)) !important; line-height: 1; padding: 0;
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .gk-dock-theme-btn:hover { background: rgba(139, 92, 246, 0.30); }
 #\${MINI_BAR_ID} {
-  position: fixed; z-index: 2147483644; display: none; flex-direction: column; gap: 7px; width: min(calc(296px * var(--gk-host-font-scale, 1)), calc(100vw - 24px)); padding: 11px 12px;
+  position: fixed; z-index: 2147483644; display: none; flex-direction: column; gap: 7px; width: min(calc(308px * var(--gk-host-font-scale, 1)), calc(100vw - 24px)); padding: 11px 12px;
   border-radius: 15px; background: var(--gk-popover-bg, var(--glass)); color: var(--foreground);
   border: 1.5px solid color-mix(in srgb, var(--gk-role-primary) 34%, var(--glass-border));
   box-shadow: 0 16px 40px -12px var(--gk-role-glow), var(--glass-shadow); backdrop-filter: blur(16px); font-size: calc(11.5px * var(--gk-host-font-scale, 1)) !important;
+  max-height: calc(100vh - 36px); overflow-y: auto;
 }
 #\${MINI_BAR_ID}.is-open { display: flex; }
 #\${MINI_BAR_ID} .gk-mini-label { font-size: calc(10.5px * var(--gk-host-font-scale, 1)) !important; opacity: 0.72; font-weight: 700; }
 #\${MINI_BAR_ID} .gk-mini-row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+#\${MINI_BAR_ID} .gk-mini-range-row { display: flex; align-items: center; gap: 8px; font-size: calc(10.5px * var(--gk-host-font-scale, 1)) !important; }
+#\${MINI_BAR_ID} .gk-mini-range-row span { flex: 0 0 auto; min-width: 96px; opacity: 0.88; }
+#\${MINI_BAR_ID} .gk-mini-range-row input[type="range"] { flex: 1 1 auto; accent-color: var(--gk-role-primary, #8b5cf6); cursor: pointer; min-width: 80px; }
 #\${MINI_BAR_ID} button.gk-mini-chip {
   padding: 3.5px 8px; border-radius: 999px; border: 1px solid var(--border);
   background: var(--secondary); color: var(--foreground); font-size: calc(10.5px * var(--gk-host-font-scale, 1)) !important; cursor: pointer;
@@ -2485,6 +2530,8 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           root.removeAttribute(attr);
         }
         root.style.removeProperty('--gk-host-font-scale');
+        root.style.removeProperty('--gk-dock-cat-size');
+        root.style.removeProperty('--gk-dock-badge-scale');
         for (const id of [THEME_STYLE_ID, COMMUNITY_PACK_STYLE_ID, AURORA_HOST_ID, HOME_STAGE_ID, HOME_EMBLEM_ID, WATERMARK_ID]) {
           const n = document.getElementById(id);
           if (n) n.remove();
@@ -2540,6 +2587,9 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         root.removeAttribute('data-gk-font-scaled');
         root.style.removeProperty('--gk-host-font-scale');
       }
+      const dockCfg = getDockConfig();
+      root.style.setProperty('--gk-dock-cat-size', \`\${dockCfg.catSize}px\`);
+      root.style.setProperty('--gk-dock-badge-scale', (dockCfg.badgeScale / 100).toFixed(3));
 
       syncCommunityPackLayer(root);
       syncConvAurora();
@@ -2654,8 +2704,8 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       const spriteQ = getSpriteQuality();
       const spriteUrl = isCustom
         ? \`\${ctx.server}/api/watermark/file?v=\${encodeURIComponent(String(cfg.updatedAt || 1))}\`
-        : \`\${ctx.server}/gemineko-sprites/\${wmRole}-\${actName}.png?q=\${spriteQ}&v=0.7.6\`;
-      const fallbackUrl = \`\${ctx.server}/gemineko-sprites/\${wmRole}-thinking.png?q=\${spriteQ}&v=0.7.6\`;
+        : \`\${ctx.server}/gemineko-sprites/\${wmRole}-\${actName}.png?q=\${spriteQ}&v=0.7.7\`;
+      const fallbackUrl = \`\${ctx.server}/gemineko-sprites/\${wmRole}-thinking.png?q=\${spriteQ}&v=0.7.7\`;
 
       let wm = document.getElementById(WATERMARK_ID);
       if (!wm) {
@@ -2679,7 +2729,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           img.addEventListener('error', () => {
             if (img.dataset.gkFb === '1') return;
             img.dataset.gkFb = '1';
-            img.src = img.dataset.gkFallbackSrc || \`\${ctx.server}/gemineko-sprites/neon-thinking.png?q=\${getSpriteQuality()}&v=0.7.6\`;
+            img.src = img.dataset.gkFallbackSrc || \`\${ctx.server}/gemineko-sprites/neon-thinking.png?q=\${getSpriteQuality()}&v=0.7.7\`;
           });
         }
         img.dataset.gkFallbackSrc = fallbackUrl;
@@ -2941,15 +2991,15 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       const img = panel.querySelector('img.gk-ask-ponder-img');
       if (img) {
         const spriteQ = getSpriteQuality();
-        const ponderUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-ponder.png?q=\${spriteQ}&v=0.7.6\`;
-        const askingUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-asking.png?q=\${spriteQ}&v=0.7.6\`;
+        const ponderUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-ponder.png?q=\${spriteQ}&v=0.7.7\`;
+        const askingUrl = \`\${ctx.server}/gemineko-sprites/\${activeRole}-asking.png?q=\${spriteQ}&v=0.7.7\`;
         if (img.dataset.gkErrBound !== '1') {
           img.dataset.gkErrBound = '1';
           img.addEventListener('error', () => {
             if (img.dataset.gkFb === '2') return;
             if (img.dataset.gkFb === '1') {
               img.dataset.gkFb = '2';
-              img.src = \`\${ctx.server}/gemineko-sprites/\${activeRole}-thinking.png?q=\${getSpriteQuality()}&v=0.7.6\`;
+              img.src = \`\${ctx.server}/gemineko-sprites/\${activeRole}-thinking.png?q=\${getSpriteQuality()}&v=0.7.7\`;
             } else {
               img.dataset.gkFb = '1';
               img.src = askingUrl;
@@ -2989,7 +3039,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           <div class="gk-home-cast">
             \${HOME_ROLES.map((r) => \`
               <button type="button" class="gk-home-actor" data-home-role="\${r.id}" title="\${r.tip}">
-                <img src="\${ctx.server}/gemineko-sprites/\${r.sprite}?q=\${getSpriteQuality()}&v=0.7.6" alt="\${r.name}" />
+                <img src="\${ctx.server}/gemineko-sprites/\${r.sprite}?q=\${getSpriteQuality()}&v=0.7.7" alt="\${r.name}" />
                 <span>\${r.name}</span>
               </button>
             \`).join('')}
@@ -3001,7 +3051,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           img.addEventListener('error', () => {
             if (img.dataset.gkFallback === '1') return;
             img.dataset.gkFallback = '1';
-            img.src = \`\${ctx.server}/gemineko-sprites/\${rId}-thinking.png?q=\${getSpriteQuality()}&v=0.7.6\`;
+            img.src = \`\${ctx.server}/gemineko-sprites/\${rId}-thinking.png?q=\${getSpriteQuality()}&v=0.7.7\`;
           });
         });
         stage.addEventListener('click', (e) => {
@@ -3026,7 +3076,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         const r = HOME_ROLES[idx];
         const im = btn.querySelector('img');
         if (r && im) {
-          const nextUrl = \`\${ctx.server}/gemineko-sprites/\${r.sprite}?q=\${homeQ}&v=0.7.6\`;
+          const nextUrl = \`\${ctx.server}/gemineko-sprites/\${r.sprite}?q=\${homeQ}&v=0.7.7\`;
           if (im.getAttribute('data-qsrc') !== nextUrl) {
             im.setAttribute('data-qsrc', nextUrl);
             if (!im.src.includes(\`q=\${homeQ}&\`)) im.src = nextUrl;
@@ -3447,7 +3497,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       track.className = 'gk-parade-track';
       for (const r of ['neon', 'hydrogen', 'carbon', 'claude', 'gpt']) {
         const img = document.createElement('img');
-        img.src = \`\${ctx.server}/gemineko-sprites/\${r}-running.png?q=\${getSpriteQuality()}&v=0.7.6\`;
+        img.src = \`\${ctx.server}/gemineko-sprites/\${r}-running.png?q=\${getSpriteQuality()}&v=0.7.7\`;
         img.alt = r;
         track.appendChild(img);
       }
@@ -3476,10 +3526,14 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       if (patch?.typography && typeof patch.typography === 'object') {
         writeHostLocalTypo(patch.typography);
       }
+      if (patch?.dock && typeof patch.dock === 'object') {
+        writeHostDockCfg(patch.dock);
+      }
       if (patch?.spriteQuality) {
         writeHostSpriteQ(patch.spriteQuality);
       }
       const optimisticTypo = patch?.typography || readHostLocalTypo();
+      const optimisticDock = patch?.dock ? writeHostDockCfg(patch.dock) : readHostDockCfg();
       const optimisticQ = normSpriteQ(patch?.spriteQuality) || readHostSpriteQ();
       fetch(\`\${ctx.server}/api/theme/config\`, {
         method: 'POST',
@@ -3495,6 +3549,9 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
             let nextCfg = d.config.typography || !optimisticTypo
               ? d.config
               : { ...d.config, typography: optimisticTypo };
+            if (!nextCfg.dock && optimisticDock) {
+              nextCfg = { ...nextCfg, dock: optimisticDock };
+            }
             if (!normSpriteQ(nextCfg.spriteQuality) && optimisticQ) {
               nextCfg = { ...nextCfg, spriteQuality: optimisticQ };
             }
@@ -3618,6 +3675,19 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           <button class="gk-mini-chip" data-sprite-q="512">超清 512</button>
           <button class="gk-mini-chip" data-sprite-q="1024">极致 1024</button>
         </div>
+        <div class="gk-mini-label">小猫停靠与大小：</div>
+        <div class="gk-mini-row">
+          <button class="gk-mini-chip" data-dock-side="left">⬅ 输入框左侧</button>
+          <button class="gk-mini-chip" data-dock-side="right">输入框右侧 ➡</button>
+        </div>
+        <label class="gk-mini-range-row">
+          <span>小猫立绘 <strong data-dock-val="catSize">88px</strong></span>
+          <input type="range" min="52" max="140" step="4" value="88" data-dock-range="catSize" />
+        </label>
+        <label class="gk-mini-range-row">
+          <span>状态气泡 <strong data-dock-val="badgeScale">115%</strong></span>
+          <input type="range" min="85" max="150" step="5" value="115" data-dock-range="badgeScale" />
+        </label>
         <div class="gk-mini-label">反重力宿主汉化：</div>
         <div class="gk-mini-row">
           <button class="gk-mini-chip" data-i18n="auto">跟随系统</button>
@@ -3641,6 +3711,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         const spinner = btn.getAttribute('data-spinner');
         const fontPreset = btn.getAttribute('data-font-preset');
         const spriteQ = btn.getAttribute('data-sprite-q');
+        const dockSide = btn.getAttribute('data-dock-side');
         const i18nMode = btn.getAttribute('data-i18n');
         const act = btn.getAttribute('data-act');
         if (preset) {
@@ -3661,6 +3732,12 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           writeHostSpriteQ(spriteQ);
           applyConfig({ ...cfg, enabled: true, spriteQuality: spriteQ });
           persistPatch({ enabled: true, spriteQuality: spriteQ });
+        } else if (dockSide) {
+          const nextDock = writeHostDockCfg({ ...getDockConfig(), side: dockSide });
+          applyConfig({ ...cfg, enabled: true, dock: nextDock });
+          persistPatch({ dock: nextDock });
+          const dockAnchor = document.querySelector('#' + ctx.dockId + ' .gk-dock-theme-btn');
+          requestAnimationFrame(() => positionMiniBar(dockAnchor || btn));
         } else if (i18nMode) {
           const nextI18n = { ...(cfg.i18n || {}), mode: i18nMode };
           applyConfig({ ...cfg, i18n: nextI18n });
@@ -3688,8 +3765,42 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           bar.classList.remove('is-open');
         }
       });
+      bar.addEventListener('input', (e) => {
+        const rangeKey = e.target?.getAttribute?.('data-dock-range');
+        if (!rangeKey) return;
+        const val = Number(e.target.value);
+        const nextDock = writeHostDockCfg({ ...getDockConfig(), [rangeKey]: val });
+        if (!nextDock) return;
+        applyConfig({ ...cfg, enabled: true, dock: nextDock });
+        const dockAnchor = document.querySelector('#' + ctx.dockId + ' .gk-dock-theme-btn');
+        requestAnimationFrame(() => positionMiniBar(dockAnchor));
+      });
+      bar.addEventListener('change', (e) => {
+        const rangeKey = e.target?.getAttribute?.('data-dock-range');
+        if (!rangeKey) return;
+        const val = Number(e.target.value);
+        const nextDock = writeHostDockCfg({ ...getDockConfig(), [rangeKey]: val });
+        if (!nextDock) return;
+        persistPatch({ dock: nextDock });
+      });
       document.body?.appendChild(bar);
       return bar;
+    }
+
+    function positionMiniBar(anchorBtn) {
+      const bar = document.getElementById(MINI_BAR_ID);
+      if (!bar || !bar.classList.contains('is-open')) return;
+      const barW = bar.offsetWidth || 308;
+      const barH = bar.offsetHeight || 360;
+      const r = anchorBtn && typeof anchorBtn.getBoundingClientRect === 'function'
+        ? anchorBtn.getBoundingClientRect()
+        : { left: 16, right: 320, top: window.innerHeight - 100 };
+      const preferRight = getDockConfig().side === 'right' || r.left + barW > window.innerWidth - 12;
+      const rawLeft = preferRight ? Math.round(r.right - barW) : Math.round(r.left);
+      const left = Math.max(12, Math.min(Math.max(12, window.innerWidth - barW - 12), rawLeft));
+      const top = Math.max(16, Math.round(r.top - barH - 10));
+      bar.style.left = left + 'px';
+      bar.style.top = top + 'px';
     }
 
     function syncMiniBarState() {
@@ -3714,6 +3825,18 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       bar.querySelectorAll('[data-sprite-q]').forEach((b) => {
         b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-sprite-q') === curQ);
       });
+      const dockCfg = getDockConfig();
+      bar.querySelectorAll('[data-dock-side]').forEach((b) => {
+        b.classList.toggle('is-active', b.getAttribute('data-dock-side') === dockCfg.side);
+      });
+      const catRange = bar.querySelector('[data-dock-range="catSize"]');
+      const catVal = bar.querySelector('[data-dock-val="catSize"]');
+      if (catRange && Number(catRange.value) !== dockCfg.catSize) catRange.value = String(dockCfg.catSize);
+      if (catVal) catVal.textContent = \`\${dockCfg.catSize}px\`;
+      const badgeRange = bar.querySelector('[data-dock-range="badgeScale"]');
+      const badgeVal = bar.querySelector('[data-dock-val="badgeScale"]');
+      if (badgeRange && Number(badgeRange.value) !== dockCfg.badgeScale) badgeRange.value = String(dockCfg.badgeScale);
+      if (badgeVal) badgeVal.textContent = \`\${dockCfg.badgeScale}%\`;
       bar.querySelectorAll('[data-i18n]').forEach((b) => {
         b.classList.toggle('is-active', b.getAttribute('data-i18n') === (cfg.i18n?.mode || 'auto'));
       });
@@ -3728,10 +3851,8 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       syncMiniBarState();
       const open = !bar.classList.contains('is-open');
       bar.classList.toggle('is-open', open);
-      if (open && anchorBtn) {
-        const r = anchorBtn.getBoundingClientRect();
-        bar.style.left = Math.max(12, Math.min(window.innerWidth - 304, Math.round(r.left))) + 'px';
-        bar.style.top = Math.max(18, Math.round(r.top - bar.offsetHeight - 10)) + 'px';
+      if (open) {
+        positionMiniBar(anchorBtn);
       }
     }
 
@@ -4087,6 +4208,9 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       if (nextCfg?.typography && typeof nextCfg.typography === 'object') {
         writeHostLocalTypo(nextCfg.typography);
       }
+      if (nextCfg?.dock && typeof nextCfg.dock === 'object') {
+        writeHostDockCfg(nextCfg.dock);
+      }
       if (nextCfg?.spriteQuality) {
         writeHostSpriteQ(nextCfg.spriteQuality);
       }
@@ -4149,7 +4273,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
     applyConfig(cfg);
     decorateLongCodeBlocks();
 
-    const api = { applyConfig, onActivityUpdate, onDockPoke, triggerEvent, toggleMiniBar, syncAskQuestionStage, getSpriteQuality, unmount };
+    const api = { applyConfig, onActivityUpdate, onDockPoke, triggerEvent, toggleMiniBar, syncAskQuestionStage, getSpriteQuality, getDockConfig, unmount };
     window.__GEMINEKO_THEME_API__ = api;
 
     function unmount() {
@@ -4191,7 +4315,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper','data-gk-pack','data-gk-font-scaled']) {
           root.removeAttribute(attr);
         }
-        for (const prop of ['--gk-role-primary','--gk-role-accent2','--gk-role-accent3','--gk-role-glow','--gk-role-gradient','--gk-role-spark','--gk-role-tint','--gk-catnest-pattern','--gk-spinner-role-svg','--gk-spinner-paw-svg','--gk-aurora-1','--gk-aurora-2','--gk-aurora-3','--gk-ambient-alpha','--gk-watermark-opacity','--gk-host-font-scale']) {
+        for (const prop of ['--gk-role-primary','--gk-role-accent2','--gk-role-accent3','--gk-role-glow','--gk-role-gradient','--gk-role-spark','--gk-role-tint','--gk-catnest-pattern','--gk-spinner-role-svg','--gk-spinner-paw-svg','--gk-aurora-1','--gk-aurora-2','--gk-aurora-3','--gk-ambient-alpha','--gk-watermark-opacity','--gk-host-font-scale','--gk-dock-cat-size','--gk-dock-badge-scale']) {
           root.style.removeProperty(prop);
         }
       }

@@ -246,11 +246,13 @@ export function buildHostMemeRuntimeSnippet() {
       const dr = dock && !dock.classList.contains('is-hidden') ? dock.getBoundingClientRect() : null;
       const rect = dr && dr.width > 0
         ? dr
-        : { left: Math.max(24, window.innerWidth - 220), top: Math.max(160, window.innerHeight - 96) };
+        : { left: Math.max(24, window.innerWidth - 220), right: Math.max(214, window.innerWidth - 24), width: 190, top: Math.max(160, window.innerHeight - 96) };
       const toast = document.createElement('div');
       toast.id = TOAST_ID;
       toast.innerHTML = \`<img src="\${picked.url}" alt="" /><span>收工啦 · \${picked.caption}</span>\`;
-      toast.style.left = Math.max(12, Math.min(window.innerWidth - 180, Math.round(rect.left + 10))) + 'px';
+      const estW = 190;
+      const anchorMid = rect.left + Math.min(rect.width || estW, 180) / 2;
+      toast.style.left = Math.max(12, Math.min(Math.max(12, window.innerWidth - estW - 12), Math.round(anchorMid - estW / 2))) + 'px';
       toast.style.top = Math.max(20, Math.min(window.innerHeight - 136, Math.round(rect.top - 122))) + 'px';
       toast.addEventListener('click', () => toast.remove());
       document.body?.appendChild(toast);
@@ -341,9 +343,13 @@ export function buildHostMemeRuntimeSnippet() {
       const open = !pop.classList.contains('is-open');
       pop.classList.toggle('is-open', open);
       if (open) {
-        const r = anchorEl ? anchorEl.getBoundingClientRect() : { left: 40, top: window.innerHeight - 90 };
-        pop.style.left = Math.max(12, Math.min(window.innerWidth - 344, Math.round(r.left))) + 'px';
-        pop.style.top = Math.max(18, Math.round(r.top - pop.offsetHeight - 10)) + 'px';
+        const popW = pop.offsetWidth || 336;
+        const popH = pop.offsetHeight || 340;
+        const r = anchorEl ? anchorEl.getBoundingClientRect() : { left: 40, right: 320, top: window.innerHeight - 90 };
+        const preferRight = (window.__GEMINEKO_THEME_API__?.getDockConfig?.()?.side === 'right') || (r.left + popW > window.innerWidth - 12);
+        const rawLeft = preferRight ? Math.round(r.right - popW) : Math.round(r.left);
+        pop.style.left = Math.max(12, Math.min(Math.max(12, window.innerWidth - popW - 12), rawLeft)) + 'px';
+        pop.style.top = Math.max(18, Math.round(r.top - popH - 10)) + 'px';
       }
     }
 

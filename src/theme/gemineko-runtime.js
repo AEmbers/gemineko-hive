@@ -221,6 +221,42 @@ export function bootGeminekoHive() {
 
   const TYPO_STORAGE_KEY = 'gemineko_typography_v1';
   const SPRITE_Q_KEY = 'gemineko_sprite_quality_v1';
+  const DOCK_STORAGE_KEY = 'gemineko_dock_prefs_v1';
+
+  function normDockPrefs(raw, base) {
+    const d = raw && typeof raw === 'object' ? raw : {};
+    const b = base && typeof base === 'object' ? base : { side: 'left', catSize: 88, badgeScale: 115, sidecarAvatarSize: 64 };
+    const clampInt = (v, min, max, fb) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : fb;
+    };
+    const side = d.side === 'right' || d.side === 'left'
+      ? d.side
+      : (b.side === 'right' ? 'right' : 'left');
+    return {
+      side,
+      catSize: clampInt(d.catSize, 52, 140, b.catSize ?? 88),
+      badgeScale: clampInt(d.badgeScale, 85, 150, b.badgeScale ?? 115),
+      sidecarAvatarSize: clampInt(d.sidecarAvatarSize, 44, 112, b.sidecarAvatarSize ?? 64),
+    };
+  }
+
+  function readLocalDockPrefs() {
+    try {
+      const raw = localStorage.getItem(DOCK_STORAGE_KEY);
+      if (!raw) return null;
+      return normDockPrefs(JSON.parse(raw));
+    } catch {
+      return null;
+    }
+  }
+
+  function writeLocalDockPrefs(dock) {
+    if (!dock || typeof dock !== 'object') return null;
+    const clean = normDockPrefs(dock, readLocalDockPrefs());
+    try { localStorage.setItem(DOCK_STORAGE_KEY, JSON.stringify(clean)); } catch {}
+    return clean;
+  }
 
   function normalizeSpriteQ(val) {
     const s = String(val || '');
@@ -294,6 +330,12 @@ export function bootGeminekoHive() {
       const localQ = readLocalSpriteQ();
       if (localQ) out = { ...out, spriteQuality: localQ };
     }
+    if (out.dock && typeof out.dock === 'object') {
+      out = { ...out, dock: writeLocalDockPrefs(out.dock) };
+    } else {
+      const localDock = readLocalDockPrefs();
+      if (localDock) out = { ...out, dock: localDock };
+    }
     return out;
   }
 
@@ -324,7 +366,7 @@ export function bootGeminekoHive() {
       root.removeAttribute('data-gn-scheme');
       root.style.removeProperty('--gn-hive-accent');
       root.style.removeProperty('--gn-hive-accent-2');
-      for (const fp of ['--gn-font-scale', '--gn-font-size', '--text-2xs', '--text-xs', '--text-sm', '--text-base']) {
+      for (const fp of ['--gn-font-scale', '--gn-font-size', '--gn-avatar-size', '--text-2xs', '--text-xs', '--text-sm', '--text-base']) {
         root.style.removeProperty(fp);
       }
       return;
@@ -353,6 +395,8 @@ export function bootGeminekoHive() {
 
     const sidecarFontSize = Math.max(11, Math.min(22, Math.round(Number(cur?.typography?.sidecarFontSize) || 14)));
     const fontScale = Number((sidecarFontSize / 13).toFixed(3));
+    const avatarSize = Math.max(44, Math.min(112, Math.round(Number(cur?.dock?.sidecarAvatarSize) || 64)));
+    root.style.setProperty('--gn-avatar-size', `${avatarSize}px`);
     root.style.setProperty('--gn-font-scale', String(fontScale));
     root.style.setProperty('--gn-font-size', `${sidecarFontSize}px`);
     root.style.setProperty('--text-2xs', `${(11 * fontScale).toFixed(1)}px`);
@@ -547,7 +591,7 @@ export function bootGeminekoHive() {
   function getChibiSpriteUrl(role, action) {
     const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
     const a = ['thinking', 'reading', 'editing', 'running', 'asking', 'idle'].includes(action) ? action : 'thinking';
-    return `${getSpriteBaseUrl()}/${r}-${a}.png?q=${getActiveSpriteQuality()}&v=0.7.6`;
+    return `${getSpriteBaseUrl()}/${r}-${a}.png?q=${getActiveSpriteQuality()}&v=0.7.7`;
   }
 
   function resolveLiveSpriteUrl(act) {
@@ -557,7 +601,7 @@ export function bootGeminekoHive() {
     const validFile = /^(neon|hydrogen|carbon|claude|gpt)-(thinking|reading|editing|running|asking|idle)\.png$/i.test(rawFile)
       ? rawFile.toLowerCase()
       : `${r}-${a}.png`;
-    return `${getSpriteBaseUrl()}/${validFile}?q=${getActiveSpriteQuality()}&v=0.7.6`;
+    return `${getSpriteBaseUrl()}/${validFile}?q=${getActiveSpriteQuality()}&v=0.7.7`;
   }
 
   function attachSpriteFallback(imgEl, role) {
@@ -567,7 +611,7 @@ export function bootGeminekoHive() {
       if (imgEl.dataset.gnFallback === '1') return;
       imgEl.dataset.gnFallback = '1';
       const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
-      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?q=${getActiveSpriteQuality()}&v=0.7.6`;
+      imgEl.src = `${getSpriteBaseUrl()}/${r}-thinking.png?q=${getActiveSpriteQuality()}&v=0.7.7`;
     });
   }
 

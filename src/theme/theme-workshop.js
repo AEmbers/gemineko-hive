@@ -34,6 +34,42 @@ export function createThemeWorkshopController(deps) {
 
   const TYPO_STORAGE_KEY = 'gemineko_typography_v1';
   const SPRITE_Q_KEY = 'gemineko_sprite_quality_v1';
+  const DOCK_STORAGE_KEY = 'gemineko_dock_prefs_v1';
+
+  function normDockPrefs(val, base) {
+    const d = val && typeof val === 'object' ? val : {};
+    const b = base && typeof base === 'object' ? base : { side: 'left', catSize: 88, badgeScale: 115, sidecarAvatarSize: 64 };
+    const clampInt = (v, min, max, fb) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : fb;
+    };
+    const side = d.side === 'right' || d.side === 'left'
+      ? d.side
+      : (b.side === 'right' ? 'right' : 'left');
+    return {
+      side,
+      catSize: clampInt(d.catSize, 52, 140, b.catSize ?? 88),
+      badgeScale: clampInt(d.badgeScale, 85, 150, b.badgeScale ?? 115),
+      sidecarAvatarSize: clampInt(d.sidecarAvatarSize, 44, 112, b.sidecarAvatarSize ?? 64),
+    };
+  }
+
+  function readLocalDock() {
+    try {
+      const raw = localStorage.getItem(DOCK_STORAGE_KEY);
+      if (!raw) return null;
+      return normDockPrefs(JSON.parse(raw));
+    } catch {
+      return null;
+    }
+  }
+
+  function writeLocalDock(dock) {
+    if (!dock || typeof dock !== 'object') return null;
+    const clean = normDockPrefs(dock, readLocalDock());
+    try { localStorage.setItem(DOCK_STORAGE_KEY, JSON.stringify(clean)); } catch {}
+    return clean;
+  }
 
   function normalizeSpriteQ(val) {
     const s = String(val || '');
@@ -80,13 +116,18 @@ export function createThemeWorkshopController(deps) {
     return clean;
   }
 
-  function withLocalTypo(cfg, fallbackTypo, fallbackSpriteQ) {
+  function withLocalTypo(cfg, fallbackTypo, fallbackSpriteQ, fallbackDock) {
     if (!cfg || typeof cfg !== 'object') return cfg;
     const out = { ...cfg };
     if (out.typography && typeof out.typography === 'object') {
       writeLocalTypo(out.typography);
     } else {
       out.typography = fallbackTypo || readLocalTypo() || { sidecarFontSize: 14, hostFontScale: 100 };
+    }
+    if (out.dock && typeof out.dock === 'object') {
+      out.dock = writeLocalDock(out.dock);
+    } else {
+      out.dock = normDockPrefs(fallbackDock || readLocalDock());
     }
     const cfgQ = normalizeSpriteQ(out.spriteQuality);
     if (cfgQ) {
@@ -184,10 +225,18 @@ export function createThemeWorkshopController(deps) {
   async function savePatch(patch) {
     let optimisticTypo = null;
     let optimisticQ = '';
+    let optimisticDock = null;
     if (patch?.typography && typeof patch.typography === 'object') {
       optimisticTypo = writeLocalTypo({ ...(state.config?.typography || readLocalTypo() || { sidecarFontSize: 14, hostFontScale: 100 }), ...patch.typography });
       if (state.config && optimisticTypo) {
         state.config = { ...state.config, typography: optimisticTypo };
+        notifyHostTheme(state.config);
+      }
+    }
+    if (patch?.dock && typeof patch.dock === 'object') {
+      optimisticDock = writeLocalDock({ ...(state.config?.dock || readLocalDock()), ...patch.dock });
+      if (state.config && optimisticDock) {
+        state.config = { ...state.config, dock: optimisticDock };
         notifyHostTheme(state.config);
       }
     }
@@ -205,7 +254,7 @@ export function createThemeWorkshopController(deps) {
         body: JSON.stringify(patch),
       });
       if (data?.ok && data.config) {
-        state.config = withLocalTypo(data.config, optimisticTypo, optimisticQ);
+        state.config = withLocalTypo(data.config, optimisticTypo, optimisticQ, optimisticDock);
         notifyHostTheme(state.config);
         render();
         showWorkshopToast(data.warning ? `已保存，壁纸提示：${data.warning}` : '✨ 已即时同步到主窗口与基米窝', Boolean(data.warning));
@@ -216,13 +265,14 @@ export function createThemeWorkshopController(deps) {
   }
 
   async function resetConfig() {
-    try { localStorage.removeItem(TYPO_STORAGE_KEY); localStorage.removeItem(SPRITE_Q_KEY); } catch {}
+    try { localStorage.removeItem(TYPO_STORAGE_KEY); localStorage.removeItem(SPRITE_Q_KEY); localStorage.removeItem(DOCK_STORAGE_KEY); } catch {}
     try {
       const data = await deps.hostApi('/api/theme/reset', { method: 'POST', body: '{}' });
       if (data?.ok && data.config) {
         state.config = {
           ...data.config,
           typography: data.config.typography || { sidecarFontSize: 14, hostFontScale: 100 },
+          dock: normDockPrefs(data.config.dock),
           spriteQuality: normalizeSpriteQ(data.config.spriteQuality) || '512',
         };
         notifyHostTheme(state.config);
@@ -583,6 +633,23 @@ export function createThemeWorkshopController(deps) {
               <button type="button" class="gn-pill ${(c.spriteQuality || '512') === '512' ? 'is-primary' : ''}" data-ws-sprite-q="512">超清 512px</button>
               <button type="button" class="gn-pill ${(c.spriteQuality || '512') === '1024' ? 'is-primary' : ''}" data-ws-sprite-q="1024">极致 1024px</button>
             </div>
+            <div class="gn-font-box-head" style="margin-top:6px;">🐱 悬浮小猫停靠与大小</div>
+            <div class="gn-font-presets">
+              <button type="button" class="gn-pill ${(c.dock?.side || 'left') === 'left' ? 'is-primary' : ''}" data-ws-dock-side="left">⬅ 输入框左侧</button>
+              <button type="button" class="gn-pill ${c.dock?.side === 'right' ? 'is-primary' : ''}" data-ws-dock-side="right">输入框右侧 ➡</button>
+            </div>
+            <label class="gn-range-label">
+              <span>主窗口小猫大小 <strong data-ws-dock-val="catSize">${c.dock?.catSize ?? 88}px</strong></span>
+              <input type="range" min="52" max="140" step="4" value="${c.dock?.catSize ?? 88}" data-ws-dock-range="catSize" />
+            </label>
+            <label class="gn-range-label">
+              <span>状态气泡大小 <strong data-ws-dock-val="badgeScale">${c.dock?.badgeScale ?? 115}%</strong></span>
+              <input type="range" min="85" max="150" step="5" value="${c.dock?.badgeScale ?? 115}" data-ws-dock-range="badgeScale" />
+            </label>
+            <label class="gn-range-label">
+              <span>侧栏与消息板头像 <strong data-ws-dock-val="sidecarAvatarSize">${c.dock?.sidecarAvatarSize ?? 64}px</strong></span>
+              <input type="range" min="44" max="112" step="4" value="${c.dock?.sidecarAvatarSize ?? 64}" data-ws-dock-range="sidecarAvatarSize" />
+            </label>
           </div>
         </div>
 
@@ -794,6 +861,13 @@ export function createThemeWorkshopController(deps) {
         void savePatch({ spriteQuality: q });
         return;
       }
+      const dockSideBtn = e.target.closest('[data-ws-dock-side]');
+      if (dockSideBtn) {
+        const side = dockSideBtn.getAttribute('data-ws-dock-side') === 'right' ? 'right' : 'left';
+        const nextDock = writeLocalDock({ ...(c.dock || readLocalDock()), side });
+        void savePatch({ dock: nextDock });
+        return;
+      }
       const eggBtn = e.target.closest('[data-ws-egg]');
       if (eggBtn) {
         void triggerSidecarEgg(eggBtn.getAttribute('data-ws-egg'));
@@ -803,17 +877,32 @@ export function createThemeWorkshopController(deps) {
     root.oninput = (e) => {
       const target = e.target;
       const typoKey = target?.getAttribute?.('data-ws-typo-range');
-      if (!typoKey) return;
-      const num = Number(target.value);
-      const valEl = root.querySelector(`[data-ws-typo-val="${typoKey}"]`);
-      if (valEl) valEl.textContent = typoKey === 'hostFontScale' ? `${num}%` : `${num}px`;
-      const curTypo = state.config?.typography || readLocalTypo() || { sidecarFontSize: 14, hostFontScale: 100 };
-      const nextTypo = writeLocalTypo({ ...curTypo, [typoKey]: num }) || curTypo;
-      if (state.config) {
-        state.config = { ...state.config, typography: nextTypo };
+      if (typoKey) {
+        const num = Number(target.value);
+        const valEl = root.querySelector(`[data-ws-typo-val="${typoKey}"]`);
+        if (valEl) valEl.textContent = typoKey === 'hostFontScale' ? `${num}%` : `${num}px`;
+        const curTypo = state.config?.typography || readLocalTypo() || { sidecarFontSize: 14, hostFontScale: 100 };
+        const nextTypo = writeLocalTypo({ ...curTypo, [typoKey]: num }) || curTypo;
+        if (state.config) {
+          state.config = { ...state.config, typography: nextTypo };
+        }
+        if (typoKey === 'sidecarFontSize' && state.config) {
+          notifyHostTheme(state.config);
+        }
+        return;
       }
-      if (typoKey === 'sidecarFontSize' && state.config) {
-        notifyHostTheme(state.config);
+      const dockKey = target?.getAttribute?.('data-ws-dock-range');
+      if (!dockKey) return;
+      const num = Number(target.value);
+      const valEl = root.querySelector(`[data-ws-dock-val="${dockKey}"]`);
+      if (valEl) valEl.textContent = dockKey === 'badgeScale' ? `${num}%` : `${num}px`;
+      const curDock = state.config?.dock || readLocalDock();
+      const nextDock = writeLocalDock({ ...curDock, [dockKey]: num });
+      if (state.config && nextDock) {
+        state.config = { ...state.config, dock: nextDock };
+        if (dockKey === 'sidecarAvatarSize') {
+          notifyHostTheme(state.config);
+        }
       }
     };
 
@@ -893,6 +982,12 @@ export function createThemeWorkshopController(deps) {
       const typoKey = target.getAttribute('data-ws-typo-range');
       if (typoKey) {
         void savePatch({ typography: { ...(c.typography || {}), [typoKey]: Number(target.value) } });
+        return;
+      }
+      const dockKey = target.getAttribute('data-ws-dock-range');
+      if (dockKey) {
+        const nextDock = writeLocalDock({ ...(c.dock || readLocalDock()), [dockKey]: Number(target.value) });
+        void savePatch({ dock: nextDock });
       }
     };
   }

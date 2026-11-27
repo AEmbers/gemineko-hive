@@ -523,6 +523,17 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(DEFAULT_HOST_THEME_CONFIG.spriteQuality, '512');
   assert.equal(sanitizeHostThemeConfig({ spriteQuality: '1024' }).spriteQuality, '1024');
   assert.equal(sanitizeHostThemeConfig({ spriteQuality: '999' }).spriteQuality, '512');
+  assert.deepEqual(DEFAULT_HOST_THEME_CONFIG.dock, {
+    side: 'left',
+    catSize: 88,
+    badgeScale: 115,
+    sidecarAvatarSize: 64,
+  });
+  assert.deepEqual(
+    sanitizeHostThemeConfig({ dock: { side: 'right', catSize: 200, badgeScale: 50, sidecarAvatarSize: 200 } }).dock,
+    { side: 'right', catSize: 140, badgeScale: 85, sidecarAvatarSize: 112 },
+  );
+  assert.equal(sanitizeHostThemeConfig({ dock: { side: 'center' } }).dock.side, 'left');
   assert.equal(parseMemeCaptionFromText('[表情: 测试全绿通过]'), '测试全绿通过');
   assert.equal(parseMemeCaptionFromText('普通文本不含贴纸'), null);
   assert.equal(resolveSpriteFile('hydrogen', 'ponder'), 'hydrogen-ponder.png');
@@ -755,6 +766,29 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.equal(wmFileRes.statusCode, 200);
     assert.equal(wmFileRes.headers['content-type'], 'image/png');
 
+    // 验证 Dock 左右停靠与尺寸配置写入及读回闭环
+    const setDockRes = await srv.inject({
+      method: 'POST',
+      url: '/api/theme/config',
+      headers: { 'x-sidecar-token': 'test-v5-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dock: { side: 'right', catSize: 112, badgeScale: 130, sidecarAvatarSize: 72 } }),
+    });
+    assert.equal(setDockRes.statusCode, 200);
+    assert.deepEqual(setDockRes.json().config.dock, {
+      side: 'right',
+      catSize: 112,
+      badgeScale: 130,
+      sidecarAvatarSize: 72,
+    });
+    const getDockRes = await srv.inject({ url: '/api/theme/config' });
+    assert.equal(getDockRes.statusCode, 200);
+    assert.deepEqual(getDockRes.json().config.dock, {
+      side: 'right',
+      catSize: 112,
+      badgeScale: 130,
+      sidecarAvatarSize: 72,
+    });
+
     const bundleRes = buildGeminekoBundle();
     assert.ok(bundleRes.bytes < 420_000, `主包体过大: ${bundleRes.bytes}`);
     const bundleContent = fs.readFileSync(bundleRes.outPath, 'utf8');
@@ -772,6 +806,14 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(bundleContent, /gemineko_typography_v1/);
     assert.match(bundleContent, /gn-font-val/);
     assert.match(bundleContent, /data-ws-sprite-q/);
+    assert.match(bundleContent, /data-ws-dock-side/);
+    assert.match(bundleContent, /data-ws-dock-range/);
+    assert.match(bundleContent, /--gn-avatar-size/);
+    assert.match(cdpScript, /--gk-dock-cat-size/);
+    assert.match(cdpScript, /--gk-dock-badge-scale/);
+    assert.match(cdpScript, /data-dock-side/);
+    assert.match(cdpScript, /data-dock-range/);
+    assert.match(cdpScript, /is-right/);
     assert.match(bundleContent, /\.gn-live-sub[\s\S]{0,160}--gn-font-scale/);
     assert.match(bundleContent, /image-rendering:\s*auto\s*!important/);
     assert.match(bundleContent, /\.msg-av\.bee\s*\{[\s\S]{0,180}--gn-font-scale/);

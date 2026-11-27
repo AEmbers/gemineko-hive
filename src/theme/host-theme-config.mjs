@@ -45,6 +45,7 @@ export const ALLOWED_WATERMARK_ROLES = new Set([
 export const ALLOWED_I18N_MODES = new Set(['auto', 'neko-zh', 'zh', 'off']);
 export const ALLOWED_I18N_AUTO_STYLES = new Set(['neko-zh', 'zh']);
 export const ALLOWED_SPRITE_QUALITIES = new Set(['384', '512', '1024']);
+export const ALLOWED_DOCK_SIDES = new Set(['left', 'right']);
 export const ALLOWED_WALLPAPER_MODES = new Set([
   'off',
   'builtin-starry',
@@ -481,6 +482,12 @@ export const DEFAULT_HOST_THEME_CONFIG = {
     sidecarFontSize: 14,
     hostFontScale: 100,
   },
+  dock: {
+    side: 'left',
+    catSize: 88,
+    badgeScale: 115,
+    sidecarAvatarSize: 64,
+  },
   spriteQuality: '512',
   updatedAt: 0,
 };
@@ -653,6 +660,11 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
   const bWp = b.wallpaper || DEFAULT_HOST_THEME_CONFIG.wallpaper;
   const srcTypo = src.typography && typeof src.typography === 'object' ? src.typography : {};
   const bTypo = b.typography || DEFAULT_HOST_THEME_CONFIG.typography;
+  const srcDock = src.dock && typeof src.dock === 'object' ? src.dock : {};
+  const bDock = b.dock || DEFAULT_HOST_THEME_CONFIG.dock;
+  const dockSide = ALLOWED_DOCK_SIDES.has(srcDock.side)
+    ? srcDock.side
+    : (ALLOWED_DOCK_SIDES.has(bDock.side) ? bDock.side : 'left');
 
   let wpMode = ALLOWED_WALLPAPER_MODES.has(srcWp.mode)
     ? srcWp.mode
@@ -725,6 +737,12 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
     typography: {
       sidecarFontSize: Math.round(clampNumber(srcTypo.sidecarFontSize, 11, 22, bTypo.sidecarFontSize ?? 14)),
       hostFontScale: Math.round(clampNumber(srcTypo.hostFontScale, 85, 135, bTypo.hostFontScale ?? 100)),
+    },
+    dock: {
+      side: dockSide,
+      catSize: Math.round(clampNumber(srcDock.catSize, 52, 140, bDock.catSize ?? 88)),
+      badgeScale: Math.round(clampNumber(srcDock.badgeScale, 85, 150, bDock.badgeScale ?? 115)),
+      sidecarAvatarSize: Math.round(clampNumber(srcDock.sidecarAvatarSize, 44, 112, bDock.sidecarAvatarSize ?? 64)),
     },
     spriteQuality: ALLOWED_SPRITE_QUALITIES.has(String(src.spriteQuality || ''))
       ? String(src.spriteQuality)
