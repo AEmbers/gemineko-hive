@@ -32,6 +32,43 @@ export function createThemeWorkshopController(deps) {
     exportedPack: null,
   };
 
+  const TYPO_STORAGE_KEY = 'gemineko_typography_v1';
+
+  function readLocalTypo() {
+    try {
+      const raw = localStorage.getItem(TYPO_STORAGE_KEY);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== 'object') return null;
+      return {
+        sidecarFontSize: Math.max(11, Math.min(22, Math.round(Number(obj.sidecarFontSize) || 14))),
+        hostFontScale: Math.max(85, Math.min(135, Math.round(Number(obj.hostFontScale) || 100))),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function writeLocalTypo(typo) {
+    if (!typo || typeof typo !== 'object') return null;
+    const clean = {
+      sidecarFontSize: Math.max(11, Math.min(22, Math.round(Number(typo.sidecarFontSize) || 14))),
+      hostFontScale: Math.max(85, Math.min(135, Math.round(Number(typo.hostFontScale) || 100))),
+    };
+    try { localStorage.setItem(TYPO_STORAGE_KEY, JSON.stringify(clean)); } catch {}
+    return clean;
+  }
+
+  function withLocalTypo(cfg, fallbackTypo) {
+    if (!cfg || typeof cfg !== 'object') return cfg;
+    if (cfg.typography && typeof cfg.typography === 'object') {
+      writeLocalTypo(cfg.typography);
+      return cfg;
+    }
+    const typo = fallbackTypo || readLocalTypo() || { sidecarFontSize: 14, hostFontScale: 100 };
+    return { ...cfg, typography: typo };
+  }
+
   function notifyHostTheme(cfg) {
     if (cfg && typeof deps.onThemeConfigChange === 'function') {
       deps.onThemeConfigChange(cfg);
@@ -93,7 +130,7 @@ export function createThemeWorkshopController(deps) {
         deps.hostApi(`/api/github/status${suffix}`),
       ]);
       if (cfgRes?.ok) {
-        state.config = cfgRes.config;
+        state.config = withLocalTypo(cfgRes.config);
         state.presets = cfgRes.presets || {};
         state.rolePalettes = cfgRes.rolePalettes || {};
         if (cfgRes.brand) state.brand = cfgRes.brand;
@@ -116,13 +153,21 @@ export function createThemeWorkshopController(deps) {
   }
 
   async function savePatch(patch) {
+    let optimisticTypo = null;
+    if (patch?.typography && typeof patch.typography === 'object') {
+      optimisticTypo = writeLocalTypo({ ...(state.config?.typography || readLocalTypo() || { sidecarFontSize: 14, hostFontScale: 100 }), ...patch.typography });
+      if (state.config && optimisticTypo) {
+        state.config = { ...state.config, typography: optimisticTypo };
+        notifyHostTheme(state.config);
+      }
+    }
     try {
       const data = await deps.hostApi('/api/theme/config', {
         method: 'POST',
         body: JSON.stringify(patch),
       });
       if (data?.ok && data.config) {
-        state.config = data.config;
+        state.config = withLocalTypo(data.config, optimisticTypo);
         notifyHostTheme(state.config);
         render();
         showWorkshopToast(data.warning ? `已保存，壁纸提示：${data.warning}` : '✨ 已即时同步到主窗口与基米窝', Boolean(data.warning));
@@ -133,10 +178,11 @@ export function createThemeWorkshopController(deps) {
   }
 
   async function resetConfig() {
+    try { localStorage.removeItem(TYPO_STORAGE_KEY); } catch {}
     try {
       const data = await deps.hostApi('/api/theme/reset', { method: 'POST', body: '{}' });
       if (data?.ok && data.config) {
-        state.config = data.config;
+        state.config = data.config.typography ? data.config : { ...data.config, typography: { sidecarFontSize: 14, hostFontScale: 100 } };
         notifyHostTheme(state.config);
         render();
         showWorkshopToast('已恢复默认《基米窝》官方旗舰配置');
@@ -706,8 +752,13 @@ export function createThemeWorkshopController(deps) {
       const num = Number(target.value);
       const valEl = root.querySelector(`[data-ws-typo-val="${typoKey}"]`);
       if (valEl) valEl.textContent = typoKey === 'hostFontScale' ? `${num}%` : `${num}px`;
+      const curTypo = state.config?.typography || readLocalTypo() || { sidecarFontSize: 14, hostFontScale: 100 };
+      const nextTypo = writeLocalTypo({ ...curTypo, [typoKey]: num }) || curTypo;
+      if (state.config) {
+        state.config = { ...state.config, typography: nextTypo };
+      }
       if (typoKey === 'sidecarFontSize' && state.config) {
-        notifyHostTheme({ ...state.config, typography: { ...(state.config.typography || {}), sidecarFontSize: num } });
+        notifyHostTheme(state.config);
       }
     };
 
@@ -819,6 +870,25 @@ export function createThemeWorkshopController(deps) {
     } catch {}
   }
 
+  function syncExternalTypography(typo) {
+    if (!typo || typeof typo !== 'object') return;
+    const clean = writeLocalTypo({ ...(state.config?.typography || readLocalTypo() || { sidecarFontSize: 14, hostFontScale: 100 }), ...typo });
+    if (state.config && clean) {
+      state.config = { ...state.config, typography: clean };
+    }
+    const root = document.getElementById('gn-theme-workshop');
+    if (root && !root.classList.contains('hidden') && clean) {
+      const sRange = root.querySelector('[data-ws-typo-range="sidecarFontSize"]');
+      const sVal = root.querySelector('[data-ws-typo-val="sidecarFontSize"]');
+      if (sRange) sRange.value = String(clean.sidecarFontSize);
+      if (sVal) sVal.textContent = `${clean.sidecarFontSize}px`;
+      const hRange = root.querySelector('[data-ws-typo-range="hostFontScale"]');
+      const hVal = root.querySelector('[data-ws-typo-val="hostFontScale"]');
+      if (hRange) hRange.value = String(clean.hostFontScale);
+      if (hVal) hVal.textContent = `${clean.hostFontScale}%`;
+    }
+  }
+
   return {
     isOpen: () => state.open,
     setOpen,
@@ -826,5 +896,6 @@ export function createThemeWorkshopController(deps) {
     loadConfig,
     pollEvents,
     triggerSidecarEgg,
+    syncExternalTypography,
   };
 }

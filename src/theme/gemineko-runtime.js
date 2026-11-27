@@ -219,9 +219,51 @@ export function bootGeminekoHive() {
     }
   }
 
+  const TYPO_STORAGE_KEY = 'gemineko_typography_v1';
+
+  function readLocalTypography() {
+    try {
+      const raw = localStorage.getItem(TYPO_STORAGE_KEY);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== 'object') return null;
+      return {
+        sidecarFontSize: Math.max(11, Math.min(22, Math.round(Number(obj.sidecarFontSize) || 14))),
+        hostFontScale: Math.max(85, Math.min(135, Math.round(Number(obj.hostFontScale) || 100))),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function writeLocalTypography(typo) {
+    try {
+      if (typo === null) {
+        localStorage.removeItem(TYPO_STORAGE_KEY);
+        return;
+      }
+      if (!typo || typeof typo !== 'object') return;
+      const clean = {
+        sidecarFontSize: Math.max(11, Math.min(22, Math.round(Number(typo.sidecarFontSize) || 14))),
+        hostFontScale: Math.max(85, Math.min(135, Math.round(Number(typo.hostFontScale) || 100))),
+      };
+      localStorage.setItem(TYPO_STORAGE_KEY, JSON.stringify(clean));
+    } catch {}
+  }
+
+  function mergeTypographyConfig(cfg) {
+    if (!cfg || typeof cfg !== 'object') return cfg;
+    if (cfg.typography && typeof cfg.typography === 'object') {
+      writeLocalTypography(cfg.typography);
+      return cfg;
+    }
+    const localTypo = readLocalTypography();
+    return localTypo ? { ...cfg, typography: localTypo } : cfg;
+  }
+
   function syncSidecarHostTheme(cfg) {
     if (cfg && typeof cfg === 'object') {
-      lastSidecarThemeConfig = cfg;
+      lastSidecarThemeConfig = mergeTypographyConfig(cfg);
       lastSidecarThemeTs = Number(cfg.updatedAt || 0);
     }
     const cur = lastSidecarThemeConfig;
@@ -267,6 +309,10 @@ export function bootGeminekoHive() {
     root.style.setProperty('--text-xs', `${(12 * fontScale).toFixed(1)}px`);
     root.style.setProperty('--text-sm', `${(13 * fontScale).toFixed(1)}px`);
     root.style.setProperty('--text-base', `${(14 * fontScale).toFixed(1)}px`);
+    const fontValEl = document.querySelector('#gemineko-toolbar .gn-font-val');
+    if (fontValEl) fontValEl.textContent = `${sidecarFontSize}px`;
+    const fontGroupEl = document.querySelector('#gemineko-toolbar .gn-font-step-group');
+    if (fontGroupEl) fontGroupEl.setAttribute('title', `当前侧栏字号 ${sidecarFontSize}px`);
   }
 
   async function openExternalSafe(url) {
@@ -1521,6 +1567,7 @@ export function bootGeminekoHive() {
           ${window.__GEMINEKO_SIDECAR_MODE__ ? `<button type="button" id="gn-workshop-toggle-btn" class="gn-pill ${workshop?.isOpen?.() ? 'is-active' : ''}" data-gn-act="toggle-workshop" title="打开《Gemineko Hive · 基米窝》社区主题商店与精细工坊">🏪 主题商店</button>
           <span class="gn-font-step-group" title="当前侧栏字号 ${Math.max(11, Math.min(22, Math.round(Number(lastSidecarThemeConfig?.typography?.sidecarFontSize) || 14)))}px">
             <button type="button" class="gn-pill" data-gn-act="font-dec" aria-label="减小字号">A-</button>
+            <span class="gn-font-val">${Math.max(11, Math.min(22, Math.round(Number(lastSidecarThemeConfig?.typography?.sidecarFontSize) || 14)))}px</span>
             <button type="button" class="gn-pill" data-gn-act="font-inc" aria-label="增大字号">A+</button>
           </span>` : ''}
           <button type="button" class="gn-pill gn-star-pill" data-gn-act="open-star" title="前往 GitHub 仓库 AEmbers/gemineko-hive 点亮 Star 支持作者">${starCountText}</button>
@@ -1573,10 +1620,16 @@ export function bootGeminekoHive() {
           void openExternalSafe(lastGithubPulse?.starUrl || 'https://github.com/AEmbers/gemineko-hive');
           return;
         } else if (act === 'font-dec' || act === 'font-inc') {
-          const curSize = Math.max(11, Math.min(22, Math.round(Number(lastSidecarThemeConfig?.typography?.sidecarFontSize) || 14)));
+          const curTypo = lastSidecarThemeConfig?.typography || readLocalTypography() || { sidecarFontSize: 14, hostFontScale: 100 };
+          const curSize = Math.max(11, Math.min(22, Math.round(Number(curTypo.sidecarFontSize) || 14)));
           const nextSize = Math.max(11, Math.min(22, curSize + (act === 'font-inc' ? 1 : -1)));
-          const nextTypo = { ...(lastSidecarThemeConfig?.typography || { hostFontScale: 100 }), sidecarFontSize: nextSize };
+          const nextTypo = {
+            hostFontScale: Math.max(85, Math.min(135, Math.round(Number(curTypo.hostFontScale) || 100))),
+            sidecarFontSize: nextSize,
+          };
+          writeLocalTypography(nextTypo);
           syncSidecarHostTheme({ ...(lastSidecarThemeConfig || { enabled: true }), typography: nextTypo });
+          workshop?.syncExternalTypography?.(nextTypo);
           try {
             const headers = { 'Content-Type': 'application/json' };
             if (window.__SIDECAR_TOKEN__) headers['x-sidecar-token'] = window.__SIDECAR_TOKEN__;
@@ -1587,7 +1640,11 @@ export function bootGeminekoHive() {
             });
             if (r.ok) {
               const resJson = await r.json();
-              if (resJson?.config) syncSidecarHostTheme(resJson.config);
+              if (resJson?.config) {
+                const merged = resJson.config.typography ? resJson.config : { ...resJson.config, typography: nextTypo };
+                syncSidecarHostTheme(merged);
+                workshop?.syncExternalTypography?.(merged.typography);
+              }
             }
           } catch {}
           renderToolbar();

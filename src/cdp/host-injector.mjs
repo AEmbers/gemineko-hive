@@ -232,7 +232,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         pointer-events: none;
         user-select: none;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif !important;
-        font-size: 12px !important;
+        font-size: calc(12px * var(--gk-host-font-scale, 1)) !important;
         line-height: 1.25 !important;
         transition: opacity 0.16s ease;
       }
@@ -283,7 +283,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         box-shadow: 0 4px 14px rgba(103, 76, 178, 0.14);
         backdrop-filter: blur(10px);
         color: #2f2546;
-        max-width: min(210px, calc(100vw - 150px));
+        max-width: min(calc(230px * var(--gk-host-font-scale, 1)), calc(100vw - 150px));
         overflow: hidden;
       }
       #\${DOCK_ID}.is-dark .gk-dock-badge {
@@ -310,14 +310,14 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         display: flex;
         align-items: center;
         gap: 5px;
-        font-size: 10.5px !important;
+        font-size: calc(10.5px * var(--gk-host-font-scale, 1)) !important;
         font-weight: 700;
         white-space: nowrap;
       }
       #\${DOCK_ID} .gk-phase {
         padding: 1px 6px;
         border-radius: 999px;
-        font-size: 10px !important;
+        font-size: calc(10px * var(--gk-host-font-scale, 1)) !important;
         color: #fff;
         background: linear-gradient(135deg, #8b5cf6, #ec4899);
         flex-shrink: 0;
@@ -330,7 +330,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       }
       #\${DOCK_ID} .gk-action {
         color: #7c3aed;
-        font-size: 10.5px !important;
+        font-size: calc(10.5px * var(--gk-host-font-scale, 1)) !important;
         overflow: hidden;
         text-overflow: ellipsis;
       }
@@ -341,7 +341,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         display: flex;
         align-items: center;
         gap: 5px;
-        font-size: 10.5px !important;
+        font-size: calc(10.5px * var(--gk-host-font-scale, 1)) !important;
         color: #5b4d78;
         white-space: nowrap;
         overflow: hidden;
@@ -363,7 +363,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         height: 18px;
         border-radius: 999px;
         cursor: pointer;
-        font-size: 11px !important;
+        font-size: calc(11px * var(--gk-host-font-scale, 1)) !important;
         line-height: 1;
         padding: 0;
         flex-shrink: 0;

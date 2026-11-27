@@ -2,6 +2,12 @@
 
 ## [0.7.5] - 2026-11-27
 
+### Fixed
+- **彻底打通插件内全量动态字号缩放（侧边栏 + 商店/工坊 + 主窗口浮层 + 旧 Sidecar 兼容）**：
+  - **补全 `gemineko-theme.css` 剩余固定像素规则**：消除 `.gn-bar` 的 `clamp(..., 13.5px)` 上限，为 `.gn-brand`、`.gn-live-sub`、`.gn-seg`、`.gn-phase-badge`、`.gn-action-chip`、`.gn-store-tag`、`.gn-store-footer`、`.gn-update-banner`、`.gn-setting-label` 及 `.graph .node-label` 等全部组件接入 `var(--gn-font-scale)` 矢量缩放，并在 `A- / A+` 中间加入实时字号读数徽标 `.gn-font-val`；
+  - **增加 `localStorage` 韧性兜底（`gemineko_typography_v1` / `gemineko_host_typography_v1`）**：兼容尚未重启的旧版 Sidecar 后台进程（回包未带 `typography` 字段），避免点按 `A+` 或拖动滑条后被服务端回包或 4 秒轮询回弹到默认字号；
+  - **主窗口全量插件浮层联动缩放**：为 [host-injector.mjs](src/cdp/host-injector.mjs)、[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs) 与 [host-meme-runtime.mjs](src/cdp/host-meme-runtime.mjs) 内的 Dock 徽标、快切浮层、猫爪大纲、代码块吸顶栏、右键菜单、对话气泡与表情选择器全面接入 `var(--gk-host-font-scale)`。
+
 ### Changed & Upgraded
 - **品牌视觉同源双生重塑（Google Gemini 四色光学棱镜 × Neon 哈基米探身共生）**：
   - **首页大 Logo（`assets/sprites/home-star-gem-light.png` / `home-star-gem-dark.png`）**：以正统 Google Gemini 四色全光谱光学玻璃棱镜星芒（宝蓝/翡翠青/暖阳金/珊瑚玫红）为视觉主骨，搭配 2.5~3 头身精致光感 Neon 哈基米探身倚靠共生，经四向泛洪精抠与去白边色溢处理生成 `256×256` RGBA 透明双底素材；

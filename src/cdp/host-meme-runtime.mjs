@@ -80,7 +80,7 @@ export function buildHostMemeRuntimeSnippet() {
   filter: drop-shadow(0 4px 10px rgba(30, 41, 90, 0.16));
 }
 .\${INLINE_CARD_CLS} .gk-meme-cap {
-  font-size: 10.5px !important;
+  font-size: calc(10.5px * var(--gk-host-font-scale, 1)) !important;
   opacity: 0.72;
   padding: 0 4px;
   color: var(--muted-foreground, #64748b);
@@ -108,14 +108,14 @@ export function buildHostMemeRuntimeSnippet() {
   display: block;
 }
 #\${TOAST_ID} span {
-  font-size: 11px !important;
+  font-size: calc(11px * var(--gk-host-font-scale, 1)) !important;
   font-weight: 700;
   color: var(--gk-role-primary, #8b5cf6);
 }
 #\${PICKER_ID} {
   position: fixed;
   z-index: 2147483645;
-  width: 332px;
+  width: min(calc(340px * var(--gk-host-font-scale, 1)), calc(100vw - 24px));
   max-height: 390px;
   display: none;
   flex-direction: column;
@@ -132,12 +132,12 @@ export function buildHostMemeRuntimeSnippet() {
 #\${PICKER_ID} .gk-mp-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
 #\${PICKER_ID} .gk-mp-tab {
   padding: 2.5px 7px; border-radius: 999px; border: 1px solid var(--border);
-  background: var(--secondary); color: inherit; font-size: 10.5px !important; cursor: pointer;
+  background: var(--secondary); color: inherit; font-size: calc(10.5px * var(--gk-host-font-scale, 1)) !important; cursor: pointer;
 }
 #\${PICKER_ID} .gk-mp-tab.is-active { background: var(--gk-role-primary, #8b5cf6); color: #fff; border-color: transparent; }
 #\${PICKER_ID} input.gk-mp-search {
   width: 100%; box-sizing: border-box; padding: 5px 8px; border-radius: 9px;
-  border: 1px solid var(--border); background: var(--background); color: inherit; font-size: 11.5px !important;
+  border: 1px solid var(--border); background: var(--background); color: inherit; font-size: calc(11.5px * var(--gk-host-font-scale, 1)) !important;
 }
 #\${PICKER_ID} .gk-mp-grid {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
@@ -153,7 +153,7 @@ export function buildHostMemeRuntimeSnippet() {
   border-color: var(--gk-role-primary, #8b5cf6);
 }
 #\${PICKER_ID} button.gk-mp-item img { width: 54px; height: 54px; object-fit: contain; }
-#\${PICKER_ID} button.gk-mp-item span { font-size: 9.5px !important; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
+#\${PICKER_ID} button.gk-mp-item span { font-size: calc(9.5px * var(--gk-host-font-scale, 1)) !important; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
       \`;
       document.head.appendChild(st);
     }
