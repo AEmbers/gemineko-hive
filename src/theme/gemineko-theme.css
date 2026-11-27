@@ -462,13 +462,104 @@ body:not([data-gemineko-minimal="1"]) svg.graph g.node:hover rect.node-box {
   filter: drop-shadow(0 4px 12px rgba(236, 72, 153, 0.28));
 }
 
-body:not([data-gemineko-minimal="1"]) .hv-cell {
-  filter: drop-shadow(0 3px 9px rgba(124, 108, 246, 0.14));
-  transition: filter 0.25s ease;
+body:not([data-gemineko-minimal="1"]) .pane .hv-svg {
+  border-radius: 18px;
 }
 
-body:not([data-gemineko-minimal="1"]) .hv-cell:hover {
+body:not([data-gemineko-minimal="1"]) .pane .hv-cell {
+  fill: color-mix(in srgb, #faf5ff 78%, var(--o2-card, #fff));
+  stroke: color-mix(in srgb, var(--gn-hive-accent) 44%, var(--o2-border, #cbd5e1));
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 4px 11px rgba(124, 108, 246, 0.14));
+  transition: filter 0.22s ease, fill 0.2s ease, stroke 0.2s ease;
+}
+
+body:not([data-gemineko-minimal="1"]) .pane .hv-cell.full {
+  fill: color-mix(in srgb, #f5d0fe 24%, var(--o2-card, #fff));
+  stroke: color-mix(in srgb, #a855f7 48%, var(--o2-border, #cbd5e1));
+}
+
+body:not([data-gemineko-minimal="1"]) .pane .hv-cell.gn-nest-coord {
+  fill: color-mix(in srgb, #fef3c7 36%, var(--o2-card, #fff));
+  stroke: color-mix(in srgb, #f59e0b 52%, var(--gn-hive-accent));
+  stroke-width: 2;
+}
+
+body:not([data-gemineko-minimal="1"]) .pane .hv-cell:hover {
+  stroke: rgba(236, 72, 153, 0.72);
   filter: drop-shadow(0 0 14px rgba(244, 114, 182, 0.42));
+}
+
+body:not([data-gemineko-minimal="1"]) .pane .hv-cell.sel {
+  fill: color-mix(in srgb, #fbcfe8 32%, var(--o2-card, #fff));
+}
+
+body:not([data-gemineko-minimal="1"]) .pane .hv-prog {
+  stroke: #a855f7;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body:not([data-gemineko-minimal="1"]) .pane .hv-prog.gn-nest-coord-prog {
+  stroke: #f59e0b;
+  stroke-width: 2.8;
+}
+
+body:not([data-gemineko-minimal="1"]) .pane .hv-selring {
+  stroke: #ec4899;
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+}
+
+body:not([data-gemineko-minimal="1"]) .pane .hv-key i.hv-kd {
+  border-top-color: #a855f7;
+}
+
+.gn-nest-ear-inner {
+  fill: rgba(244, 114, 182, 0.34);
+}
+
+.gn-nest-deco.is-coord .gn-nest-ear-inner {
+  fill: rgba(251, 146, 60, 0.34);
+}
+
+.gn-nest-stitch {
+  fill: none;
+  stroke: rgba(139, 92, 246, 0.25);
+  stroke-width: 1.25;
+  stroke-dasharray: 4 4;
+  stroke-linecap: round;
+}
+
+.gn-nest-deco.is-coord .gn-nest-stitch {
+  stroke: rgba(245, 158, 11, 0.34);
+}
+
+.gn-nest-cushion {
+  fill: rgba(244, 114, 182, 0.08);
+}
+
+.gn-nest-deco.is-coord .gn-nest-cushion {
+  fill: rgba(245, 158, 11, 0.11);
+}
+
+.gn-nest-bow-wing {
+  fill: #f472b6;
+  stroke: #db2777;
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+}
+
+.gn-nest-bow-knot {
+  fill: #fbbf24;
+  stroke: #d97706;
+  stroke-width: 0.9;
+}
+
+.gn-nest-paw {
+  fill: rgba(168, 85, 247, 0.18);
 }
 
 body:not([data-gemineko-minimal="1"]) .hv-link,

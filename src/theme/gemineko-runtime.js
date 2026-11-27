@@ -3,6 +3,120 @@
  * 依赖同作用域中的 GEMINEKO_ASSETS, GEMINEKO_CSS, resolveMemeNickname, drawPixelSprite, getPixelSpriteDataUri, buildDemoSwarmSnapshot。
  */
 
+/**
+ * 解析原生蜂巢图谱的平顶六边形路径，提取中心坐标与外接半径。
+ * 对含曲线或非标准正六边形的路径返回 null。
+ * @param {string} d
+ * @returns {{ cx: number, cy: number, r: number } | null}
+ */
+export function parseHexPathGeometry(d) {
+  if (typeof d !== 'string' || !d.trim() || /[CQTAS]/i.test(d)) return null;
+  const nums = d.match(/-?\d+(?:\.\d+)?/g);
+  if (!nums || nums.length !== 12) return null;
+
+  const pts = [];
+  let sx = 0;
+  let sy = 0;
+  for (let i = 0; i < 12; i += 2) {
+    const x = Number(nums[i]);
+    const y = Number(nums[i + 1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    pts.push([x, y]);
+    sx += x;
+    sy += y;
+  }
+
+  const cx = sx / 6;
+  const cy = sy / 6;
+  const rs = pts.map(([px, py]) => Math.hypot(px - cx, py - cy));
+  const r = rs.reduce((a, b) => a + b, 0) / 6;
+  if (!Number.isFinite(r) || r <= 1) return null;
+  if (rs.some((ri) => Math.abs(ri - r) >= 1.5)) return null;
+  return { cx, cy, r };
+}
+
+/**
+ * 构建圆润可爱的猫耳软垫猫窝闭合 SVG Path（严格约束在原六边形安全包络内）。
+ * @param {number} cx
+ * @param {number} cy
+ * @param {number} r
+ * @returns {string}
+ */
+export function buildCatNestPath(cx, cy, r) {
+  const px = (nx) => (cx + nx * r).toFixed(1);
+  const py = (ny) => (cy + ny * r).toFixed(1);
+  const c = (x1, y1, x2, y2, x, y) => `C${px(x1)} ${py(y1)} ${px(x2)} ${py(y2)} ${px(x)} ${py(y)}`;
+  return [
+    `M${px(0)} ${py(-0.76)}`,
+    c(0.09, -0.76, 0.18, -0.77, 0.25, -0.76),
+    c(0.34, -0.82, 0.44, -0.93, 0.54, -0.90),
+    c(0.65, -0.87, 0.73, -0.71, 0.75, -0.54),
+    c(0.90, -0.34, 0.98, -0.10, 0.92, 0.14),
+    c(0.84, 0.54, 0.46, 0.84, 0, 0.84),
+    c(-0.46, 0.84, -0.84, 0.54, -0.92, 0.14),
+    c(-0.98, -0.10, -0.90, -0.34, -0.75, -0.54),
+    c(-0.73, -0.71, -0.65, -0.87, -0.54, -0.90),
+    c(-0.44, -0.93, -0.34, -0.82, -0.25, -0.76),
+    c(-0.18, -0.77, -0.09, -0.76, 0, -0.76),
+    'Z',
+  ].join(' ');
+}
+
+/**
+ * 构建猫窝内部细节装饰 SVG 片段（内耳粉垫、虚线缝线、软垫高光、蝴蝶结或小猫爪）。
+ * @param {number} cx
+ * @param {number} cy
+ * @param {number} r
+ * @param {{ isCoord?: boolean }} [opts]
+ * @returns {string}
+ */
+export function buildCatNestDecoSvg(cx, cy, r, opts = {}) {
+  if (!Number.isFinite(r) || r < 36) return '';
+  const isCoord = Boolean(opts.isCoord);
+  const px = (nx) => (cx + nx * r).toFixed(1);
+  const py = (ny) => (cy + ny * r).toFixed(1);
+
+  const parts = [];
+  // 左右粉嫩圆角内耳
+  parts.push(
+    `<path class="gn-nest-ear-inner" d="M${px(0.41)} ${py(-0.74)} Q${px(0.51)} ${py(-0.83)} ${px(0.59)} ${py(-0.71)} Q${px(0.65)} ${py(-0.59)} ${px(0.57)} ${py(-0.57)} Q${px(0.45)} ${py(-0.58)} ${px(0.37)} ${py(-0.67)} Q${px(0.35)} ${py(-0.72)} ${px(0.41)} ${py(-0.74)} Z"/>`,
+    `<path class="gn-nest-ear-inner" d="M${px(-0.41)} ${py(-0.74)} Q${px(-0.51)} ${py(-0.83)} ${px(-0.59)} ${py(-0.71)} Q${px(-0.65)} ${py(-0.59)} ${px(-0.57)} ${py(-0.57)} Q${px(-0.45)} ${py(-0.58)} ${px(-0.37)} ${py(-0.67)} Q${px(-0.35)} ${py(-0.72)} ${px(-0.41)} ${py(-0.74)} Z"/>`,
+  );
+
+  // 内圈虚线毛绒缝线
+  if (r >= 44) {
+    parts.push(`<path class="gn-nest-stitch" d="${buildCatNestPath(cx, cy, r * 0.905)}"/>`);
+  }
+
+  // 底部柔软软垫弧影
+  if (r >= 52) {
+    parts.push(
+      `<path class="gn-nest-cushion" d="M${px(-0.62)} ${py(0.50)} Q${px(0)} ${py(0.76)} ${px(0.62)} ${py(0.50)} Q${px(0)} ${py(0.65)} ${px(-0.62)} ${py(0.50)} Z"/>`,
+    );
+  }
+
+  // 协调喵主窝专属额头小蝴蝶结
+  if (isCoord && r >= 48) {
+    parts.push(
+      `<path class="gn-nest-bow-wing" d="M${px(-0.02)} ${py(-0.76)} C${px(-0.09)} ${py(-0.83)} ${px(-0.14)} ${py(-0.81)} ${px(-0.13)} ${py(-0.76)} C${px(-0.14)} ${py(-0.71)} ${px(-0.09)} ${py(-0.69)} ${px(-0.02)} ${py(-0.76)} Z"/>`,
+      `<path class="gn-nest-bow-wing" d="M${px(0.02)} ${py(-0.76)} C${px(0.09)} ${py(-0.83)} ${px(0.14)} ${py(-0.81)} ${px(0.13)} ${py(-0.76)} C${px(0.14)} ${py(-0.71)} ${px(0.09)} ${py(-0.69)} ${px(0.02)} ${py(-0.76)} Z"/>`,
+      `<circle class="gn-nest-bow-knot" cx="${px(0)}" cy="${py(-0.76)}" r="${(0.032 * r).toFixed(1)}"/>`,
+    );
+  } else if (!isCoord && r >= 60) {
+    // 普通任务窝底缘小猫爪印
+    parts.push(
+      `<g class="gn-nest-paw">`,
+      `<ellipse cx="${px(0)}" cy="${py(0.745)}" rx="${(0.048 * r).toFixed(1)}" ry="${(0.034 * r).toFixed(1)}"/>`,
+      `<circle cx="${px(-0.045)}" cy="${py(0.695)}" r="${(0.017 * r).toFixed(1)}"/>`,
+      `<circle cx="${px(0)}" cy="${py(0.682)}" r="${(0.018 * r).toFixed(1)}"/>`,
+      `<circle cx="${px(0.045)}" cy="${py(0.695)}" r="${(0.017 * r).toFixed(1)}"/>`,
+      `</g>`,
+    );
+  }
+
+  return `<g class="gn-nest-deco${isCoord ? ' is-coord' : ''}">${parts.join('')}</g>`;
+}
+
 export function bootGeminekoHive() {
   const PREFS_KEY = 'gemineko_hive_prefs_v3';
   const DEFAULT_PREFS = {
@@ -408,6 +522,9 @@ export function bootGeminekoHive() {
       legendViaAll: '经 @all 广播',
       legendNoMention: '仅发帖未点名',
       legendAllNote: '@all 广播数，开启“展开 @all”可连线',
+      hiveLegendDone: '已完成猫窝',
+      hiveLegendSent: '刚刚传话',
+      hiveLegendWait: '等待回复',
       // Board & Overview & Modal
       searchPlaceholder: '搜索喵讯',
       fromAnyone: '所有发帖喵',
@@ -456,6 +573,9 @@ export function bootGeminekoHive() {
       legendViaAll: '经由 @all 触发',
       legendNoMention: '未点名他人',
       legendAllNote: '@all 广播帖数，勾选展开可连线',
+      hiveLegendDone: '已完成任务',
+      hiveLegendSent: '刚发送消息',
+      hiveLegendWait: '等待响应',
       searchPlaceholder: '搜索消息',
       fromAnyone: '来自任意成员',
       toAnyone: '提及任意成员',
@@ -503,6 +623,9 @@ export function bootGeminekoHive() {
       legendViaAll: 'via @all',
       legendNoMention: 'posted with no mention',
       legendAllNote: '@all posts, drawn by Expand @all',
+      hiveLegendDone: 'Tasks done',
+      hiveLegendSent: 'Message just sent',
+      hiveLegendWait: 'Waiting on',
       searchPlaceholder: 'Search',
       fromAnyone: 'From anyone',
       toAnyone: 'To anyone',
@@ -645,6 +768,15 @@ export function bootGeminekoHive() {
     setTextIfChanged(document.getElementById('raw-copy-label'), L.copyBtn);
     setTextIfChanged(document.querySelector('.gif-modal-hint'), L.gifHint);
     setTextIfChanged(document.getElementById('gif-modal-open'), L.gifOpenTab);
+
+    // 猫窝图谱底部图例三语汉化（保留 <i> 色标）
+    for (const keyBar of document.querySelectorAll('.hv-key')) {
+      setNodeTextEdge(keyBar.querySelector('i.hv-kd')?.parentElement, L.hiveLegendDone, true);
+      setNodeTextEdge(keyBar.querySelector('i.hv-km')?.parentElement, L.hiveLegendSent, true);
+      setNodeTextEdge(keyBar.querySelector('i.hv-kw')?.parentElement, L.hiveLegendWait, true);
+    }
+
+    transformHiveCellsToCatNests();
   }
 
   /**
@@ -785,6 +917,103 @@ export function bootGeminekoHive() {
     if (action === 'editing') return 'gn-act-editing';
     if (action === 'running') return 'gn-act-running';
     return '';
+  }
+
+  /**
+   * 将原生「猫窝图谱」svg.hv-svg 内的平顶六边形单元格无损变形为可爱猫耳软垫猫窝；
+   * 当切换为「仅换头像（avatar-only）」时自动还原为原始六边形路径。
+   */
+  function transformHiveCellsToCatNests() {
+    const svgs = document.querySelectorAll('svg.hv-svg');
+    if (!svgs.length) return;
+    const minimal = prefs.themeMode === 'avatar-only';
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    for (const svg of svgs) {
+      const paths = svg.querySelectorAll('path.hv-cell, path.hv-prog, path.hv-selring');
+      if (minimal) {
+        for (const p of paths) {
+          if (p.dataset.gnOrigD) {
+            setAttrIfChanged(p, 'd', p.dataset.gnOrigD);
+          }
+          p.classList.remove('gn-nest-coord', 'gn-nest-coord-prog');
+          delete p.dataset.gnCatnestApplied;
+        }
+        const existingLayer = svg.querySelector('g.gn-catnest-layer');
+        if (existingLayer) existingLayer.remove();
+        delete svg.dataset.gnDecoSig;
+        continue;
+      }
+
+      const decoChunks = [];
+      const sigParts = [];
+
+      for (const p of paths) {
+        let geom = null;
+        if (p.dataset.gnGeom) {
+          const [gx, gy, gr] = p.dataset.gnGeom.split(',').map(Number);
+          if (Number.isFinite(gx) && Number.isFinite(gy) && Number.isFinite(gr)) {
+            geom = { cx: gx, cy: gy, r: gr };
+          }
+        }
+        if (!geom) {
+          const rawD = p.dataset.gnOrigD || p.getAttribute('d') || '';
+          const parsed = parseHexPathGeometry(rawD);
+          if (parsed) {
+            p.dataset.gnOrigD = rawD;
+            p.dataset.gnGeom = `${parsed.cx.toFixed(1)},${parsed.cy.toFixed(1)},${parsed.r.toFixed(1)}`;
+            geom = parsed;
+          }
+        }
+        if (!geom) continue;
+
+        const isSelRing = p.classList.contains('hv-selring');
+        if (p.dataset.gnCatnestApplied !== '1') {
+          const nextD = buildCatNestPath(geom.cx, geom.cy, isSelRing ? geom.r + 1 : geom.r);
+          setAttrIfChanged(p, 'd', nextD);
+          p.dataset.gnCatnestApplied = '1';
+        }
+
+        if (p.classList.contains('hv-cell')) {
+          const isCoord = p.getAttribute('data-c') === '-1';
+          p.classList.toggle('gn-nest-coord', isCoord);
+          const nextEl = p.nextElementSibling;
+          if (nextEl && nextEl.classList.contains('hv-prog')) {
+            nextEl.classList.toggle('gn-nest-coord-prog', isCoord);
+          }
+          sigParts.push(`${p.dataset.gnGeom}:${isCoord ? 1 : 0}`);
+          const chunk = buildCatNestDecoSvg(geom.cx, geom.cy, geom.r, { isCoord });
+          if (chunk) decoChunks.push(chunk);
+        }
+      }
+
+      const decoSig = sigParts.join('|');
+      let layer = svg.querySelector('g.gn-catnest-layer');
+      if (!decoChunks.length) {
+        if (layer) layer.remove();
+        delete svg.dataset.gnDecoSig;
+        continue;
+      }
+
+      if (!layer || svg.dataset.gnDecoSig !== decoSig) {
+        if (!layer) {
+          layer = document.createElementNS(SVG_NS, 'g');
+          layer.setAttribute('class', 'gn-catnest-layer');
+          layer.setAttribute('pointer-events', 'none');
+        }
+        layer.innerHTML = decoChunks.join('');
+        svg.dataset.gnDecoSig = decoSig;
+      }
+
+      const anchor = svg.querySelector('.hv-ln, .hv-ah, .hv-bd, text.hv-t, text.hv-n');
+      if (anchor) {
+        if (layer.parentNode !== svg || layer.nextElementSibling !== anchor) {
+          svg.insertBefore(layer, anchor);
+        }
+      } else if (layer.parentNode !== svg) {
+        svg.appendChild(layer);
+      }
+    }
   }
 
   // 把页面上所有 .beebox 与关系图/消息头像同步为透明 25 态《基米窝》精灵
@@ -928,6 +1157,7 @@ export function bootGeminekoHive() {
     }
 
     applyMemeNicknamesToDom();
+    transformHiveCellsToCatNests();
   }
 
   function refreshAllSprites() {
@@ -1420,7 +1650,13 @@ export function bootGeminekoHive() {
     const mo = new MutationObserver((mutations) => {
       const urgent = mutations.some((m) => {
         const t = m.target;
-        return t && (t.id === 'graph' || t.id === 'replay-label' || (typeof t.closest === 'function' && t.closest('svg#graph')));
+        return (
+          t &&
+          (t.id === 'graph' ||
+            t.id === 'replay-label' ||
+            t.classList?.contains('hv-svg') ||
+            (typeof t.closest === 'function' && (t.closest('svg#graph') || t.closest('svg.hv-svg'))))
+        );
       });
       if (urgent) {
         if (domSyncTimer) {

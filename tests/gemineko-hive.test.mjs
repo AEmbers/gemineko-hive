@@ -16,6 +16,11 @@ import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../s
 import { buildCdpOverlayScript } from '../src/cdp/host-injector.mjs';
 import { createHiveSidecarServer } from '../src/sidecar/server.mjs';
 import { resolveMemeNickname } from '../src/theme/nicknames.js';
+import {
+  buildCatNestDecoSvg,
+  buildCatNestPath,
+  parseHexPathGeometry,
+} from '../src/theme/gemineko-runtime.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -138,6 +143,8 @@ test('buildGeminekoBundle 生成轻量化自包含脚本并包含透明猫窝/�
   assert.match(content, /gn-settings-panel/);
   assert.match(content, /--gn-catnest-pattern/);
   assert.match(content, /extractFullNodeIdFromGroup/);
+  assert.match(content, /transformHiveCellsToCatNests/);
+  assert.match(content, /gn-catnest-layer/);
   assert.match(content, /传话连线/);
   assert.match(content, /隐藏摸鱼猫/);
 });
@@ -347,4 +354,62 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
     await srv.close();
     fs.rmSync(sb.root, { recursive: true, force: true });
   }
+});
+
+test('猫耳软垫猫窝几何解析、安全包络路径与装饰 SVG 生成', () => {
+  const hex = (x, y, r, a0) => {
+    let d = '';
+    for (let k = 0; k < 6; k++) {
+      const a = ((a0 + 60 * k) * Math.PI) / 180;
+      d += `${k ? 'L' : 'M'}${(x + r * Math.cos(a)).toFixed(1)} ${(y + r * Math.sin(a)).toFixed(1)}`;
+    }
+    return `${d}Z`;
+  };
+
+  // 标准平顶六边形与 -120° 进度环六边形均应精准还原
+  const gCell = parseHexPathGeometry(hex(200, 180, 108, 0));
+  assert.ok(gCell);
+  assert.ok(Math.abs(gCell.cx - 200) < 0.2);
+  assert.ok(Math.abs(gCell.cy - 180) < 0.2);
+  assert.ok(Math.abs(gCell.r - 108) < 0.2);
+
+  const gProg = parseHexPathGeometry(hex(200, 180, 106, -120));
+  assert.ok(gProg);
+  assert.ok(Math.abs(gProg.cx - 200) < 0.2);
+  assert.ok(Math.abs(gProg.cy - 180) < 0.2);
+  assert.ok(Math.abs(gProg.r - 106) < 0.2);
+
+  // 含曲线或非法字符串返回 null
+  assert.equal(parseHexPathGeometry(''), null);
+  assert.equal(parseHexPathGeometry('M0 0 C10 10 20 20 30 30 Z'), null);
+  assert.equal(parseHexPathGeometry('M0 0 L10 0 L10 10 Z'), null);
+
+  // 猫耳猫窝路径闭合且全部坐标落在安全包络内（|dx| <= r, dy in [-0.96r, 0.90r]）
+  const nestD = buildCatNestPath(200, 200, 108);
+  assert.ok(nestD.startsWith('M') && nestD.endsWith('Z'));
+  const cCount = (nestD.match(/\bC/g) || []).length;
+  assert.equal(cCount, 10);
+  const coords = nestD.match(/-?\d+(?:\.\d+)?/g).map(Number);
+  assert.ok(coords.length >= 20);
+  for (let i = 0; i < coords.length; i += 2) {
+    const dx = coords[i] - 200;
+    const dy = coords[i + 1] - 200;
+    assert.ok(Math.abs(dx) <= 108 * 0.99, `X 越界: dx=${dx}`);
+    assert.ok(dy >= -108 * 0.95 && dy <= 108 * 0.86, `Y 越界: dy=${dy}`);
+  }
+
+  // 装饰层：协调喵主窝含蝴蝶结、普通大窝含猫爪，tiny 尺寸返回空串
+  const coordDeco = buildCatNestDecoSvg(200, 200, 108, { isCoord: true });
+  assert.match(coordDeco, /gn-nest-ear-inner/);
+  assert.match(coordDeco, /gn-nest-stitch/);
+  assert.match(coordDeco, /gn-nest-cushion/);
+  assert.match(coordDeco, /gn-nest-bow-wing/);
+  assert.doesNotMatch(coordDeco, /gn-nest-paw/);
+
+  const taskDeco = buildCatNestDecoSvg(200, 200, 108, { isCoord: false });
+  assert.match(taskDeco, /gn-nest-ear-inner/);
+  assert.match(taskDeco, /gn-nest-paw/);
+  assert.doesNotMatch(taskDeco, /gn-nest-bow-wing/);
+
+  assert.equal(buildCatNestDecoSvg(200, 200, 24, { isCoord: false }), '');
 });

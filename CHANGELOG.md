@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1] - 2026-11-27
+
+### Changed
+- **关系猫窝图谱六边形无损升级为可爱猫耳软垫猫窝**：
+  - `src/theme/gemineko-runtime.js` 新增 `parseHexPathGeometry`、`buildCatNestPath`、`buildCatNestDecoSvg` 与 `transformHiveCellsToCatNests()`，同帧将 `svg.hv-svg` 内的平顶六边形单元格（`.hv-cell` / `.hv-prog` / `.hv-selring`）变形为圆润双猫耳猫窝，协调喵主窝自带额头蝴蝶结，普通任务窝带底缘小猫爪与柔粉软垫缝线，并在「仅换头像」模式下支持 100% 字节级无损还原；同步补齐图谱底部 `.hv-key` 三语图例汉化；
+  - `src/theme/gemineko-theme.css` 为猫耳软垫猫窝定制奶油粉紫/暖金配色、粉嫩内耳、虚线缝线与樱花粉选中环；
+  - `tests/gemineko-hive.test.mjs` 新增猫窝几何解析、安全包络路径及装饰生成单测。
+
 ## [0.4.0] - 2026-11-27
 
 ### Changed & Added
