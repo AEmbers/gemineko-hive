@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.6.1] - 2026-11-27
+
+### Changed
+- **重铸 `optical-neko`（光学高定哈基米）真·长过渡光学引擎**：
+  - 彻底清除 `optical-neko` 模式下的侧栏粉紫染色、2.5px 实心彩虹顶条、硬紫边与荧光粉紫实心「开启新喵聊」按钮，回归 5 级冷白（`#F5F8FC`/`#EAF0F8`）与深曜（`#0D0F14`/`#090B0F`）通透中性玻璃分层；
+  - 将顶栏/输入栏/Overview 顶条升级为 `1px` **7 阶两端渐隐至 0% 的超长棱镜折射光丝（`--gk-optical-hairline`）**，将「开启新喵聊」重绘为支持 `background-clip: padding-box, border-box` 的通透水晶玻璃按钮；
+  - 将对话区底部 `#gemineko-conv-aurora` 极光拉高至 `46%`，叠加 **6 阶大气散射长过渡 + 42px 柔焦双核极光幕（`gkAuroraHorizonBreath`）+ 底部白核折射辉光**，形成无硬边的液态地平线雾晕；
+  - 新增纯 GPU 零 DOM 侵入的 **鼠标跟随 300px 6 阶角色棱镜色散光边**（`onRimPointerMove` 单 rAF 节流 + `220px` 距离平滑衰减 `--gk-rx`/`--gk-ry`/`--gk-rim-alpha`），鼠标经过输入框、Overview 卡、新喵聊按钮、用户气泡与侧栏选中项时泛起细腻的角色色散高光；
+  - `vivid`（浓郁二次元）与 `minimal`（极简专注）模式保持原样不变。
+
 ## [0.6.0] - 2026-11-27
 
 ### Added & Changed

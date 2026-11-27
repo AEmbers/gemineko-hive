@@ -614,6 +614,9 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /gemineko-host-theme-v5/);
     assert.match(cdpScript, /__GEMINEKO_CDP_OVERLAY_V7__/);
     assert.match(cdpScript, /optical-neko/);
+    assert.match(cdpScript, /--gk-optical-hairline/);
+    assert.match(cdpScript, /gkAuroraHorizonBreath/);
+    assert.match(cdpScript, /--gk-rx/);
     assert.match(cdpScript, /gk-ask-thought-bubble/);
     assert.match(cdpScript, /gk-ask-ponder-img/);
     assert.match(cdpScript, /-ponder\.png/);

@@ -276,6 +276,11 @@ export function buildHostThemeRuntimeSnippet() {
     let nightTimer = null;
     let konamiIdx = 0;
     const KONAMI_SEQ = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+    const RIM_TARGETS_SEL = '.surface-composer-card, div:has(> [data-testid="overview-panel"]), [data-testid="new-conversation-button"], [data-testid="user-message-bubble"], .agy-user-bubble, [data-testid="conversation-row-sidebar"][data-selected="true"]';
+    const litRimEls = new Set();
+    let rimRafId = 0;
+    let lastPtrX = -9999;
+    let lastPtrY = -9999;
 
     function sanitizeLocalCfg(input) {
       const c = input && typeof input === 'object' ? input : {};
@@ -1346,6 +1351,318 @@ pre.gk-code-collapsed {
   color: inherit; font-size: 12px !important; cursor: pointer; display: flex; align-items: center; gap: 7px;
 }
 #\${CTX_MENU_ID} button:hover { background: var(--onyx-selected); }
+
+/* === 9. optical-neko 光学高定模式：超长多阶渐隐光学层 × 鼠标跟随 6 阶棱镜色散光边 × 地平线柔焦极光 === */
+html[data-gk-theme][data-gk-intensity="optical-neko"] {
+  --gk-optical-hairline: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--gk-role-primary) 14%, transparent) 12%,
+    color-mix(in srgb, var(--gk-role-primary) 68%, #ffffff) 34%,
+    rgba(255, 255, 255, 0.96) 50%,
+    color-mix(in srgb, var(--gk-role-accent2) 66%, #ffffff) 66%,
+    color-mix(in srgb, var(--gk-role-accent3) 18%, transparent) 88%,
+    transparent 100%
+  );
+  --gk-optical-rim-grad: radial-gradient(
+    300px circle at var(--gk-rx, -999px) var(--gk-ry, -999px),
+    color-mix(in srgb, var(--gk-optical-rim-core) calc(var(--gk-rim-alpha, 0) * 100%), transparent) 0%,
+    color-mix(in srgb, var(--gk-role-primary) calc(var(--gk-rim-alpha, 0) * 92%), transparent) 16%,
+    color-mix(in srgb, var(--gk-role-accent2) calc(var(--gk-rim-alpha, 0) * 78%), transparent) 38%,
+    color-mix(in srgb, var(--gk-role-accent3) calc(var(--gk-rim-alpha, 0) * 48%), transparent) 62%,
+    color-mix(in srgb, var(--gk-role-primary) calc(var(--gk-rim-alpha, 0) * 14%), transparent) 84%,
+    transparent 100%
+  );
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] {
+  --gk-optical-canvas: #F5F8FC;
+  --gk-optical-sidebar: #EAF0F8;
+  --gk-optical-titlebar: #E6EDF7;
+  --gk-optical-card-fill: rgba(255, 255, 255, 0.94);
+  --gk-optical-glass-fill: rgba(252, 253, 255, 0.90);
+  --gk-optical-sheen: linear-gradient(176deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.76) 38%, rgba(239, 245, 254, 0.52) 100%);
+  --gk-optical-border-top: rgba(255, 255, 255, 0.96);
+  --gk-optical-border-base: rgba(15, 23, 42, 0.085);
+  --gk-optical-shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 1px 2px rgba(15, 23, 42, 0.04), 0 14px 34px -12px rgba(30, 58, 138, 0.11);
+  --gk-optical-shadow-float: inset 0 1px 0 rgba(255, 255, 255, 0.98), 0 2px 6px rgba(15, 23, 42, 0.05), 0 24px 56px -18px rgba(15, 23, 42, 0.18);
+  --gk-optical-rim-core: rgba(255, 255, 255, 0.98);
+  --gk-optical-specular-spot: rgba(255, 255, 255, 0.55);
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] {
+  --gk-optical-canvas: #0D0F14;
+  --gk-optical-sidebar: #090B0F;
+  --gk-optical-titlebar: #0B0D12;
+  --gk-optical-card-fill: rgba(20, 23, 32, 0.93);
+  --gk-optical-glass-fill: rgba(18, 21, 30, 0.88);
+  --gk-optical-sheen: linear-gradient(172deg, rgba(255, 255, 255, 0.068) 0%, rgba(168, 196, 255, 0.022) 34%, rgba(8, 10, 16, 0.22) 100%);
+  --gk-optical-border-top: rgba(255, 255, 255, 0.15);
+  --gk-optical-border-base: rgba(218, 228, 255, 0.08);
+  --gk-optical-shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.36), 0 18px 42px -14px rgba(0, 0, 0, 0.56);
+  --gk-optical-shadow-float: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 4px 12px rgba(0, 0, 0, 0.42), 0 28px 64px -18px rgba(0, 0, 0, 0.68);
+  --gk-optical-rim-core: rgba(255, 255, 255, 0.94);
+  --gk-optical-specular-spot: rgba(232, 242, 255, 0.11);
+}
+
+/* 中性高通透表面层次（去掉粉紫油腻染色，严格排除 Browser Hole） */
+html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-wallpaper="on"]) > body:not([data-has-browser-hole="true"]),
+html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-wallpaper="on"]) :is(.agy-shell, .agy-sheet, [data-testid="sidecar-iframe-slot"], iframe[data-testid="sidecar-iframe"], [data-testid="conversation-view"], .agy-home):not([data-has-browser-hole="true"]) {
+  background-color: var(--gk-optical-canvas) !important;
+  background-image: none !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-wallpaper="on"]) :is(.bg-sidebar, aside.bg-sidebar, div.bg-sidebar, [class*="bg-sidebar"]):not([data-has-browser-hole="true"]) {
+  background-color: var(--gk-optical-sidebar) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) :is(aside.bg-sidebar, div.h-full.bg-sidebar):not([data-has-browser-hole="true"]) {
+  background-image:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--gk-role-primary) 7%, transparent) 0%,
+      color-mix(in srgb, var(--gk-role-primary) 3.5%, transparent) 24%,
+      color-mix(in srgb, var(--gk-role-primary) 1%, transparent) 52%,
+      transparent 78%
+    ),
+    linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--gk-role-accent2) 6.5%, transparent) 0%,
+      color-mix(in srgb, var(--gk-role-accent2) 3%, transparent) 26%,
+      color-mix(in srgb, var(--gk-role-accent3) 0.8%, transparent) 56%,
+      transparent 82%
+    ) !important;
+  background-repeat: no-repeat !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="title-menu-bar"] {
+  background: var(--gk-optical-titlebar) !important;
+  border-bottom: 1px solid var(--gk-optical-border-base) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="pane-titlebar-toolbar"] {
+  background: color-mix(in srgb, var(--gk-optical-canvas) 92%, transparent) !important;
+  border-bottom: 1px solid var(--gk-optical-border-base) !important;
+}
+
+/* 超长 7 阶两端渐隐棱镜光丝（取代生硬 2.5px 彩虹实线） */
+html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="title-menu-bar"]::before {
+  height: 1px !important;
+  background: var(--gk-optical-hairline) !important;
+  opacity: 0.95 !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] .surface-composer-card::before,
+html[data-gk-theme][data-gk-intensity="optical-neko"] div:has(> [data-testid="overview-panel"])::before {
+  left: 10% !important;
+  right: 10% !important;
+  height: 1px !important;
+  background: var(--gk-optical-hairline) !important;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--gk-role-primary) 34%, transparent) !important;
+  opacity: 0.92 !important;
+}
+
+/* 「开启新喵聊」水晶玻璃按钮（彻底去荧光紫大色块，支持鼠标跟随棱镜边框） */
+html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="new-conversation-button"] {
+  color: var(--foreground) !important;
+  border: 1px solid transparent !important;
+  background-color: transparent !important;
+  background-image:
+    var(--gk-optical-sheen),
+    linear-gradient(var(--gk-optical-card-fill), var(--gk-optical-card-fill)),
+    var(--gk-optical-rim-grad),
+    linear-gradient(180deg, var(--gk-optical-border-top) 0%, var(--gk-optical-border-base) 42%, var(--gk-optical-border-base) 100%) !important;
+  background-origin: padding-box, padding-box, border-box, border-box !important;
+  background-clip: padding-box, padding-box, border-box, border-box !important;
+  box-shadow: var(--gk-optical-shadow-card), 0 6px 18px -10px color-mix(in srgb, var(--gk-role-primary) 24%, transparent) !important;
+  filter: none !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="new-conversation-button"]:hover {
+  transform: translateY(-1px) !important;
+  color: var(--gk-role-primary) !important;
+  filter: none !important;
+  box-shadow: var(--gk-optical-shadow-float), 0 10px 24px -10px var(--gk-role-glow) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="new-conversation-button"]::before {
+  color: var(--gk-role-primary) !important;
+  filter: drop-shadow(0 0 6px var(--gk-role-glow)) !important;
+}
+
+/* 悬浮 Overview 卡片：清透长过渡玻璃 + 鼠标跟随棱镜色散边框 + 琉璃半透猫耳尖 */
+html[data-gk-theme][data-gk-intensity="optical-neko"] :is(div:has(> [data-testid="overview-panel"]), [data-testid="overview-panel-host-sibling"]) {
+  border: 1px solid transparent !important;
+  background-color: transparent !important;
+  background-image:
+    var(--gk-optical-sheen),
+    linear-gradient(var(--gk-optical-glass-fill), var(--gk-optical-glass-fill)),
+    var(--gk-optical-rim-grad),
+    linear-gradient(180deg, var(--gk-optical-border-top) 0%, var(--gk-optical-border-base) 42%, var(--gk-optical-border-base) 100%) !important;
+  background-origin: padding-box, padding-box, border-box, border-box !important;
+  background-clip: padding-box, padding-box, border-box, border-box !important;
+  backdrop-filter: blur(22px) saturate(145%) !important;
+  box-shadow: var(--gk-optical-shadow-float) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="overview-panel"] > div:first-child {
+  border-bottom: 1px solid var(--gk-optical-border-base) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gk-role-primary) 5%, transparent) 0%, transparent 100%) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"]:not([data-gk-focus="1"]) div:has(> [data-testid="overview-panel"])::after {
+  opacity: 0.68 !important;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.92) 0%,
+    color-mix(in srgb, var(--gk-role-primary) 72%, #ffffff) 45%,
+    color-mix(in srgb, var(--gk-role-accent2) 55%, transparent) 100%
+  ) !important;
+  filter: drop-shadow(0 -2px 8px color-mix(in srgb, var(--gk-role-primary) 38%, transparent)) !important;
+}
+
+/* 输入框玻璃底座 + 鼠标跟随 300px 棱镜色散边框 */
+html[data-gk-theme][data-gk-intensity="optical-neko"] #antigravity\\.agentSidePanelInputBox > .surface-composer-card,
+html[data-gk-theme][data-gk-intensity="optical-neko"] .surface-composer-card {
+  border: 1px solid transparent !important;
+  background-color: transparent !important;
+  background-image:
+    var(--gk-optical-sheen),
+    linear-gradient(var(--gk-optical-card-fill), var(--gk-optical-card-fill)),
+    var(--gk-optical-rim-grad),
+    linear-gradient(180deg, var(--gk-optical-border-top) 0%, var(--gk-optical-border-base) 42%, var(--gk-optical-border-base) 100%) !important;
+  background-origin: padding-box, padding-box, border-box, border-box !important;
+  background-clip: padding-box, padding-box, border-box, border-box !important;
+  backdrop-filter: blur(20px) saturate(140%) !important;
+  box-shadow: var(--gk-optical-shadow-float) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] #antigravity\\.agentSidePanelInputBox:focus-within > .surface-composer-card,
+html[data-gk-theme][data-gk-intensity="optical-neko"] .surface-composer-card:focus-within {
+  border-color: transparent !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--gk-role-primary) 32%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--gk-role-primary) 10%, transparent),
+    var(--gk-optical-shadow-float) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="model-selector-trigger"], [data-testid="permissions-selector-trigger"]) {
+  background: color-mix(in srgb, var(--gk-optical-card-fill) 86%, var(--gk-role-primary) 4%) !important;
+  border: 1px solid var(--gk-optical-border-base) !important;
+  box-shadow: inset 0 1px 0 var(--gk-optical-border-top) !important;
+}
+
+/* 用户消息气泡 & 侧栏选中项（去硬紫竖条与大块粉紫底，回归通透玻璃 + 棱镜折射细边） */
+html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="user-message-bubble"], .agy-user-bubble) {
+  border: 1px solid transparent !important;
+  background-color: transparent !important;
+  background-image:
+    linear-gradient(120deg, color-mix(in srgb, var(--gk-role-primary) 6%, transparent) 0%, color-mix(in srgb, var(--gk-role-accent2) 3%, transparent) 42%, transparent 82%),
+    linear-gradient(var(--gk-optical-card-fill), var(--gk-optical-card-fill)),
+    var(--gk-optical-rim-grad),
+    linear-gradient(180deg, var(--gk-optical-border-top) 0%, var(--gk-optical-border-base) 42%, var(--gk-optical-border-base) 100%) !important;
+  background-origin: padding-box, padding-box, border-box, border-box !important;
+  background-clip: padding-box, padding-box, border-box, border-box !important;
+  box-shadow: var(--gk-optical-shadow-card) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="user-message-bubble"], .agy-user-bubble)::after {
+  opacity: 0.48 !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row)[data-selected="true"] {
+  border: 1px solid transparent !important;
+  background-color: transparent !important;
+  background-image:
+    linear-gradient(120deg, color-mix(in srgb, var(--gk-role-primary) 8%, transparent) 0%, color-mix(in srgb, var(--gk-role-accent2) 4%, transparent) 44%, transparent 84%),
+    linear-gradient(var(--gk-optical-card-fill), var(--gk-optical-card-fill)),
+    var(--gk-optical-rim-grad),
+    linear-gradient(180deg, var(--gk-optical-border-top) 0%, var(--gk-optical-border-base) 42%, var(--gk-optical-border-base) 100%) !important;
+  background-origin: padding-box, padding-box, border-box, border-box !important;
+  background-clip: padding-box, padding-box, border-box, border-box !important;
+  box-shadow: var(--gk-optical-shadow-card) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row):hover:not([data-selected="true"]) {
+  background-color: color-mix(in srgb, var(--gk-role-primary) 6%, var(--gk-optical-card-fill)) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="project-header"] {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] [data-testid="project-header"]::before {
+  width: 2px !important;
+  opacity: 0.72 !important;
+  background: linear-gradient(180deg, transparent 0%, var(--gk-role-primary) 50%, transparent 100%) !important;
+}
+
+/* 底部地平线 6 阶超长平滑衰减弥散极光（#gemineko-conv-aurora） */
+@keyframes gkAuroraHorizonBreath {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.92; }
+  50% { transform: translate3d(0, -1.5%, 0) scale(1.03); opacity: 1; }
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] #\${AURORA_HOST_ID} {
+  height: 46% !important;
+  overflow: hidden !important;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--gk-role-primary) 14%, transparent) 0%,
+    color-mix(in srgb, var(--gk-role-accent2) 9%, transparent) 14%,
+    color-mix(in srgb, var(--gk-role-accent3) 5%, transparent) 32%,
+    color-mix(in srgb, var(--gk-role-primary) 2%, transparent) 54%,
+    color-mix(in srgb, var(--gk-role-accent2) 0.5%, transparent) 76%,
+    transparent 100%
+  ) !important;
+  opacity: calc(var(--gk-ambient-alpha, 0.85) * 0.98);
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] #\${AURORA_HOST_ID} {
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--gk-role-primary) 20%, transparent) 0%,
+    color-mix(in srgb, var(--gk-role-accent2) 13%, transparent) 15%,
+    color-mix(in srgb, var(--gk-role-accent3) 7%, transparent) 34%,
+    color-mix(in srgb, var(--gk-role-primary) 2.5%, transparent) 56%,
+    color-mix(in srgb, var(--gk-role-accent2) 0.7%, transparent) 78%,
+    transparent 100%
+  ) !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] #\${AURORA_HOST_ID}::before {
+  content: "";
+  position: absolute;
+  inset: 10% -12% -20% -12%;
+  pointer-events: none;
+  filter: blur(42px) saturate(125%);
+  background:
+    radial-gradient(
+      52% 84% at 22% 96%,
+      color-mix(in srgb, var(--gk-role-primary) 34%, transparent) 0%,
+      color-mix(in srgb, var(--gk-role-primary) 20%, transparent) 24%,
+      color-mix(in srgb, var(--gk-role-primary) 8%, transparent) 52%,
+      color-mix(in srgb, var(--gk-role-primary) 2%, transparent) 78%,
+      transparent 100%
+    ),
+    radial-gradient(
+      50% 82% at 78% 96%,
+      color-mix(in srgb, var(--gk-role-accent2) 28%, transparent) 0%,
+      color-mix(in srgb, var(--gk-role-accent2) 16%, transparent) 24%,
+      color-mix(in srgb, var(--gk-role-accent2) 6%, transparent) 52%,
+      color-mix(in srgb, var(--gk-role-accent2) 1.5%, transparent) 78%,
+      transparent 100%
+    ),
+    radial-gradient(
+      46% 70% at 50% 94%,
+      color-mix(in srgb, var(--gk-role-accent3) 22%, transparent) 0%,
+      color-mix(in srgb, var(--gk-role-accent3) 11%, transparent) 28%,
+      color-mix(in srgb, var(--gk-role-accent3) 3.5%, transparent) 58%,
+      transparent 100%
+    );
+  animation: gkAuroraHorizonBreath 9s ease-in-out infinite;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"] #\${AURORA_HOST_ID}::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 42%;
+  pointer-events: none;
+  background: radial-gradient(
+    56% 52% at 50% 100%,
+    var(--gk-optical-specular-spot) 0%,
+    color-mix(in srgb, var(--gk-role-primary) 20%, transparent) 24%,
+    color-mix(in srgb, var(--gk-role-accent2) 11%, transparent) 52%,
+    color-mix(in srgb, var(--gk-role-accent3) 3%, transparent) 78%,
+    transparent 100%
+  );
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [data-gk-motion="off"]) #\${AURORA_HOST_ID}::before {
+  animation: none !important;
+}
+html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [data-gk-wallpaper="on"]) #\${AURORA_HOST_ID} {
+  opacity: 0 !important;
+}
       \`;
       document.head.appendChild(st);
       return st;
@@ -1836,6 +2153,7 @@ pre.gk-code-collapsed {
     }
 
     function onVisibilityOrFocus() {
+      if (document.hidden) clearAllOpticalRims();
       const vid = document.querySelector('#' + WP_LAYER_ID + ' video');
       if (!vid) return;
       if (document.hidden || !document.hasFocus()) {
@@ -1843,6 +2161,79 @@ pre.gk-code-collapsed {
       } else {
         try { vid.play()?.catch?.(() => {}); } catch {}
       }
+    }
+
+    function isOpticalRimActive() {
+      if (stopped || !cfg.enabled || cfg.focusMode || cfg.motionLevel === 'off') return false;
+      if (typeof document !== 'undefined' && document.hidden) return false;
+      const curInt = cfg.themeIntensity === 'balanced' ? 'optical-neko' : (cfg.themeIntensity || 'optical-neko');
+      return curInt === 'optical-neko';
+    }
+
+    function clearRimProps(el) {
+      if (!el?.style) return;
+      el.style.removeProperty('--gk-rx');
+      el.style.removeProperty('--gk-ry');
+      el.style.removeProperty('--gk-rim-alpha');
+    }
+
+    function clearAllOpticalRims() {
+      if (rimRafId) {
+        cancelAnimationFrame(rimRafId);
+        rimRafId = 0;
+      }
+      for (const el of litRimEls) clearRimProps(el);
+      litRimEls.clear();
+    }
+
+    function flushOpticalRimFrame() {
+      rimRafId = 0;
+      if (!isOpticalRimActive()) {
+        clearAllOpticalRims();
+        return;
+      }
+      const px = lastPtrX;
+      const py = lastPtrY;
+      const vh = window.innerHeight || 900;
+      const vw = window.innerWidth || 1440;
+      const maxDist = 220;
+      const nextLit = new Set();
+      const targets = document.querySelectorAll(RIM_TARGETS_SEL);
+      for (const el of targets) {
+        if (!el || !el.isConnected) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 8 || r.height < 8 || r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue;
+        const dx = px < r.left ? r.left - px : (px > r.right ? px - r.right : 0);
+        const dy = py < r.top ? r.top - py : (py > r.bottom ? py - r.bottom : 0);
+        const dist = Math.hypot(dx, dy);
+        if (dist <= maxDist) {
+          const alpha = Math.pow(Math.max(0, 1 - dist / maxDist), 0.72);
+          el.style.setProperty('--gk-rx', (px - r.left).toFixed(1) + 'px');
+          el.style.setProperty('--gk-ry', (py - r.top).toFixed(1) + 'px');
+          el.style.setProperty('--gk-rim-alpha', alpha.toFixed(3));
+          nextLit.add(el);
+        }
+      }
+      for (const prevEl of litRimEls) {
+        if (!nextLit.has(prevEl)) clearRimProps(prevEl);
+      }
+      litRimEls.clear();
+      for (const el of nextLit) litRimEls.add(el);
+    }
+
+    function onRimPointerMove(e) {
+      if (!e || !Number.isFinite(e.clientX) || !Number.isFinite(e.clientY)) return;
+      lastPtrX = e.clientX;
+      lastPtrY = e.clientY;
+      if (!rimRafId && isOpticalRimActive()) {
+        rimRafId = requestAnimationFrame(flushOpticalRimFrame);
+      }
+    }
+
+    function onRimPointerLeave() {
+      lastPtrX = -9999;
+      lastPtrY = -9999;
+      clearAllOpticalRims();
     }
 
     function syncNightLamp() {
@@ -2414,6 +2805,7 @@ pre.gk-code-collapsed {
 
     function applyConfig(nextCfg) {
       cfg = sanitizeLocalCfg(nextCfg);
+      if (!isOpticalRimActive()) clearAllOpticalRims();
       const act = ctx.getActivity();
       applyThemeDom(act);
       syncMiniBarState();
@@ -2460,6 +2852,8 @@ pre.gk-code-collapsed {
     document.addEventListener('visibilitychange', onVisibilityOrFocus);
     window.addEventListener('focus', onVisibilityOrFocus);
     window.addEventListener('blur', onVisibilityOrFocus);
+    document.addEventListener('pointermove', onRimPointerMove, { passive: true });
+    document.documentElement?.addEventListener('pointerleave', onRimPointerLeave, { passive: true });
     document.addEventListener('contextmenu', onDocumentContextMenu);
     document.addEventListener('click', onGlobalClickCloseMenus, true);
     window.addEventListener('keydown', onKeyDownComposerOrEgg, true);
@@ -2473,12 +2867,15 @@ pre.gk-code-collapsed {
     function unmount() {
       stopped = true;
       clearAskStage();
+      clearAllOpticalRims();
       if (schemeObserver) schemeObserver.disconnect();
       if (workbenchTimer) clearInterval(workbenchTimer);
       if (nightTimer) clearInterval(nightTimer);
       document.removeEventListener('visibilitychange', onVisibilityOrFocus);
       window.removeEventListener('focus', onVisibilityOrFocus);
       window.removeEventListener('blur', onVisibilityOrFocus);
+      document.removeEventListener('pointermove', onRimPointerMove);
+      document.documentElement?.removeEventListener('pointerleave', onRimPointerLeave);
       document.removeEventListener('contextmenu', onDocumentContextMenu);
       document.removeEventListener('click', onGlobalClickCloseMenus, true);
       window.removeEventListener('keydown', onKeyDownComposerOrEgg, true);
