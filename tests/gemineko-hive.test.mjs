@@ -462,14 +462,17 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(validateWatermarkImagePath(samplePng).ok, true);
   assert.equal(validateWatermarkImagePath('\\\\evil-server\\share\\wm.png').ok, false);
 
-  // 验证 v0.5.1 开箱默认值：浓郁二次元 + 角落立绘水印 + 自动跟随系统语言(中文萌系)
+  // 验证 v0.5.1 开箱默认值：浓郁二次元 + 角色星徽旋转指示器 + 角落立绘水印 + 自动跟随系统语言(中文萌系)
   assert.equal(DEFAULT_HOST_THEME_CONFIG.themeIntensity, 'vivid');
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.spinnerStyle, 'role-motif');
   assert.equal(DEFAULT_HOST_THEME_CONFIG.watermark.enabled, true);
   assert.equal(DEFAULT_HOST_THEME_CONFIG.watermark.role, 'follow-role');
   assert.equal(DEFAULT_HOST_THEME_CONFIG.i18n.mode, 'auto');
   assert.equal(DEFAULT_HOST_THEME_CONFIG.i18n.autoChineseStyle, 'neko-zh');
   assert.equal(ROLE_PALETTES.carbon.crestTitle, 'CARBON · GRAPHENE');
   assert.equal(ROLE_PALETTES.neon.crestTitle, 'NEON · GEMINEKO');
+  assert.equal(sanitizeHostThemeConfig({ spinnerStyle: 'invalid' }).spinnerStyle, 'role-motif');
+  assert.equal(sanitizeHostThemeConfig({ spinnerStyle: 'paw-bounce' }).spinnerStyle, 'paw-bounce');
 
   // 验证内置宿主全量汉化双语模式并保留 Antigravity 品牌词
   assert.equal(translateHostText('Antigravity', 'neko-zh'), null);
@@ -598,6 +601,11 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /CARBON · GRAPHENE/);
     assert.match(cdpScript, /initHostI18nEngine/);
     assert.match(cdpScript, /thinking-collapsible-trigger/);
+    assert.match(cdpScript, /status-loading-spinner/);
+    assert.match(cdpScript, /gkSpinnerOrbit/);
+    assert.match(cdpScript, /gkSpinnerPawBounce/);
+    assert.match(cdpScript, /--gk-spinner-role-svg/);
+    assert.match(cdpScript, /animate-shimmer-text/);
     assert.match(cdpScript, /conversation-row-sidebar/);
     assert.match(cdpScript, /user-message-bubble/);
     assert.match(cdpScript, /surface-composer-card/);

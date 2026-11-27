@@ -120,6 +120,64 @@ function buildRoleCrestSvgMap() {
   return out;
 }
 
+/** 生成 5 位角色专属 18×18 高对比旋转状态星徽 SVG data URI */
+function buildRoleSpinnerSvgMap() {
+  const out = {};
+  for (const [id, pal] of Object.entries(ROLE_PALETTES)) {
+    let body = '';
+    if (id === 'neon') {
+      body = [
+        `<circle cx="10" cy="10" r="8" stroke="${pal.primary}" stroke-width="1.4" stroke-dasharray="6 3" opacity="0.85"/>`,
+        `<path d="${star4Path(10, 10, 7.2, 2.0)}" fill="${pal.accent2}" stroke="#ffffff" stroke-width="0.65"/>`,
+        `<circle cx="10" cy="10" r="2.1" fill="${pal.accent3}"/>`,
+      ].join('');
+    } else if (id === 'hydrogen') {
+      body = [
+        `<circle cx="10" cy="10" r="7.8" stroke="${pal.primary}" stroke-width="1.35" stroke-dasharray="10 4" opacity="0.85"/>`,
+        `<path d="${star4Path(10, 10, 6.8, 1.9)}" fill="${pal.primary}" stroke="#ffffff" stroke-width="0.6"/>`,
+        `<path d="${star4Path(15.5, 4.5, 2.8, 0.8)}" fill="${pal.accent3}"/>`,
+      ].join('');
+    } else if (id === 'carbon') {
+      body = [
+        `<polygon points="10,1.8 17.1,5.9 17.1,14.1 10,18.2 2.9,14.1 2.9,5.9" stroke="${pal.primary}" stroke-width="1.5" fill="${pal.primary}" fill-opacity="0.16"/>`,
+        `<polygon points="10,4.8 14.5,10 10,15.2 5.5,10" fill="${pal.accent2}" stroke="${pal.accent3}" stroke-width="0.7"/>`,
+      ].join('');
+    } else if (id === 'claude') {
+      body = [
+        `<path d="M10 2.5 C12.2 2.5 12.2 7.8 10 7.8 C7.8 7.8 7.8 2.5 10 2.5 M10 12.2 C12.2 12.2 12.2 17.5 10 17.5 C7.8 17.5 7.8 12.2 10 12.2 M2.5 10 C2.5 7.8 7.8 7.8 7.8 10 C7.8 12.2 2.5 12.2 2.5 10 M12.2 10 C12.2 7.8 17.5 7.8 17.5 10 C17.5 12.2 12.2 12.2 12.2 10" fill="${pal.primary}" stroke="#ffffff" stroke-width="0.55"/>`,
+        `<circle cx="10" cy="10" r="2.3" fill="${pal.accent2}"/>`,
+      ].join('');
+    } else {
+      body = [
+        `<circle cx="10" cy="10" r="7.8" stroke="${pal.primary}" stroke-width="1.35" stroke-dasharray="4 3" opacity="0.88"/>`,
+        `<polygon points="10,2.6 17.4,10 10,17.4 2.6,10" stroke="${pal.accent2}" stroke-width="1.25" fill="${pal.primary}" fill-opacity="0.22"/>`,
+        `<circle cx="10" cy="10" r="2.3" fill="${pal.accent3}"/>`,
+      ].join('');
+    }
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">${body}</svg>`;
+    out[id] = `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+  }
+  return out;
+}
+
+/** 生成 5 位角色配色 Q 弹发光小猫肉垫 SVG data URI */
+function buildPawSpinnerSvgMap() {
+  const out = {};
+  for (const [id, pal] of Object.entries(ROLE_PALETTES)) {
+    const svg = [
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">',
+      `<ellipse cx="10" cy="13.2" rx="4.8" ry="3.6" fill="${pal.primary}" stroke="#ffffff" stroke-width="0.7"/>`,
+      `<circle cx="5.0" cy="7.9" r="1.75" fill="${pal.accent2}"/>`,
+      `<circle cx="8.4" cy="5.7" r="1.85" fill="${pal.primary}"/>`,
+      `<circle cx="11.7" cy="5.7" r="1.85" fill="${pal.accent2}"/>`,
+      `<circle cx="15.0" cy="7.9" r="1.75" fill="${pal.accent3}"/>`,
+      '</svg>',
+    ].join('');
+    out[id] = `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+  }
+  return out;
+}
+
 /**
  * 构造在宿主 Renderer 浏览器上下文执行的主题、全组件重绘与联动彩蛋代码片段（定义 initHostThemeSuite）。
  * @returns {string}
@@ -130,6 +188,8 @@ export function buildHostThemeRuntimeSnippet() {
   const defaultCfgJson = JSON.stringify(DEFAULT_HOST_THEME_CONFIG);
   const rolePatternsJson = JSON.stringify(buildRolePatternMap());
   const roleCrestsJson = JSON.stringify(buildRoleCrestSvgMap());
+  const roleSpinnersJson = JSON.stringify(buildRoleSpinnerSvgMap());
+  const pawSpinnersJson = JSON.stringify(buildPawSpinnerSvgMap());
 
   return `
   function initHostThemeSuite(ctx) {
@@ -138,6 +198,8 @@ export function buildHostThemeRuntimeSnippet() {
     const DEFAULT_CFG = ${defaultCfgJson};
     const ROLE_PATTERNS = ${rolePatternsJson};
     const ROLE_CREST_SVGS = ${roleCrestsJson};
+    const ROLE_SPINNERS = ${roleSpinnersJson};
+    const PAW_SPINNERS = ${pawSpinnersJson};
     const THEME_STYLE_ID = 'gemineko-host-theme-v5';
     const WP_LAYER_ID = 'gemineko-wallpaper-layer';
     const AURORA_HOST_ID = 'gemineko-conv-aurora';
@@ -462,8 +524,75 @@ html[data-gk-theme] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-r
   pointer-events: none;
 }
 
+/* === 3.5 运行旋转指示器（[data-testid="status-loading-spinner"] 四点旋转）与思考扫光主题化 === */
+html[data-gk-theme]:not([data-gk-spinner="native"]) [data-testid="conversation-row-sidebar"]:has([data-testid="status-loading-spinner"]) {
+  background: linear-gradient(95deg, color-mix(in srgb, var(--gk-role-primary) 13%, var(--card)), color-mix(in srgb, var(--gk-role-accent2) 7%, transparent)) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 34%, transparent) !important;
+  box-shadow: 0 4px 14px -8px var(--gk-role-glow) !important;
+}
+html[data-gk-theme]:not([data-gk-spinner="native"]) [data-testid="status-loading-spinner"] {
+  position: relative !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+}
+html[data-gk-theme]:is([data-gk-spinner="role-motif"], [data-gk-spinner="paw-bounce"]) [data-testid="status-loading-spinner"] > [data-agent-state-dot] {
+  opacity: 0 !important;
+}
+@keyframes gkSpinnerOrbit {
+  0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.92); }
+  50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.08); }
+  100% { transform: translate(-50%, -50%) rotate(360deg) scale(0.92); }
+}
+@keyframes gkSpinnerPawBounce {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-10deg) scale(0.92); }
+  50% { transform: translate(-50%, -54%) rotate(10deg) scale(1.10); }
+}
+html[data-gk-theme]:is([data-gk-spinner="role-motif"], [data-gk-spinner="paw-bounce"]) [data-testid="status-loading-spinner"]::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 17px;
+  height: 17px;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 5px var(--gk-role-glow));
+}
+html[data-gk-theme][data-gk-spinner="role-motif"] [data-testid="status-loading-spinner"]::before {
+  background-image: var(--gk-spinner-role-svg);
+  animation: gkSpinnerOrbit 2.4s linear infinite;
+}
+html[data-gk-theme][data-gk-spinner="paw-bounce"] [data-testid="status-loading-spinner"]::before {
+  background-image: var(--gk-spinner-paw-svg);
+  animation: gkSpinnerPawBounce 1.15s ease-in-out infinite;
+}
+html[data-gk-theme][data-gk-spinner="prism-dots"] [data-testid="status-loading-spinner"] {
+  filter: drop-shadow(0 0 5px var(--gk-role-glow));
+}
+html[data-gk-theme][data-gk-spinner="prism-dots"] [data-testid="status-loading-spinner"] > [data-agent-state-dot]:nth-child(1) {
+  background-color: var(--gk-role-primary) !important;
+}
+html[data-gk-theme][data-gk-spinner="prism-dots"] [data-testid="status-loading-spinner"] > [data-agent-state-dot]:nth-child(2) {
+  background-color: var(--gk-role-accent2) !important;
+}
+html[data-gk-theme][data-gk-spinner="prism-dots"] [data-testid="status-loading-spinner"] > [data-agent-state-dot]:nth-child(3) {
+  background-color: var(--gk-role-accent3) !important;
+}
+html[data-gk-theme][data-gk-spinner="prism-dots"] [data-testid="status-loading-spinner"] > [data-agent-state-dot]:nth-child(4) {
+  background-color: color-mix(in srgb, var(--gk-role-primary) 55%, #ffffff) !important;
+}
+html[data-gk-theme]:is([data-gk-focus="1"], [data-gk-motion="off"]) [data-testid="status-loading-spinner"]::before {
+  animation: none !important;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]):not([data-gk-focus="1"]) .animate-shimmer-text .shimmer-text-content {
+  color: color-mix(in srgb, var(--foreground) 72%, var(--gk-role-primary) 28%) !important;
+}
+
 /* === 4. 截图 2 红圈：悬浮 Overview 卡片全量二次元猫窝重绘 === */
-html[data-gk-theme] div:has(> [data-testid="overview-panel"]) {
+html[data-gk-theme] :is(div:has(> [data-testid="overview-panel"]), [data-testid="overview-panel-host-sibling"]) {
   position: relative !important;
   background: color-mix(in srgb, var(--glass) 92%, var(--gk-role-primary) 8%) !important;
   background-image: var(--gk-surface-sheen) !important;
@@ -1065,7 +1194,7 @@ pre.gk-code-collapsed {
       const root = document.documentElement;
       if (!root) return;
       if (!cfg.enabled) {
-        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
+        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
           root.removeAttribute(attr);
         }
         for (const id of [THEME_STYLE_ID, AURORA_HOST_ID, HOME_STAGE_ID, WATERMARK_ID]) {
@@ -1083,11 +1212,13 @@ pre.gk-code-collapsed {
       const roleId = resolveActiveRoleId(activity);
       const pal = ROLE_PALETTES[roleId] || ROLE_PALETTES.neon;
       const intensity = cfg.themeIntensity || 'vivid';
+      const spinnerStyle = cfg.spinnerStyle || 'role-motif';
 
       root.setAttribute('data-gk-theme', presetId);
       root.setAttribute('data-gk-scheme', presetObj.scheme);
       root.setAttribute('data-gk-role', roleId);
       root.setAttribute('data-gk-intensity', intensity);
+      root.setAttribute('data-gk-spinner', spinnerStyle);
       root.setAttribute('data-gk-radius', cfg.cornerRadius || 'soft');
       root.setAttribute('data-gk-motion', cfg.motionLevel || 'standard');
       root.setAttribute('data-gk-focus', cfg.focusMode ? '1' : '0');
@@ -1104,6 +1235,8 @@ pre.gk-code-collapsed {
       root.style.setProperty('--gk-role-spark', pal.sparkColor || pal.primary);
       root.style.setProperty('--gk-role-tint', presetObj.scheme === 'dark' ? (pal.tintDark || 'rgba(99,102,241,0.16)') : (pal.tintLight || 'rgba(99,102,241,0.09)'));
       root.style.setProperty('--gk-catnest-pattern', resolvePatternUrl(roleId, presetObj.scheme, intensity));
+      root.style.setProperty('--gk-spinner-role-svg', ROLE_SPINNERS[roleId] || ROLE_SPINNERS.neon);
+      root.style.setProperty('--gk-spinner-paw-svg', PAW_SPINNERS[roleId] || PAW_SPINNERS.neon);
       root.style.setProperty('--gk-aurora-1', pal.aurora1);
       root.style.setProperty('--gk-aurora-2', pal.aurora2);
       root.style.setProperty('--gk-aurora-3', pal.aurora3);
@@ -1630,6 +1763,13 @@ pre.gk-code-collapsed {
           <button class="gk-mini-chip" data-intensity="balanced">均衡日常</button>
           <button class="gk-mini-chip" data-intensity="minimal">极简专注</button>
         </div>
+        <div class="gk-mini-label">运行加载动效：</div>
+        <div class="gk-mini-row">
+          <button class="gk-mini-chip" data-spinner="role-motif">角色星徽</button>
+          <button class="gk-mini-chip" data-spinner="paw-bounce">弹跳肉垫</button>
+          <button class="gk-mini-chip" data-spinner="prism-dots">炫彩四点</button>
+          <button class="gk-mini-chip" data-spinner="native">原生灰点</button>
+        </div>
         <div class="gk-mini-label">反重力宿主汉化：</div>
         <div class="gk-mini-row">
           <button class="gk-mini-chip" data-i18n="auto">跟随系统</button>
@@ -1649,6 +1789,7 @@ pre.gk-code-collapsed {
         if (!btn) return;
         const preset = btn.getAttribute('data-preset');
         const intensity = btn.getAttribute('data-intensity');
+        const spinner = btn.getAttribute('data-spinner');
         const i18nMode = btn.getAttribute('data-i18n');
         const act = btn.getAttribute('data-act');
         if (preset) {
@@ -1657,6 +1798,9 @@ pre.gk-code-collapsed {
         } else if (intensity) {
           applyConfig({ ...cfg, enabled: true, themeIntensity: intensity });
           persistPatch({ enabled: true, themeIntensity: intensity });
+        } else if (spinner) {
+          applyConfig({ ...cfg, enabled: true, spinnerStyle: spinner });
+          persistPatch({ enabled: true, spinnerStyle: spinner });
         } else if (i18nMode) {
           const nextI18n = { ...(cfg.i18n || {}), mode: i18nMode };
           applyConfig({ ...cfg, i18n: nextI18n });
@@ -1693,6 +1837,9 @@ pre.gk-code-collapsed {
       });
       bar.querySelectorAll('[data-intensity]').forEach((b) => {
         b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-intensity') === (cfg.themeIntensity || 'vivid'));
+      });
+      bar.querySelectorAll('[data-spinner]').forEach((b) => {
+        b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-spinner') === (cfg.spinnerStyle || 'role-motif'));
       });
       bar.querySelectorAll('[data-i18n]').forEach((b) => {
         b.classList.toggle('is-active', b.getAttribute('data-i18n') === (cfg.i18n?.mode || 'auto'));
@@ -2017,10 +2164,10 @@ pre.gk-code-collapsed {
       }
       const root = document.documentElement;
       if (root) {
-        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
+        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
           root.removeAttribute(attr);
         }
-        for (const prop of ['--gk-role-primary','--gk-role-accent2','--gk-role-accent3','--gk-role-glow','--gk-role-gradient','--gk-role-spark','--gk-role-tint','--gk-catnest-pattern','--gk-aurora-1','--gk-aurora-2','--gk-aurora-3','--gk-ambient-alpha','--gk-watermark-opacity']) {
+        for (const prop of ['--gk-role-primary','--gk-role-accent2','--gk-role-accent3','--gk-role-glow','--gk-role-gradient','--gk-role-spark','--gk-role-tint','--gk-catnest-pattern','--gk-spinner-role-svg','--gk-spinner-paw-svg','--gk-aurora-1','--gk-aurora-2','--gk-aurora-3','--gk-ambient-alpha','--gk-watermark-opacity']) {
           root.style.removeProperty(prop);
         }
       }

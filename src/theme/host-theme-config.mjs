@@ -30,6 +30,7 @@ export const ALLOWED_ACCENT_MODES = new Set([
 ]);
 
 export const ALLOWED_MOTION_LEVELS = new Set(['standard', 'subtle', 'off']);
+export const ALLOWED_SPINNER_STYLES = new Set(['role-motif', 'paw-bounce', 'prism-dots', 'native']);
 export const ALLOWED_CORNER_RADIUS = new Set(['compact', 'soft', 'round']);
 export const ALLOWED_THEME_INTENSITIES = new Set(['vivid', 'balanced', 'minimal']);
 export const ALLOWED_WATERMARK_ROLES = new Set([
@@ -430,6 +431,7 @@ export const DEFAULT_HOST_THEME_CONFIG = {
   preset: 'auto',
   accentMode: 'follow-role',
   themeIntensity: 'vivid',
+  spinnerStyle: 'role-motif',
   focusMode: false,
   motionLevel: 'standard',
   cornerRadius: 'soft',
@@ -584,6 +586,9 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
   const themeIntensity = ALLOWED_THEME_INTENSITIES.has(src.themeIntensity)
     ? src.themeIntensity
     : (ALLOWED_THEME_INTENSITIES.has(b.themeIntensity) ? b.themeIntensity : 'vivid');
+  const spinnerStyle = ALLOWED_SPINNER_STYLES.has(src.spinnerStyle)
+    ? src.spinnerStyle
+    : (ALLOWED_SPINNER_STYLES.has(b.spinnerStyle) ? b.spinnerStyle : 'role-motif');
   const motionLevel = ALLOWED_MOTION_LEVELS.has(src.motionLevel)
     ? src.motionLevel
     : (ALLOWED_MOTION_LEVELS.has(b.motionLevel) ? b.motionLevel : 'standard');
@@ -645,6 +650,7 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
     preset,
     accentMode,
     themeIntensity,
+    spinnerStyle,
     focusMode: asBool(src.focusMode, asBool(b.focusMode, false)),
     motionLevel,
     cornerRadius,

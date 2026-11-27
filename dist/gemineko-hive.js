@@ -1014,6 +1014,15 @@ function createThemeWorkshopController(deps) {
               <option value="round" ${c.cornerRadius === 'round' ? 'selected' : ''}>圆润胶囊</option>
             </select>
           </div>
+          <div class="gn-ws-row">
+            <span>加载动效：</span>
+            <select data-ws-field="spinnerStyle">
+              <option value="role-motif" ${(c.spinnerStyle || 'role-motif') === 'role-motif' ? 'selected' : ''}>5角色专属星徽</option>
+              <option value="paw-bounce" ${c.spinnerStyle === 'paw-bounce' ? 'selected' : ''}>弹跳发光猫肉垫</option>
+              <option value="prism-dots" ${c.spinnerStyle === 'prism-dots' ? 'selected' : ''}>炫彩四色旋转点</option>
+              <option value="native" ${c.spinnerStyle === 'native' ? 'selected' : ''}>原版灰点</option>
+            </select>
+          </div>
         </div>
 
         <div class="gn-ws-card">
