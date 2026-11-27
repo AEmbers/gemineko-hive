@@ -18,10 +18,10 @@
   - 将 [host-injector.mjs](src/cdp/host-injector.mjs)、[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs) 与 [host-meme-runtime.mjs](src/cdp/host-meme-runtime.mjs) 中的 Dock 猫娘、行内小猫、首页角色、猫爪大纲球与表情缩略图全部联动 `var(--gk-host-font-scale)` 缩放。
 
 ### Changed & Upgraded
-- **品牌视觉同源双生重塑（锚定官方三视图 [q-neon.png](assets/triviews/q-neon.png) × Google Gemini 四色光学棱镜）**：
-  - **首页大 Logo（`assets/sprites/home-star-gem-light.png` / `home-star-gem-dark.png`）**：严格锚定正统 Neon 哈基米官方三视图（露肩白紫金边振袖礼服、双深蓝蝴蝶结、蓝→青→黄→粉紫彩虹波浪大卷发与猫尾、左玫粉右金琥珀异色星瞳）与正统 Google Gemini 四色光学玻璃棱镜星芒共生，经四向泛洪精抠、封闭缝隙镂空与去白边色溢生成 `256×256` RGBA 双底透明素材；
-  - **插件图标（`assets/logo.png`）**：同源双生无错位紧致特写重构（前景完整对称 Neon 猫耳双丸子头大特写 + 左下角独立锚定 Google 四色棱镜星芒，杜绝棱镜尖角劈裂双耳/头骨），兼顾 `24~48px` 小尺寸锐利辨识；
-  - **无框端正悬浮重构（[src/cdp/host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs)）**：修复 `readHomeGemDataUri` 硬编码读取 `assets/logo.png` 导致始终带紫方框的 Bug，将 `#gemineko-home-emblem` 升级为 **`120×120px` 无框纯透明端正呼吸悬浮徽章**（轮廓 `drop-shadow` + `mask-image` 贴合扫光），移除常态歪斜旋转并收敛鼠标视差倾角至优雅的 `±8°/±10°`，同时完整保留左上角 `28px` 发光纯白猫爪按钮不变。
+- **品牌视觉终极升级（「钻石级四芒光学棱镜沉睡 Neon 哈基米」× 四层光学流光动效）**：
+  - **首页大 Logo（`assets/sprites/home-star-gem-light.png` / `home-star-gem-dark.png`）**：将精绘钻石级凹弧四角光学棱镜内沉睡的炫彩 Neon 哈基米经纯黑底手术级泛洪抠图与去黑边色溢（Black-Matte Decontamination）处理，生成 `256×256` RGBA 纯净双底透明大徽章（深色版外轮廓叠冰蓝→极光紫柔和辉光）；
+  - **插件图标（`assets/logo.png`）**：同款钻石棱镜沉睡猫娘置入深邃星夜靛紫微光玻璃底，保持高对比度与多尺寸辨识；
+  - **四层光学流光引擎（[src/cdp/host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs)）**：首页 `#gemineko-home-emblem` 升级为 `128×128px` 无框悬浮舞台，实装「16s 自转极光锥形背光晕（`gkPrismHaloOrbit`） + 7.5s 钻石火彩微呼吸（`gkGemIridescence` / `gkGemIridescenceDark`） + `mask-image` 严格贴合轮廓的三色色散白晶光刃扫光（`gkGemSheenSweep`）与极光切面呼吸流波（`gkPrismFacetFlow`） + 右上/左下错相呼吸星尘（`gkStarTwinkle`）」，同时保留左上角 `28px` 发光纯白猫爪按钮不变。
 
 ## [0.7.4] - 2026-11-27
 

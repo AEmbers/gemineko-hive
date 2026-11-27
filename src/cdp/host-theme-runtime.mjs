@@ -1548,16 +1548,33 @@ pre.gk-code-collapsed {
 }
 @keyframes gkGemIridescence {
   0%, 100% {
-    filter: drop-shadow(0 14px 28px rgba(79, 70, 229, 0.28)) drop-shadow(0 4px 12px rgba(56, 189, 248, 0.24)) saturate(1.06) hue-rotate(-5deg);
+    filter: drop-shadow(0 12px 22px rgba(56, 189, 248, 0.24)) drop-shadow(0 4px 12px rgba(139, 92, 246, 0.16)) saturate(1.02);
   }
   50% {
-    filter: drop-shadow(0 18px 34px rgba(168, 85, 247, 0.34)) drop-shadow(0 6px 16px rgba(236, 72, 153, 0.26)) saturate(1.18) hue-rotate(8deg);
+    filter: drop-shadow(0 15px 28px rgba(168, 85, 247, 0.30)) drop-shadow(0 6px 14px rgba(236, 72, 153, 0.22)) saturate(1.12);
   }
 }
+@keyframes gkGemIridescenceDark {
+  0%, 100% {
+    filter: drop-shadow(0 14px 28px rgba(56, 189, 248, 0.36)) drop-shadow(0 0 18px rgba(139, 92, 246, 0.30)) saturate(1.04);
+  }
+  50% {
+    filter: drop-shadow(0 18px 34px rgba(168, 85, 247, 0.44)) drop-shadow(0 0 24px rgba(236, 72, 153, 0.36)) saturate(1.16);
+  }
+}
+@keyframes gkPrismHaloOrbit {
+  0% { transform: rotate(0deg) scale(0.96); }
+  50% { transform: rotate(180deg) scale(1.06); }
+  100% { transform: rotate(360deg) scale(0.96); }
+}
+@keyframes gkPrismFacetFlow {
+  0%, 100% { background-position: 0% 50%; opacity: 0.48; }
+  50% { background-position: 100% 50%; opacity: 0.84; }
+}
 @keyframes gkGemSheenSweep {
-  0%, 56% { transform: translateX(-150%) rotate(24deg); opacity: 0; }
-  70% { opacity: 0.85; }
-  88%, 100% { transform: translateX(160%) rotate(24deg); opacity: 0; }
+  0%, 48% { transform: translateX(-155%) rotate(24deg); opacity: 0; }
+  66% { opacity: 0.92; }
+  86%, 100% { transform: translateX(165%) rotate(24deg); opacity: 0; }
 }
 @keyframes gkStarTwinkle {
   0%, 100% { opacity: 0.45; transform: translateZ(28px) scale(0.84) rotate(0deg); }
@@ -1639,7 +1656,7 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-ne
   transform: scale(1.08) rotate(-4deg) !important;
 }
 
-/* 焦点 3：空白首页主视觉高定重构（严格中轴居中 × 120×120 无方框纯透明四色棱镜哈基米悬浮大徽章 × 纯净沉稳标题） */
+/* 焦点 3：空白首页主视觉高定重构（严格中轴居中 × 128×128 无方框钻石棱镜哈基米 × 四层光学流光动效） */
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home .home-greeting-mark,
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="home-greeting"] .home-greeting-mark {
   display: none !important;
@@ -1656,10 +1673,10 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) :is(.agy-home [data-testi
 }
 #\${HOME_EMBLEM_ID} {
   position: relative !important;
-  width: 120px !important;
-  height: 120px !important;
-  min-width: 120px !important;
-  min-height: 120px !important;
+  width: 128px !important;
+  height: 128px !important;
+  min-width: 128px !important;
+  min-height: 128px !important;
   margin: 0 auto 12px !important;
   display: flex !important;
   align-items: center !important;
@@ -1673,19 +1690,23 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) :is(.agy-home [data-testi
 }
 #\${HOME_EMBLEM_ID} .gk-he-halo {
   position: absolute;
-  inset: 8px;
+  inset: 6px;
   border-radius: 999px;
   pointer-events: none;
-  filter: blur(22px);
-  opacity: 0.22;
-  background: radial-gradient(circle at 42% 52%, rgba(66, 133, 244, 0.52) 0%, rgba(52, 168, 83, 0.28) 38%, rgba(251, 188, 5, 0.24) 64%, rgba(234, 67, 53, 0.22) 82%, transparent 100%);
+  filter: blur(24px);
+  opacity: 0.24;
+  background: conic-gradient(from 0deg, #38BDF8, #6366F1, #A855F7, #EC4899, #FBBF24, #38BDF8);
+  animation: gkPrismHaloOrbit 16s linear infinite;
   transition: opacity 0.26s ease;
 }
 html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-halo {
-  opacity: 0.42;
+  opacity: 0.46;
 }
 #\${HOME_EMBLEM_ID}:hover .gk-he-halo {
-  opacity: 0.36;
+  opacity: 0.38;
+}
+html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID}:hover .gk-he-halo {
+  opacity: 0.60;
 }
 #\${HOME_EMBLEM_ID} .gk-he-stage {
   position: relative;
@@ -1710,24 +1731,24 @@ html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-halo {
 }
 #\${HOME_EMBLEM_ID} .gk-he-caustic {
   position: absolute;
-  inset: 84px 16px -6px;
+  inset: 90px 18px -6px;
   border-radius: 999px;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 50%, rgba(66, 133, 244, 0.24) 0%, rgba(168, 85, 247, 0.14) 55%, transparent 82%);
+  background: radial-gradient(ellipse at 50% 50%, rgba(56, 189, 248, 0.24) 0%, rgba(168, 85, 247, 0.16) 55%, transparent 82%);
   filter: blur(11px);
-  opacity: 0.52;
+  opacity: 0.56;
   transform: translate3d(var(--gk-gem-cx, 0px), var(--gk-gem-cy, 0px), -18px);
   transition: transform 0.18s ease-out, opacity 0.24s ease;
 }
 html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-caustic {
-  background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.52) 0%, rgba(66, 133, 244, 0.28) 58%, transparent 84%);
-  opacity: 0.78;
+  background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.52) 0%, rgba(56, 189, 248, 0.32) 58%, transparent 84%);
+  opacity: 0.80;
 }
 #\${HOME_EMBLEM_ID} .gk-he-gem {
   position: relative;
   z-index: 1;
-  width: 120px;
-  height: 120px;
+  width: 128px;
+  height: 128px;
   border-radius: 0;
   display: block;
   pointer-events: none;
@@ -1738,17 +1759,19 @@ html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-caustic {
   background-size: contain;
   border: none;
   box-shadow: none;
-  filter: drop-shadow(0 12px 22px rgba(66, 133, 244, 0.20)) drop-shadow(0 4px 10px rgba(15, 23, 42, 0.10));
+  filter: drop-shadow(0 12px 22px rgba(56, 189, 248, 0.24)) drop-shadow(0 4px 12px rgba(139, 92, 246, 0.16));
+  animation: gkGemIridescence 7.5s ease-in-out infinite;
   transition: filter 0.24s ease;
 }
 html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-gem {
   background-image: \${HOME_GEM_DARK_URI};
   border: none;
   box-shadow: none;
-  filter: drop-shadow(0 14px 28px rgba(66, 133, 244, 0.34)) drop-shadow(0 0 18px rgba(168, 85, 247, 0.28));
+  filter: drop-shadow(0 14px 28px rgba(56, 189, 248, 0.36)) drop-shadow(0 0 18px rgba(139, 92, 246, 0.30));
+  animation: gkGemIridescenceDark 7.5s ease-in-out infinite;
 }
 #\${HOME_EMBLEM_ID}.is-sparkling .gk-he-gem {
-  filter: brightness(1.08) saturate(1.12) drop-shadow(0 0 16px rgba(66, 133, 244, 0.52)) drop-shadow(0 8px 24px rgba(236, 72, 153, 0.38)) !important;
+  filter: brightness(1.08) saturate(1.14) drop-shadow(0 0 16px rgba(56, 189, 248, 0.54)) drop-shadow(0 8px 24px rgba(236, 72, 153, 0.40)) !important;
   box-shadow: none !important;
 }
 #\${HOME_EMBLEM_ID} .gk-he-sheen {
@@ -1758,7 +1781,7 @@ html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-gem {
   border-radius: 0;
   pointer-events: none;
   transform: translateZ(8px);
-  background: radial-gradient(circle 48px at var(--gk-gem-gx, 32%) var(--gk-gem-gy, 22%), rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.08) 48%, transparent 74%);
+  background: radial-gradient(circle 50px at var(--gk-gem-gx, 32%) var(--gk-gem-gy, 22%), rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.08) 48%, transparent 74%);
   -webkit-mask-image: \${HOME_GEM_LIGHT_URI};
   mask-image: \${HOME_GEM_LIGHT_URI};
   -webkit-mask-size: contain;
@@ -1777,17 +1800,39 @@ html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-sheen {
 #\${HOME_EMBLEM_ID} .gk-he-sheen::before {
   content: "";
   position: absolute;
-  inset: -40%;
-  background: linear-gradient(122deg, transparent 40%, rgba(255, 255, 255, 0.34) 50%, transparent 60%);
-  animation: gkGemSheenSweep 5.8s ease-in-out infinite;
+  inset: -42%;
+  background: linear-gradient(122deg, transparent 36%, rgba(56, 189, 248, 0.34) 44%, rgba(255, 255, 255, 0.72) 50%, rgba(236, 72, 153, 0.32) 56%, transparent 64%);
+  animation: gkGemSheenSweep 4.8s ease-in-out infinite;
+}
+#\${HOME_EMBLEM_ID} .gk-he-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(132deg, rgba(56, 189, 248, 0) 0%, rgba(56, 189, 248, 0.24) 24%, rgba(168, 85, 247, 0.28) 48%, rgba(244, 114, 182, 0.24) 68%, rgba(251, 191, 36, 0.18) 84%, rgba(56, 189, 248, 0) 100%);
+  background-size: 260% 260%;
+  animation: gkPrismFacetFlow 7.2s ease-in-out infinite;
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark {
-  display: none !important;
+  position: absolute;
+  pointer-events: none;
+  z-index: 3;
+  line-height: 1;
+  user-select: none;
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark-a {
+  top: 10px;
+  right: 10px;
+  font-size: 12px;
+  color: #38BDF8;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.75), 0 0 14px rgba(168, 85, 247, 0.45);
   animation: gkStarTwinkle 3.2s ease-in-out infinite;
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark-b {
+  bottom: 14px;
+  left: 10px;
+  font-size: 10px;
+  color: #EC4899;
+  text-shadow: 0 0 8px rgba(236, 72, 153, 0.72), 0 0 14px rgba(251, 191, 36, 0.42);
   animation: gkStarTwinkle 3.8s ease-in-out 1.4s infinite;
 }
 html[data-gk-theme] .agy-home > :not(#\${AURORA_HOST_ID}):not(#\${WATERMARK_ID}) {
@@ -2287,6 +2332,7 @@ html[data-gk-theme]:is([data-gk-focus="1"], [data-gk-motion="off"]) :is(
   #\${HOME_EMBLEM_ID} .gk-he-stage,
   #\${HOME_EMBLEM_ID} .gk-he-gem,
   #\${HOME_EMBLEM_ID} .gk-he-sheen::before,
+  #\${HOME_EMBLEM_ID} .gk-he-sheen::after,
   #\${HOME_EMBLEM_ID} .gk-he-spark,
   .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1)
 ) {
