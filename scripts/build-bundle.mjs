@@ -46,12 +46,15 @@ export function buildGeminekoBundle() {
   const demoSrc = stripModuleSyntax(
     fs.readFileSync(path.join(REPO_ROOT, 'src', 'theme', 'demo-data.js'), 'utf8'),
   );
+  const workshopSrc = stripModuleSyntax(
+    fs.readFileSync(path.join(REPO_ROOT, 'src', 'theme', 'theme-workshop.js'), 'utf8'),
+  );
   const runtimeSrc = stripModuleSyntax(
     fs.readFileSync(path.join(REPO_ROOT, 'src', 'theme', 'gemineko-runtime.js'), 'utf8'),
   );
 
   const bundle = [
-    '// Built by Gemineko Hive v0.4.0 (scripts/build-bundle.mjs) — DO NOT EDIT DIRECTLY.',
+    '// Built by Gemineko Hive v0.5.0 (scripts/build-bundle.mjs) — DO NOT EDIT DIRECTLY.',
     '(function() {',
     '  "use strict";',
     '  if (typeof window === "undefined" || window.__GEMINEKO_HIVE_LOADED__) return;',
@@ -67,6 +70,9 @@ export function buildGeminekoBundle() {
     '',
     '// === demo-data ===',
     demoSrc,
+    '',
+    '// === theme-workshop ===',
+    workshopSrc,
     '',
     '// === gemineko-runtime ===',
     runtimeSrc,

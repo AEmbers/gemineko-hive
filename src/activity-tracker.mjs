@@ -251,31 +251,69 @@ export function readConversationLiveActivity(
   const lines = tailText.split(/\r?\n/).filter(Boolean);
   const parsedResponses = [];
   let latestTimestampMs = mtimeMs;
+  let lastErrorSeq = '';
+  let lastErrorLineIdx = -1;
+  let turnCompletedAtMs = 0;
 
-  for (const line of lines) {
+  /**
+   * 判定单条 transcript 记录是否包含工具执行失败/错误信号。
+   * @param {any} row
+   */
+  function detectRowError(row) {
+    if (!row || typeof row !== 'object') return false;
+    if (row.isError === true || row.is_error === true || row.status === 'ERROR') return true;
+    const errObj = row.error || row.toolResponse?.error || row.tool_response?.error || row.runCommand?.error;
+    if (errObj) return true;
+    const out = String(
+      row.runCommand?.commandOutput ||
+      row.runCommand?.output ||
+      row.toolResponse?.output ||
+      row.toolResponse?.content ||
+      ''
+    );
+    if (/Command exited with code [1-9]\d*/i.test(out)) return true;
+    if (/Encountered error in tool execution/i.test(out)) return true;
+    return false;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     let obj;
     try {
       obj = JSON.parse(line);
     } catch {
       continue;
     }
+    const tsRawAll = obj.createdAt || obj.created_at || obj.timestamp || obj.metadata?.createdAt;
+    const parsedTsAll = tsRawAll ? Date.parse(tsRawAll) : NaN;
+    if (Number.isFinite(parsedTsAll)) {
+      latestTimestampMs = Math.max(latestTimestampMs, parsedTsAll);
+    }
+    if (detectRowError(obj)) {
+      lastErrorLineIdx = i;
+      lastErrorSeq = String(obj.step_index ?? obj.stepIndex ?? parsedTsAll ?? i);
+    }
     const pr = extractPlannerResponse(obj);
     if (!pr) continue;
     const tools = extractToolNames(pr);
-    const tsRaw = pr.createdAt || pr.created_at || obj.createdAt || obj.created_at || obj.timestamp;
+    const tsRaw = pr.createdAt || pr.created_at || tsRawAll;
     const parsedTs = tsRaw ? Date.parse(tsRaw) : NaN;
     if (Number.isFinite(parsedTs)) {
       latestTimestampMs = Math.max(latestTimestampMs, parsedTs);
+    }
+    if (tools.length === 0 && (pr.response || pr.text)) {
+      turnCompletedAtMs = Number.isFinite(parsedTs) ? parsedTs : mtimeMs;
     }
     parsedResponses.push({
       model: String(pr.model || pr.modelName || pr.model_name || ''),
       thinking: Boolean(pr.thinking && String(pr.thinking).trim().length > 0),
       tools,
+      lineIdx: i,
     });
   }
 
   const recent = parsedResponses.slice(-10);
-  const latest = recent[recent.length - 1] || { model: 'gemini-4-neon', thinking: true, tools: [] };
+  const latest = recent[recent.length - 1] || { model: 'gemini-4-neon', thinking: true, tools: [], lineIdx: -1 };
   const updatedAt = Math.max(mtimeMs, latestTimestampMs);
   const ageMs = Math.max(0, nowMs - updatedAt);
   const active = ageMs <= activeWindowMs;
@@ -284,6 +322,7 @@ export function readConversationLiveActivity(
   const action = classifyToolAction(lastTool, latest.thinking, active);
   const phase = inferPhase(recent, active);
   const conversationId = convDir.replace(/[/\\]+$/, '').split(/[/\\]/).pop() || '';
+  const hasError = lastErrorLineIdx >= 0 && lastErrorLineIdx >= Math.max(0, lines.length - 6);
 
   return {
     conversationId,
@@ -297,6 +336,9 @@ export function readConversationLiveActivity(
     action,
     actionLabel: ACTION_LABELS[action] || ACTION_LABELS.thinking,
     lastTool,
+    hasError,
+    errorSeq: hasError ? lastErrorSeq : '',
+    turnCompletedAt: turnCompletedAtMs > 0 ? new Date(turnCompletedAtMs).toISOString() : '',
     spriteFile: `${role}-${action}.png`,
   };
 }

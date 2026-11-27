@@ -21,6 +21,14 @@ import {
   buildCatNestPath,
   parseHexPathGeometry,
 } from '../src/theme/gemineko-runtime.js';
+import {
+  DEFAULT_HOST_THEME_CONFIG,
+  ROLE_PALETTES,
+  THEME_PRESETS,
+  createThemeConfigStore,
+  sanitizeHostThemeConfig,
+  validateWallpaperFilePath,
+} from '../src/theme/host-theme-config.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -284,7 +292,7 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
   try {
     const hz = await srv.inject({ url: '/healthz' });
     assert.equal(hz.statusCode, 200);
-    assert.equal(hz.json().version, '0.4.0');
+    assert.equal(hz.json().version, '0.5.0');
 
     const preloadRes = await srv.inject({ url: '/preload.js' });
     assert.equal(preloadRes.statusCode, 200);
@@ -412,4 +420,142 @@ test('猫耳软垫猫窝几何解析、安全包络路径与装饰 SVG 生成', 
   assert.doesNotMatch(taskDeco, /gn-nest-bow-wing/);
 
   assert.equal(buildCatNestDecoSvg(200, 200, 24, { isCoord: false }), '');
+});
+
+test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与原子持久化', () => {
+  assert.deepEqual(Object.keys(THEME_PRESETS), [
+    'nebula-day',
+    'cream-paper',
+    'starry-nest',
+    'carbon-obsidian',
+  ]);
+  assert.deepEqual(Object.keys(ROLE_PALETTES), ['neon', 'hydrogen', 'carbon', 'claude', 'gpt']);
+
+  // 非法壁纸路径拦截：UNC、相对穿越、不支持格式
+  assert.equal(validateWallpaperFilePath('\\\\evil-server\\share\\a.png').ok, false);
+  assert.equal(validateWallpaperFilePath('relative/a.png').ok, false);
+  assert.equal(validateWallpaperFilePath(path.join(REPO_ROOT, 'package.json')).ok, false);
+
+  const samplePng = path.join(REPO_ROOT, 'assets', 'logo.png');
+  const okCheck = validateWallpaperFilePath(samplePng);
+  assert.equal(okCheck.ok, true);
+  assert.equal(okCheck.mime, 'image/png');
+  assert.equal(okCheck.isVideo, false);
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gemineko-theme-cfg-'));
+  try {
+    const cfgPath = path.join(tmpDir, 'theme-config.json');
+    const store = createThemeConfigStore(cfgPath);
+    assert.equal(store.get().preset, DEFAULT_HOST_THEME_CONFIG.preset);
+
+    const updated = store.update({
+      preset: 'starry-nest',
+      focusMode: true,
+      wallpaper: { mode: 'custom', filePath: samplePng, opacity: 0.99, blur: 99 },
+    });
+    assert.equal(updated.preset, 'starry-nest');
+    assert.equal(updated.focusMode, true);
+    assert.equal(updated.wallpaper.mode, 'custom');
+    assert.equal(updated.wallpaper.opacity, 0.65);
+    assert.equal(updated.wallpaper.blur, 24);
+
+    // 重新实例化验证持久化与非法枚举容错
+    const store2 = createThemeConfigStore(cfgPath);
+    assert.equal(store2.get().preset, 'starry-nest');
+    const cleaned = sanitizeHostThemeConfig({ preset: 'invalid-preset', accentMode: 'bad' });
+    assert.equal(cleaned.preset, 'auto');
+    assert.equal(cleaned.accentMode, 'follow-role');
+
+    const resetRes = store2.reset();
+    assert.equal(resetRes.preset, 'auto');
+    assert.equal(resetRes.focusMode, false);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/鉴权闭环', async () => {
+  const sb = createFakeSwarmSandbox();
+  const sampleWp = path.join(REPO_ROOT, 'assets', 'logo.png');
+  const errLine = JSON.stringify({
+    step_index: 99,
+    runCommand: { commandOutput: 'Command exited with code 1' },
+    createdAt: new Date().toISOString(),
+  });
+  fs.appendFileSync(path.join(sb.convDir, '.system_generated', 'logs', 'transcript.jsonl'), `${errLine}\n`);
+  const actWithErr = readConversationLiveActivity(sb.convDir);
+  assert.equal(actWithErr.hasError, true);
+  assert.equal(actWithErr.errorSeq, '99');
+
+  const srv = await createHiveSidecarServer({
+    port: 0,
+    enableCdp: false,
+    swarmDir: sb.swarmDir,
+    appDataDirs: [sb.appDataDir],
+    sideToken: 'test-v5-secret',
+    themeConfigPath: path.join(sb.root, 'theme-config.json'),
+  });
+  try {
+    const hz = await srv.inject({ url: '/healthz' });
+    assert.equal(hz.statusCode, 200);
+    assert.equal(hz.json().version, '0.5.0');
+
+    const unauthPost = await srv.inject({
+      method: 'POST',
+      url: '/api/theme/config',
+      body: JSON.stringify({ preset: 'cream-paper' }),
+    });
+    assert.equal(unauthPost.statusCode, 403);
+
+    const noWp = await srv.inject({ url: '/api/wallpaper/file' });
+    assert.equal(noWp.statusCode, 404);
+
+    const setRes = await srv.inject({
+      method: 'POST',
+      url: '/api/theme/config',
+      headers: { 'x-sidecar-token': 'test-v5-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        preset: 'cream-paper',
+        wallpaper: { mode: 'custom', filePath: sampleWp },
+      }),
+    });
+    assert.equal(setRes.statusCode, 200);
+    assert.equal(setRes.json().config.preset, 'cream-paper');
+
+    // 验证 HTTP 206 Range 流式壁纸响应
+    const wpRange = await srv.inject({
+      url: '/api/wallpaper/file',
+      headers: { Range: 'bytes=0-15' },
+    });
+    assert.equal(wpRange.statusCode, 206);
+    assert.equal(wpRange.headers['content-type'], 'image/png');
+    assert.match(wpRange.headers['content-range'], /^bytes 0-15\//);
+
+    // 验证双向联动事件总线
+    const evPost = await srv.inject({
+      method: 'POST',
+      url: '/api/theme/event',
+      headers: { 'x-sidecar-token': 'test-v5-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'hive-poke-burst', role: 'claude', combo: 5, source: 'host' }),
+    });
+    assert.equal(evPost.statusCode, 200);
+    const evGet = await srv.inject({ url: '/api/theme/event' });
+    assert.equal(evGet.statusCode, 200);
+    assert.equal(evGet.json().latest.type, 'hive-poke-burst');
+    assert.equal(evGet.json().latest.role, 'claude');
+
+    // 验证构建包包含主题工坊且宿主脚本包含 v5 引擎
+    const cdpScript = buildCdpOverlayScript('http://127.0.0.1:19876', '', { sideToken: 'tk' });
+    assert.match(cdpScript, /gemineko-host-theme-v5/);
+    assert.match(cdpScript, /__GEMINEKO_CDP_OVERLAY_V5__/);
+    assert.match(cdpScript, /捅了基米窝/);
+
+    const bundleRes = buildGeminekoBundle();
+    const bundleContent = fs.readFileSync(bundleRes.outPath, 'utf8');
+    assert.match(bundleContent, /createThemeWorkshopController/);
+    assert.match(bundleContent, /主题工坊/);
+  } finally {
+    await srv.close();
+    fs.rmSync(sb.root, { recursive: true, force: true });
+  }
 });

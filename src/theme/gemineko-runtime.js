@@ -469,6 +469,9 @@ export function bootGeminekoHive() {
     void document.body.offsetWidth;
     document.body.classList.add('gn-poked');
     setTimeout(() => document.body.classList.remove('gn-poked'), 1150);
+    if (window.__GEMINEKO_SIDECAR_MODE__ && workshop?.triggerSidecarEgg) {
+      workshop.triggerSidecarEgg('hive-poke-burst');
+    }
 
     const pool = POKE_LINES[prefs.locale] || POKE_LINES['neko-zh'];
     const sprites = [...document.querySelectorAll('.gn-sprite-host')];
@@ -1334,9 +1337,10 @@ export function bootGeminekoHive() {
       <div class="gn-bar-top">
         <span class="gn-brand" data-gn-act="collapse" title="展开/收起基米窝面板">
           <img class="gn-brand-dot" src="${GEMINEKO_ASSETS.logo}" alt="" />
-          <span>基米窝 v0.4</span>
+          <span>基米窝 v0.5</span>
         </span>
         <div class="gn-top-actions">
+          ${window.__GEMINEKO_SIDECAR_MODE__ ? `<button type="button" id="gn-workshop-toggle-btn" class="gn-pill ${workshop?.isOpen?.() ? 'is-active' : ''}" data-gn-act="toggle-workshop" title="打开《基米窝》原生宿主主题工坊（替代 Obsidian Prism）">🎨 主题工坊</button>` : ''}
           <button type="button" class="gn-pill ${prefs.settingsOpen ? 'is-active' : ''}" data-gn-act="toggle-settings" title="展开或收起各项模式明确开关">⚙️ ${L.settingsBtn} ${prefs.settingsOpen ? '▴' : '▾'}</button>
           <button type="button" class="gn-pill is-poke" data-gn-act="poke">🐾 ${L.poke}</button>
           ${nativeBtnHtml}
@@ -1375,6 +1379,9 @@ export function bootGeminekoHive() {
         const act = btn.getAttribute('data-gn-act');
         if (act === 'collapse') {
           prefs.collapsed = !prefs.collapsed;
+        } else if (act === 'toggle-workshop') {
+          workshop?.toggle?.();
+          return;
         } else if (act === 'toggle-settings') {
           prefs.settingsOpen = !prefs.settingsOpen;
         } else if (act === 'poke') {
@@ -1585,6 +1592,29 @@ export function bootGeminekoHive() {
     return true;
   }
 
+  // 主题工坊双向控制台（仅 Sidecar 模式）
+  let workshop = null;
+  if (window.__GEMINEKO_SIDECAR_MODE__ && typeof createThemeWorkshopController === 'function') {
+    workshop = createThemeWorkshopController({
+      hostApi: async (url, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        if (!headers.has('Content-Type') && init.method === 'POST') {
+          headers.set('Content-Type', 'application/json');
+        }
+        if (window.__SIDECAR_TOKEN__ && !headers.has('x-sidecar-token')) {
+          headers.set('x-sidecar-token', window.__SIDECAR_TOKEN__);
+        }
+        const r = await originalFetch(url, { ...init, headers });
+        return r.json();
+      },
+      sidecarBanner: (text) => {
+        const anchor = document.querySelector('#gemineko-toolbar .gn-brand') || document.body;
+        const rect = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { left: 80, bottom: 48 };
+        spawnBubbleAt(rect.left + 80, rect.bottom + 26, text);
+      },
+    });
+  }
+
   // 启动 DOM 观察、Sidecar 实时活动轮询与初始渲染
   const start = () => {
     installSwarmHiveHooks();
@@ -1614,7 +1644,7 @@ export function bootGeminekoHive() {
               lastLiveActivity = d.activity;
               const liveImg = document.querySelector('.gn-live-avatar');
               if (liveImg) {
-                const nextSrc = `${getSpriteBaseUrl()}/${d.activity.spriteFile || `${d.activity.role}-${d.activity.action}.png`}?v=0.4.0`;
+                const nextSrc = `${getSpriteBaseUrl()}/${d.activity.spriteFile || `${d.activity.role}-${d.activity.action}.png`}?v=0.5.0`;
                 if (liveImg.getAttribute('data-src') !== nextSrc) {
                   liveImg.setAttribute('data-src', nextSrc);
                   liveImg.src = nextSrc;
@@ -1623,6 +1653,7 @@ export function bootGeminekoHive() {
             }
           })
           .catch(() => {});
+        workshop?.pollEvents?.();
       }, 4000);
     }
 

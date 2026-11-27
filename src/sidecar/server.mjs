@@ -7,6 +7,7 @@
  * 5. 提供 /api/native-patch/{status,apply,restore} 供侧边栏一键换肤与无损还原。
  */
 
+import { execFile } from 'node:child_process';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import fs from 'node:fs';
 import { createServer } from 'node:http';
@@ -17,6 +18,12 @@ import { enrichSwarmMembersWithActivity, findActiveConversationActivity } from '
 import { CdpHostInjector } from '../cdp/host-injector.mjs';
 import { applyNativePatch, getNativePatchStatus, resolveSwarmPaths, restoreNativePatch } from '../native-patcher.mjs';
 import { buildDemoSwarmSnapshot } from '../theme/demo-data.js';
+import {
+  ROLE_PALETTES,
+  THEME_PRESETS,
+  createThemeConfigStore,
+  validateWallpaperFilePath,
+} from '../theme/host-theme-config.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
@@ -319,6 +326,98 @@ export async function createHiveSidecarServer(options = {}) {
   }
 
   let cdpInjector = null;
+  const themeStore = createThemeConfigStore(options.themeConfigPath);
+  const themeEvents = { seq: 0, latest: null };
+
+  /**
+   * 弹出本机系统文件选择对话框挑选壁纸图片或 MP4/WebM 视频（仅 Windows 支持，超时保护）。
+   */
+  function openNativeWallpaperDialog() {
+    if (process.platform !== 'win32') {
+      return Promise.resolve({ ok: false, canceled: true, error: '当前系统请直接填写本地壁纸绝对路径' });
+    }
+    const psScript = [
+      'Add-Type -AssemblyName System.Windows.Forms',
+      '$d = New-Object System.Windows.Forms.OpenFileDialog',
+      "$d.Title = '选择基米窝宿主壁纸（图片或 MP4/WebM 视频）'",
+      "$d.Filter = '媒体文件 (*.png;*.jpg;*.jpeg;*.webp;*.gif;*.avif;*.mp4;*.webm)|*.png;*.jpg;*.jpeg;*.webp;*.gif;*.avif;*.mp4;*.webm'",
+      '$r = $d.ShowDialog()',
+      "if ($r -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $d.FileName }",
+    ].join('; ');
+    return new Promise((resolve) => {
+      execFile(
+        'powershell.exe',
+        ['-NoProfile', '-STA', '-Command', psScript],
+        { timeout: 60_000, windowsHide: true },
+        (err, stdout) => {
+          if (err) {
+            resolve({ ok: false, canceled: true, error: err.message });
+            return;
+          }
+          const chosen = String(stdout || '').trim();
+          if (!chosen) {
+            resolve({ ok: true, canceled: true, filePath: '' });
+            return;
+          }
+          const check = validateWallpaperFilePath(chosen);
+          resolve(check.ok ? { ok: true, canceled: false, ...check } : { ok: false, canceled: false, error: check.error });
+        },
+      );
+    });
+  }
+
+  /**
+   * 仅从已校验并保存的 config.wallpaper.filePath 读取媒体流，严格支持 206 Range。
+   */
+  function handleWallpaperStream(req, res) {
+    const cfg = themeStore.get();
+    if (!cfg?.wallpaper?.filePath) {
+      res.writeHead(404, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('No custom wallpaper configured');
+      return;
+    }
+    const check = validateWallpaperFilePath(cfg.wallpaper.filePath);
+    if (!check.ok) {
+      res.writeHead(403, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end(check.error || 'Wallpaper path rejected');
+      return;
+    }
+    const totalSize = check.size || 0;
+    const rangeHeader = String(req.headers.range || '').trim();
+    if (rangeHeader && totalSize > 0) {
+      const m = /^bytes=(\d*)-(\d*)$/i.exec(rangeHeader);
+      if (!m) {
+        res.writeHead(416, { ...CORS_HEADERS, 'Content-Range': `bytes */${totalSize}` });
+        res.end();
+        return;
+      }
+      const start = m[1] ? Number(m[1]) : Math.max(0, totalSize - Number(m[2] || 0));
+      const end = m[1] && m[2] ? Math.min(totalSize - 1, Number(m[2])) : totalSize - 1;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || start > end || start >= totalSize) {
+        res.writeHead(416, { ...CORS_HEADERS, 'Content-Range': `bytes */${totalSize}` });
+        res.end();
+        return;
+      }
+      res.writeHead(206, {
+        ...CORS_HEADERS,
+        'Content-Type': check.mime,
+        'Content-Length': end - start + 1,
+        'Content-Range': `bytes ${start}-${end}/${totalSize}`,
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'no-cache',
+      });
+      fs.createReadStream(check.path, { start, end }).pipe(res);
+      return;
+    }
+    res.writeHead(200, {
+      ...CORS_HEADERS,
+      'Content-Type': check.mime,
+      'Content-Length': totalSize,
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'no-cache',
+    });
+    fs.createReadStream(check.path).pipe(res);
+  }
 
   async function dispatch(req, res) {
     const urlObj = new URL(req.url || '/', 'http://127.0.0.1');
@@ -331,7 +430,7 @@ export async function createHiveSidecarServer(options = {}) {
     }
 
     if (req.method === 'GET' && pathname === '/healthz') {
-      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.4.0', sidecar: 'hive_board' });
+      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.5.0', sidecar: 'hive_board' });
       return;
     }
 
@@ -395,6 +494,112 @@ export async function createHiveSidecarServer(options = {}) {
         },
         spriteBaseUrl: `${origin}/gemineko-sprites`,
       });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/theme/config') {
+      sendJson(res, 200, {
+        ok: true,
+        config: themeStore.get(),
+        presets: THEME_PRESETS,
+        rolePalettes: ROLE_PALETTES,
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/theme/config') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const body = await readJsonBody(req);
+      let wallpaperError = '';
+      if (body?.wallpaper && typeof body.wallpaper.filePath === 'string' && body.wallpaper.filePath.trim()) {
+        const check = validateWallpaperFilePath(body.wallpaper.filePath);
+        if (!check.ok) wallpaperError = check.error || '壁纸路径无效';
+      }
+      const next = themeStore.update(body);
+      if (cdpInjector) {
+        cdpInjector.pushThemeConfig(next).catch(() => {});
+      }
+      sendJson(res, 200, {
+        ok: true,
+        config: next,
+        ...(wallpaperError ? { warning: wallpaperError } : {}),
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/theme/reset') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const next = themeStore.reset();
+      if (cdpInjector) {
+        cdpInjector.pushThemeConfig(next).catch(() => {});
+      }
+      sendJson(res, 200, { ok: true, config: next });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/theme/event') {
+      sendJson(res, 200, {
+        ok: true,
+        seq: themeEvents.seq,
+        latest: themeEvents.latest,
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/theme/event') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const evtType = String(body?.type || '').trim();
+      if (!evtType) {
+        sendJson(res, 400, { ok: false, error: 'Missing event type' });
+        return;
+      }
+      themeEvents.seq += 1;
+      themeEvents.latest = {
+        seq: themeEvents.seq,
+        type: evtType,
+        role: String(body?.role || 'neon'),
+        combo: Number(body?.combo) || 0,
+        source: String(body?.source || 'unknown'),
+        ts: Date.now(),
+      };
+      if (evtType === 'open-workshop' && body?.source === 'host') {
+        themeEvents.latest.openWorkshop = true;
+      }
+      if (cdpInjector && body?.source === 'sidecar') {
+        cdpInjector.pushThemeEvent(themeEvents.latest).catch(() => {});
+      }
+      sendJson(res, 200, { ok: true, seq: themeEvents.seq, event: themeEvents.latest });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/wallpaper/pick') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const body = await readJsonBody(req);
+      if (typeof body?.filePath === 'string' && body.filePath.trim()) {
+        const check = validateWallpaperFilePath(body.filePath);
+        sendJson(res, check.ok ? 200 : 400, check.ok ? { ok: true, ...check } : { ok: false, error: check.error });
+        return;
+      }
+      const picked = await openNativeWallpaperDialog();
+      sendJson(res, 200, picked);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/wallpaper/file') {
+      handleWallpaperStream(req, res);
       return;
     }
 
@@ -534,6 +739,8 @@ export async function createHiveSidecarServer(options = {}) {
       serverBaseUrl: origin,
       logoDataUri,
       debugPort: options.cdpPort,
+      sideToken: validTokens[0] || generatedToken,
+      getThemeConfig: () => themeStore.get(),
     });
     cdpInjector.start();
   }

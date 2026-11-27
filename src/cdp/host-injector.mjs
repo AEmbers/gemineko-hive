@@ -9,6 +9,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { buildHostThemeRuntimeSnippet } from './host-theme-runtime.mjs';
 
 const DEFAULT_DEBUG_PORT = 19222;
 const POLL_INTERVAL_MS = 3200;
@@ -94,18 +95,24 @@ function pickPrimaryPageTarget(targets) {
 }
 
 /**
- * 构造向主聊天窗口注入的自包含幂等脚本 v0.4.0。
+ * 构造向主聊天窗口注入的自包含幂等脚本 v0.5.0（含实时看板 + 原生宿主主题与联动彩蛋引擎）。
  * 运行在宿主 Electron 渲染进程浏览器上下文中。
  * @param {string} serverBaseUrl 例如 http://127.0.0.1:19876
- * @param {string} logoDataUri
+ * @param {string} [logoDataUri]
+ * @param {{ sideToken?: string, themeConfig?: any }} [options]
  * @returns {string}
  */
-export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
+export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options = {}) {
   const baseJson = JSON.stringify(serverBaseUrl.replace(/\/+$/, ''));
   const logoJson = JSON.stringify(logoDataUri || '');
+  const tokenJson = JSON.stringify(String(options?.sideToken || ''));
+  const themeCfgJson = JSON.stringify(options?.themeConfig || null);
+  const themeSnippet = buildHostThemeRuntimeSnippet();
   return `(() => {
   const SERVER = ${baseJson};
   const LOGO_URI = ${logoJson};
+  const SIDE_TOKEN = ${tokenJson};
+  const INITIAL_THEME_CONFIG = ${themeCfgJson};
   const DOCK_ID = 'gemineko-cdp-composer-dock';
   const LEGACY_CAPSULE_ID = 'gemineko-cdp-live-capsule';
   const INLINE_CLASS = 'gk-live-inline-wrap';
@@ -494,16 +501,24 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
             <span class="gk-tool"></span>
           </div>
         </div>
+        <button type="button" class="gk-dock-theme-btn" title="基米窝主题与彩蛋快切">🎨</button>
         <button type="button" class="gk-collapse-btn" title="展开/收起状态标签">\${collapsed ? '›' : '‹'}</button>
       </div>
     \`;
 
     const catEl = dock.querySelector('.gk-dock-cat');
+    const themeBtn = dock.querySelector('.gk-dock-theme-btn');
     const collapseBtn = dock.querySelector('.gk-collapse-btn');
 
     catEl.addEventListener('click', (e) => {
       e.stopPropagation();
       spawnHeart(e.clientX - 8, e.clientY - 14);
+      themeSuite?.onDockPoke?.(latestState.role || 'neon', e.clientX, e.clientY);
+    });
+
+    themeBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      themeSuite?.toggleMiniBar?.(themeBtn);
     });
 
     collapseBtn.addEventListener('click', (e) => {
@@ -726,6 +741,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
           latestState = { ...latestState, ...data.activity };
           renderDockState();
           syncActiveStatusSprite();
+          themeSuite?.onActivityUpdate?.(latestState);
         }
       }
     } catch {}
@@ -744,6 +760,20 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
     }
     scheduleSync();
   };
+
+  ${themeSnippet}
+
+  const themeSuite = initHostThemeSuite({
+    server: SERVER,
+    token: SIDE_TOKEN,
+    dockId: DOCK_ID,
+    getActivity: () => latestState,
+    initialConfig: INITIAL_THEME_CONFIG,
+  });
+  fetch(\`\${SERVER}/api/theme/config\`)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => { if (d?.config) themeSuite.applyConfig(d.config); })
+    .catch(() => {});
 
   ensureDock();
   syncDockPosition();
@@ -764,6 +794,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
 
   window.__GEMINEKO_CDP_OVERLAY_V2__ = true;
   window.__GEMINEKO_CDP_OVERLAY_V3__ = true;
+  window.__GEMINEKO_CDP_OVERLAY_V5__ = true;
   window.__GEMINEKO_CDP_UNMOUNT__ = () => {
     stopped = true;
     if (pollTimer) clearTimeout(pollTimer);
@@ -773,6 +804,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
     window.removeEventListener('resize', onViewportChange);
     window.removeEventListener('scroll', onViewportChange, true);
     window.removeEventListener('popstate', onUrlCheck);
+    themeSuite?.unmount?.();
     cleanupLegacyNodes();
     const dock = document.getElementById(DOCK_ID);
     if (dock) dock.remove();
@@ -780,6 +812,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
     if (st) st.remove();
     window.__GEMINEKO_CDP_OVERLAY_V2__ = false;
     window.__GEMINEKO_CDP_OVERLAY_V3__ = false;
+    window.__GEMINEKO_CDP_OVERLAY_V5__ = false;
   };
 })();`;
 }
@@ -789,12 +822,14 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
  */
 export class CdpHostInjector {
   /**
-   * @param {{ serverBaseUrl: string, logoDataUri?: string, debugPort?: number }} options
+   * @param {{ serverBaseUrl: string, logoDataUri?: string, debugPort?: number, sideToken?: string, getThemeConfig?: () => any }} options
    */
   constructor(options) {
     this.serverBaseUrl = options.serverBaseUrl;
     this.logoDataUri = options.logoDataUri || '';
     this.debugPort = Number(options.debugPort) || DEFAULT_DEBUG_PORT;
+    this.sideToken = options.sideToken || '';
+    this.getThemeConfig = typeof options.getThemeConfig === 'function' ? options.getThemeConfig : () => null;
     this.enabled = true;
     this.state = 'idle';
     this.hint = '';
@@ -941,13 +976,34 @@ export class CdpHostInjector {
   }
 
   /**
+   * 向宿主即时推送最新主题配置（热刷新 <50ms）。
+   * @param {any} config
+   */
+  async pushThemeConfig(config) {
+    const expr = `window.__GEMINEKO_THEME_API__?.applyConfig?.(${JSON.stringify(config)})`;
+    return this.evaluateOnTarget(expr, false);
+  }
+
+  /**
+   * 向宿主即时推送互动彩蛋事件（如从侧边栏触发「捅了基米窝」或「星尘雨」）。
+   * @param {any} event
+   */
+  async pushThemeEvent(event) {
+    const expr = `window.__GEMINEKO_THEME_API__?.triggerEvent?.(${JSON.stringify(event)})`;
+    return this.evaluateOnTarget(expr, false);
+  }
+
+  /**
    * 周期探活：若宿主刷新或重绘导致注入标记丢失，自动重新注入。
    */
   async verifyAndReinject() {
     if (!this.enabled || !this.ws || this.ws.readyState !== 1) return;
-    const alive = await this.evaluateOnTarget('Boolean(window.__GEMINEKO_CDP_OVERLAY_V3__)', true);
+    const alive = await this.evaluateOnTarget('Boolean(window.__GEMINEKO_CDP_OVERLAY_V5__)', true);
     if (alive === false) {
-      const script = buildCdpOverlayScript(this.serverBaseUrl, this.logoDataUri);
+      const script = buildCdpOverlayScript(this.serverBaseUrl, this.logoDataUri, {
+        sideToken: this.sideToken,
+        themeConfig: this.getThemeConfig(),
+      });
       await this.evaluateOnTarget(script);
     }
   }
@@ -1018,7 +1074,10 @@ export class CdpHostInjector {
         this.state = 'attached';
         this.hint = '已固定挂载到主对话输入栏与底部活跃状态行';
         this.lastError = '';
-        const script = buildCdpOverlayScript(this.serverBaseUrl, this.logoDataUri);
+        const script = buildCdpOverlayScript(this.serverBaseUrl, this.logoDataUri, {
+          sideToken: this.sideToken,
+          themeConfig: this.getThemeConfig(),
+        });
         this.evaluateOnTarget(script).catch(() => {});
         finish();
       });
