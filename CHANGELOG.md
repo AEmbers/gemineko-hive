@@ -8,7 +8,9 @@
   - `src/cdp/host-theme-runtime.mjs` 全界面重绘覆盖顶部菜单栏（`[data-testid="title-menu-bar"]` / `[data-testid="pane-titlebar-toolbar"]`）、修复内层 `.bg-sidebar` 盖色、重绘渐变 `new-conversation-button` / `project-header`、重点美化的悬浮 **`Overview` 卡片（`[data-testid="overview-panel"]` 及其外层容器带随角色变色双猫耳尖 + 虹光顶条 + 计数星徽胶囊）**、对话流引用块/表格/行内代码/气泡、输入栏与弹窗。
   - 新增 `#gemineko-corner-watermark` 角落透明底动态 APNG + 旋转角色专属 260×260 SVG 矢量纹章水印，支持 `follow-role` / 指定 5 角色 / `/api/watermark/file` 本地透明 PNG/WebP 导入；升级「爪印星尘雨」为 32~36 颗 `24px~38px` 彩色外发光内联 SVG 肉垫/星芒/晶棱雨；
   - 将宿主四点旋转运行指示器 `[data-testid="status-loading-spinner"]` 及 `.animate-shimmer-text` 纳入主题体系（支持 `role-motif` 5 角色专属旋转星徽、`paw-bounce` 弹跳发光猫肉垫、`prism-dots` 炫彩四色旋转点阵及 `native` 原版切换，并高亮侧栏运行中对话行）。
-- **内置可选 Antigravity 宿主全量汉化（`src/cdp/host-i18n-runtime.mjs`）**：
+- **交互细节与全内页汉化补全（v0.5.1-fix）**：
+  - `src/cdp/host-injector.mjs` 与 `src/cdp/host-theme-runtime.mjs`：空白首页显示 `#gemineko-home-stage`（5 角色迎宾舞台）时自动隐藏左上沿小猫 Dock，消除相互遮挡；迎宾舞台内置「🎨 主题/汉化」直达快切钮，切入对话页自动恢复 Dock；
+  - `src/cdp/host-i18n-runtime.mjs`：放行对话流内系统折行卡（`Worked for` / `steps` / `files changed` / `Review`）同时保持 `planner-response-text` / `user-message-bubble` / `pre` / `code` 正文保护；补充首页问候、工作区栏与 Settings 设置弹窗全内页中英对照词典。
   - 默认 `i18n.mode: 'auto'`：中文系统自动开启哈基米萌系中文（`neko-zh`），海外英文环境默认零开销完全关闭（`off`）；支持 `auto` / `neko-zh` / `zh`（标准专业中文）/ `off`（原版英文）4 档秒级无损切换。
   - 使用 `WeakMap` 记录首次修改前原始文本与属性，严格排除聊天正文、`pre`、`code`、`.monaco-editor`、输入编辑框及 `Antigravity` 品牌字样；切回 `off` 完整还原并断开 `MutationObserver`。
 - **服务端与工坊联动**：

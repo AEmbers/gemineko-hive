@@ -557,6 +557,16 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       return;
     }
 
+    // 空白首页存在 5 角色迎宾舞台时自动隐藏左上沿小猫 Dock，避免相互遮挡
+    const homeStage = document.getElementById('gemineko-home-stage');
+    if (homeStage && homeStage.isConnected) {
+      const hr = homeStage.getBoundingClientRect();
+      if (hr.width > 60 && hr.height > 20) {
+        dock.classList.add('is-hidden');
+        return;
+      }
+    }
+
     const r = anchor.getBoundingClientRect();
     if (r.width < 120 || r.top < 80 || r.bottom > window.innerHeight + 40) {
       dock.classList.add('is-hidden');

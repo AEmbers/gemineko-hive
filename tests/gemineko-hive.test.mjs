@@ -484,6 +484,11 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(translateHostText('Worked for 6m', 'neko-zh'), '猫猫打工 6m');
   assert.equal(translateHostText('5 files changed', 'zh'), '5 个文件已变更');
   assert.equal(translateHostText('Ask anything, @ to mention, / for actions', 'zh'), '随便问点什么，@ 提及文件，/ 呼出指令');
+  assert.equal(translateHostText('Welcome back, qilin. Where should we pick up?', 'neko-zh'), '欢迎回窝，qilin！今天想从哪开工喵？');
+  assert.equal(translateHostText('Interface Layout', 'zh'), '界面布局');
+  assert.equal(translateHostText('Configure agent execution, queued message delivery, and permissions.', 'zh'), '配置智能体执行策略、排队消息投递方式及权限控制。');
+  assert.equal(translateHostText('Send Immediately', 'zh'), '立即发送');
+  assert.equal(translateHostText('This Computer', 'zh'), '本机电脑');
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gemineko-theme-cfg-'));
   try {
@@ -595,6 +600,8 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /gemineko-conv-aurora/);
     assert.match(cdpScript, /gemineko-corner-watermark/);
     assert.match(cdpScript, /gemineko-home-stage/);
+    assert.match(cdpScript, /gk-home-theme-btn/);
+    assert.match(cdpScript, /document\.getElementById\('gemineko-home-stage'\)/);
     assert.match(cdpScript, /overview-panel/);
     assert.match(cdpScript, /title-menu-bar/);
     assert.match(cdpScript, /NEON · GEMINEKO/);

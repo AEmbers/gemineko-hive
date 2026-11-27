@@ -942,7 +942,7 @@ html[data-gk-smooth="1"] * { scroll-behavior: smooth; }
   position: relative;
   width: 100%;
   max-width: min(720px, 100%);
-  margin: 0 auto 12px;
+  margin: 0 auto 14px;
   padding: 12px 16px 10px;
   border-radius: var(--nux-radius-xl, 18px);
   background: color-mix(in srgb, var(--glass, rgba(255,255,255,0.88)) 86%, var(--gk-role-primary) 14%);
@@ -956,6 +956,32 @@ html[data-gk-smooth="1"] * { scroll-behavior: smooth; }
   gap: 7px;
   z-index: 4;
   user-select: none;
+}
+#\${HOME_STAGE_ID} .gk-home-stage-head {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#\${HOME_STAGE_ID} .gk-home-theme-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 28%, transparent);
+  background: color-mix(in srgb, var(--gk-role-primary) 11%, var(--card));
+  color: var(--gk-role-primary, #8b5cf6);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 10.5px !important;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.16s var(--gk-ease-spring), background-color 0.16s ease;
+}
+#\${HOME_STAGE_ID} .gk-home-theme-btn:hover {
+  transform: translateY(-50%) scale(1.04);
+  background: color-mix(in srgb, var(--gk-role-primary) 20%, var(--card));
 }
 #\${HOME_STAGE_ID}::before {
   content: "";
@@ -1365,7 +1391,10 @@ pre.gk-code-collapsed {
         stage = document.createElement('div');
         stage.id = HOME_STAGE_ID;
         stage.innerHTML = \`
-          <div class="gk-home-stage-sub">✦ 欢迎回到基米窝 · 5 位哈基米已就位 ✦</div>
+          <div class="gk-home-stage-head">
+            <div class="gk-home-stage-sub">✦ 欢迎回到基米窝 · 5 位哈基米已就位 ✦</div>
+            <button type="button" class="gk-home-theme-btn" title="基米窝主题与汉化快切">🎨 主题/汉化</button>
+          </div>
           <div class="gk-home-cast">
             \${HOME_ROLES.map((r) => \`
               <button type="button" class="gk-home-actor" data-home-role="\${r.id}" title="\${r.tip}">
@@ -1384,6 +1413,12 @@ pre.gk-code-collapsed {
           });
         });
         stage.addEventListener('click', (e) => {
+          const themeBtn = e.target.closest('.gk-home-theme-btn');
+          if (themeBtn) {
+            e.stopPropagation();
+            toggleMiniBar(themeBtn);
+            return;
+          }
           const btn = e.target.closest('[data-home-role]');
           if (!btn) return;
           const rId = btn.getAttribute('data-home-role') || 'neon';
