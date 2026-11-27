@@ -302,17 +302,31 @@ export function readConversationLiveActivity(
 }
 
 /**
- * 扫描多个 appDataDir 中的 brain 会话，找出最近更新的活跃会话状态。
+ * 扫描多个 appDataDir 中的 brain 会话，优先锁定指定 conversationId，否则找出最近更新的活跃会话状态。
  * @param {string[]} appDataDirs
  * @param {number} [nowMs]
  * @param {number} [activeWindowMs]
+ * @param {string} [preferredConversationId]
  * @returns {object|null}
  */
 export function findActiveConversationActivity(
   appDataDirs = [],
   nowMs = Date.now(),
-  activeWindowMs = DEFAULT_ACTIVE_WINDOW_MS
+  activeWindowMs = DEFAULT_ACTIVE_WINDOW_MS,
+  preferredConversationId = ''
 ) {
+  const cleanPreferred = String(preferredConversationId || '').trim();
+  if (cleanPreferred && /^[0-9a-f-]{8,}$/i.test(cleanPreferred)) {
+    for (const appDir of appDataDirs) {
+      if (!appDir) continue;
+      const directDir = join(appDir, 'brain', cleanPreferred);
+      if (existsSync(directDir)) {
+        const directInfo = readConversationLiveActivity(directDir, nowMs, activeWindowMs);
+        if (directInfo) return directInfo;
+      }
+    }
+  }
+
   let best = null;
   for (const appDir of appDataDirs) {
     if (!appDir) continue;

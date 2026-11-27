@@ -1,14 +1,18 @@
 /**
  * @file Antigravity 主窗口 CDP 运行时注入器（不修改 app.asar）
  * 检测 %APPDATA%\Antigravity\DevToolsActivePort 或 127.0.0.1:19222 调试端口，
- * 向主聊天界面挂载右上角实时猫娘悬浮胶囊、步骤条模型小头像与入口图标兜底替换。
+ * 向主聊天界面挂载：
+ * 1. 位置 A：输入栏左上沿固定锚定的透明动态猫娘 + 玻璃态模式徽章（不可拖拽，自适应缩放/字体变化）；
+ * 2. 位置 B：聊天流最底部活跃状态行（Thinking/Working/Running 等）旁动态透明立绘（结束自动收起）；
+ * 3. /api/live-activity?conversationId=... 按当前主窗口对话 ID 精准追踪，不串台。
  */
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DEFAULT_DEBUG_PORT = 19222;
-const POLL_INTERVAL_MS = 4000;
+const POLL_INTERVAL_MS = 3200;
+const HEARTBEAT_INTERVAL_MS = 10_000;
 
 /**
  * 验证 Host 仅允许本地回环地址，杜绝远程连接。
@@ -83,13 +87,15 @@ function pickPrimaryPageTarget(targets) {
     }
   });
   if (pages.length === 0) return null;
-  const preferred = pages.find((t) => /antigravity|workbench/i.test(`${t.title || ''} ${t.url || ''}`));
+  const preferred = pages.find(
+    (t) => /\/c\//i.test(t.url || '') || (/antigravity|workbench/i.test(`${t.title || ''} ${t.url || ''}`) && !/^data:/i.test(t.url || '')),
+  );
   return preferred || pages[0];
 }
 
 /**
- * 构造向主聊天窗口注入的自包含幂等脚本。
- * 注意：此脚本运行在宿主 Electron 渲染进程浏览器上下文中。
+ * 构造向主聊天窗口注入的自包含幂等脚本 v0.3.0。
+ * 运行在宿主 Electron 渲染进程浏览器上下文中。
  * @param {string} serverBaseUrl 例如 http://127.0.0.1:19876
  * @param {string} logoDataUri
  * @returns {string}
@@ -100,25 +106,42 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
   return `(() => {
   const SERVER = ${baseJson};
   const LOGO_URI = ${logoJson};
-  const OVERLAY_ID = 'gemineko-cdp-live-capsule';
-  const STYLE_ID = 'gemineko-cdp-style';
-  const STATE_KEY = 'gemineko_cdp_pos_v2';
+  const DOCK_ID = 'gemineko-cdp-composer-dock';
+  const LEGACY_CAPSULE_ID = 'gemineko-cdp-live-capsule';
+  const INLINE_CLASS = 'gk-live-inline-wrap';
+  const STYLE_ID = 'gemineko-cdp-style-v3';
+  const COLLAPSE_PREF_KEY = 'gemineko_cdp_dock_collapsed_v3';
 
   if (typeof window.__GEMINEKO_CDP_UNMOUNT__ === 'function') {
     try { window.__GEMINEKO_CDP_UNMOUNT__(); } catch {}
   }
 
-  // 先彻底清除页面上所有历史误插的 .gk-step-avatar 与标记，防止升级后残留重叠
-  function cleanupStepAvatars() {
+  function cleanupLegacyNodes() {
+    const oldCapsule = document.getElementById(LEGACY_CAPSULE_ID);
+    if (oldCapsule) oldCapsule.remove();
+    const oldStyle = document.getElementById('gemineko-cdp-style');
+    if (oldStyle) oldStyle.remove();
     document.querySelectorAll('.gk-step-avatar').forEach((n) => n.remove());
     document.querySelectorAll('[data-gemineko-step]').forEach((el) => el.removeAttribute('data-gemineko-step'));
+    document.querySelectorAll('.' + INLINE_CLASS).forEach((n) => n.remove());
   }
-  cleanupStepAvatars();
+  cleanupLegacyNodes();
 
   let stopped = false;
   let pollTimer = null;
-  let observer = null;
+  let syncRaf = null;
+  let domObserver = null;
+  let anchorResizeObserver = null;
+  let currentAnchor = null;
+  let lastPathname = location.pathname;
+  let collapsed = false;
+  try {
+    collapsed = localStorage.getItem(COLLAPSE_PREF_KEY) === '1';
+  } catch {}
+
   let latestState = {
+    conversationId: '',
+    active: false,
     role: 'neon',
     action: 'idle',
     actionLabel: '打盹摸鱼',
@@ -129,142 +152,272 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
     spriteFile: 'neon-idle.png'
   };
 
+  function getCurrentConversationId() {
+    const m = String(window.location.pathname || '').match(/\\/c\\/([0-9a-f-]{8,})/i);
+    return m ? m[1] : '';
+  }
+
+  function isHostDarkTheme() {
+    try {
+      const bg = getComputedStyle(document.body).backgroundColor || '';
+      const nums = bg.match(/\\d+/g);
+      if (nums && nums.length >= 3) {
+        const lum = (Number(nums[0]) * 299 + Number(nums[1]) * 587 + Number(nums[2]) * 114) / 1000;
+        return lum < 135;
+      }
+    } catch {}
+    return document.documentElement.classList.contains('dark');
+  }
+
   function ensureStyle() {
-    if (document.getElementById(STYLE_ID)) return;
+    const prev = document.getElementById(STYLE_ID);
+    if (prev) return;
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = \`
-      #\${OVERLAY_ID} {
+      #\${DOCK_ID} {
         position: fixed;
-        top: 52px;
-        right: 18px;
-        z-index: 99990;
+        z-index: 99980;
+        display: flex;
+        align-items: flex-end;
+        gap: 6px;
+        pointer-events: none;
+        user-select: none;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif !important;
+        font-size: 12px !important;
+        line-height: 1.25 !important;
+        transition: opacity 0.16s ease;
+      }
+      #\${DOCK_ID}.is-hidden {
+        opacity: 0 !important;
+        visibility: hidden !important;
+      }
+      #\${DOCK_ID} .gk-dock-cat {
+        position: relative;
+        width: 68px;
+        height: 68px;
+        flex-shrink: 0;
+        pointer-events: auto;
+        cursor: pointer;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+      }
+      #\${DOCK_ID} img.gk-dock-sprite {
+        width: 68px;
+        height: 68px;
+        object-fit: contain;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        display: block;
+        filter: drop-shadow(0 4px 10px rgba(124, 108, 246, 0.28));
+        transform-origin: center bottom;
+        transition: transform 0.2s ease, filter 0.2s ease;
+      }
+      #\${DOCK_ID} .gk-dock-cat:hover img.gk-dock-sprite {
+        transform: scale(1.06) translateY(-2px);
+        filter: drop-shadow(0 6px 14px rgba(236, 72, 153, 0.36));
+      }
+      #\${DOCK_ID} .gk-dock-badge {
+        pointer-events: auto;
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 7px 12px 7px 8px;
-        border-radius: 18px;
-        background: rgba(255, 250, 255, 0.92);
-        border: 1.5px solid rgba(155, 114, 242, 0.45);
-        box-shadow: 0 8px 24px rgba(103, 76, 178, 0.18);
+        gap: 6px;
+        margin-bottom: 10px;
+        padding: 4px 8px 4px 9px;
+        border-radius: 14px;
+        background: rgba(255, 250, 255, 0.88);
+        border: 1px solid rgba(139, 92, 246, 0.34);
+        box-shadow: 0 4px 14px rgba(103, 76, 178, 0.14);
         backdrop-filter: blur(10px);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
         color: #2f2546;
-        cursor: grab;
-        user-select: none;
-        transition: transform 0.16s ease, box-shadow 0.16s ease;
+        max-width: min(210px, calc(100vw - 150px));
+        overflow: hidden;
       }
-      #\${OVERLAY_ID}:hover {
-        box-shadow: 0 10px 28px rgba(103, 76, 178, 0.28);
+      #\${DOCK_ID}.is-dark .gk-dock-badge {
+        background: rgba(28, 23, 52, 0.86);
+        border-color: rgba(167, 139, 250, 0.42);
+        color: #ede9fe;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.38);
       }
-      #\${OVERLAY_ID}.is-collapsed {
-        padding: 4px;
-        border-radius: 999px;
-      }
-      #\${OVERLAY_ID}.is-collapsed .gk-meta,
-      #\${OVERLAY_ID}.is-collapsed .gk-collapse-btn {
+      #\${DOCK_ID}.is-collapsed .gk-dock-badge-body {
         display: none;
       }
-      #\${OVERLAY_ID} .gk-avatar-wrap {
-        position: relative;
-        width: 52px;
-        height: 52px;
-        border-radius: 14px;
-        overflow: hidden;
-        background: #fff;
-        border: 1px solid rgba(155, 114, 242, 0.28);
-        flex-shrink: 0;
-        cursor: pointer;
+      #\${DOCK_ID}.is-collapsed .gk-dock-badge {
+        padding: 3px;
+        border-radius: 999px;
+        margin-bottom: 12px;
       }
-      #\${OVERLAY_ID} .gk-avatar-wrap img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      #\${OVERLAY_ID} .gk-meta {
+      #\${DOCK_ID} .gk-dock-badge-body {
         display: flex;
         flex-direction: column;
         gap: 2px;
-        min-width: 128px;
-        max-width: 185px;
+        min-width: 0;
       }
-      #\${OVERLAY_ID} .gk-top-row {
+      #\${DOCK_ID} .gk-top-row {
         display: flex;
         align-items: center;
         gap: 5px;
-        font-size: 11px;
+        font-size: 10.5px !important;
         font-weight: 700;
+        white-space: nowrap;
       }
-      #\${OVERLAY_ID} .gk-phase {
+      #\${DOCK_ID} .gk-phase {
         padding: 1px 6px;
         border-radius: 999px;
-        font-size: 10px;
+        font-size: 10px !important;
         color: #fff;
         background: linear-gradient(135deg, #8b5cf6, #ec4899);
+        flex-shrink: 0;
       }
-      #\${OVERLAY_ID} .gk-phase.is-executor {
+      #\${DOCK_ID} .gk-phase.is-executor {
         background: linear-gradient(135deg, #06b6d4, #3b82f6);
       }
-      #\${OVERLAY_ID} .gk-phase.is-idle {
+      #\${DOCK_ID} .gk-phase.is-idle {
         background: #94a3b8;
       }
-      #\${OVERLAY_ID} .gk-action {
+      #\${DOCK_ID} .gk-action {
         color: #7c3aed;
-        font-size: 11px;
-        white-space: nowrap;
+        font-size: 10.5px !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
-      #\${OVERLAY_ID} .gk-model {
-        font-size: 11.5px;
+      #\${DOCK_ID}.is-dark .gk-action {
+        color: #c4b5fd;
+      }
+      #\${DOCK_ID} .gk-sub-row {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 10.5px !important;
+        color: #5b4d78;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #\${DOCK_ID}.is-dark .gk-sub-row {
+        color: #cbd5e1;
+      }
+      #\${DOCK_ID} .gk-model {
         font-weight: 600;
-        color: #312548;
-        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      #\${OVERLAY_ID} .gk-tool {
-        font-size: 10px;
-        color: #6b5f87;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      #\${OVERLAY_ID} .gk-collapse-btn {
+      #\${DOCK_ID} .gk-collapse-btn {
         border: none;
-        background: rgba(139, 92, 246, 0.12);
+        background: rgba(139, 92, 246, 0.14);
         color: #6d28d9;
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         border-radius: 999px;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 11px !important;
         line-height: 1;
         padding: 0;
         flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #\${DOCK_ID}.is-dark .gk-collapse-btn {
+        background: rgba(167, 139, 250, 0.24);
+        color: #f5f3ff;
+      }
+      /* 聊天流最底部活跃行旁动态透明立绘 */
+      .\${INLINE_CLASS} {
+        position: relative;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        margin-right: 6px;
+        flex-shrink: 0;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        pointer-events: none;
+        vertical-align: middle;
+      }
+      .\${INLINE_CLASS} img.gk-inline-sprite {
+        width: 38px;
+        height: 38px;
+        object-fit: contain;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        display: block;
+        filter: drop-shadow(0 2px 6px rgba(124, 108, 246, 0.34));
+        transform-origin: center bottom;
+      }
+      .\${INLINE_CLASS} .gk-inline-spark {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        font-size: 10px !important;
+        line-height: 1;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+        animation: gkSparkPulse 1.4s ease-in-out infinite;
+      }
+      /* 5 动作专属生命感动画 */
+      .gk-act-thinking {
+        animation: gkActThink 2.2s ease-in-out infinite;
+      }
+      .gk-act-reading {
+        animation: gkActRead 1.8s ease-in-out infinite;
+      }
+      .gk-act-editing {
+        animation: gkActEdit 0.72s ease-in-out infinite;
+      }
+      .gk-act-running {
+        animation: gkActRun 0.9s ease-in-out infinite;
+      }
+      .gk-act-asking {
+        animation: gkActThink 1.3s ease-in-out infinite;
+      }
+      .gk-act-idle {
+        animation: gkActIdle 3.2s ease-in-out infinite;
+      }
+      @keyframes gkActThink {
+        0%, 100% { transform: translateY(0) rotate(-2deg); }
+        50% { transform: translateY(-3px) rotate(2.5deg); }
+      }
+      @keyframes gkActRead {
+        0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+        35% { transform: translateY(-2px) rotate(-2deg) scale(1.02); }
+        70% { transform: translateY(-1px) rotate(2deg) scale(1.02); }
+      }
+      @keyframes gkActEdit {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-3.5px) scale(1.04, 0.97); }
+      }
+      @keyframes gkActRun {
+        0%, 100% { transform: translateY(0) scale(1); }
+        25% { transform: translateY(-3px) rotate(-3deg) scale(1.03); }
+        75% { transform: translateY(-2px) rotate(3deg) scale(1.03); }
+      }
+      @keyframes gkActIdle {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-2px) scale(1.015); }
+      }
+      @keyframes gkSparkPulse {
+        0%, 100% { opacity: 0.7; transform: scale(0.9); }
+        50% { opacity: 1; transform: scale(1.16); }
       }
       .gk-heart-pop {
         position: fixed;
         z-index: 99999;
         pointer-events: none;
-        font-size: 16px;
+        font-size: 16px !important;
         animation: gkFloatUp 0.85s ease-out forwards;
       }
       @keyframes gkFloatUp {
         0% { opacity: 1; transform: translateY(0) scale(0.9); }
         100% { opacity: 0; transform: translateY(-28px) scale(1.25); }
-      }
-      .gk-step-avatar {
-        display: inline-block;
-        width: 18px;
-        height: 18px;
-        border-radius: 5px;
-        object-fit: cover;
-        margin-right: 5px;
-        vertical-align: -3px;
-        border: 1px solid rgba(139, 92, 246, 0.35);
-        background: #fff;
-        flex-shrink: 0;
-        pointer-events: none;
       }
     \`;
     document.head.appendChild(style);
@@ -280,215 +433,353 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '') {
     setTimeout(() => h.remove(), 900);
   }
 
-  function createCapsule() {
-    ensureStyle();
-    let box = document.getElementById(OVERLAY_ID);
-    if (box) return box;
+  function isElementVisible(el) {
+    if (!el || !el.isConnected) return false;
+    const r = el.getBoundingClientRect();
+    if (r.width < 120 || r.height < 40) return false;
+    const cs = getComputedStyle(el);
+    return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
+  }
 
-    box = document.createElement('div');
-    box.id = OVERLAY_ID;
+  function findComposerAnchor() {
+    const byId = document.getElementById('antigravity.agentSidePanelInputBox');
+    if (isElementVisible(byId)) return byId;
 
-    try {
-      const saved = JSON.parse(localStorage.getItem(STATE_KEY) || 'null');
-      if (saved && typeof saved.top === 'number' && typeof saved.left === 'number') {
-        box.style.top = Math.max(8, Math.min(window.innerHeight - 72, saved.top)) + 'px';
-        box.style.left = Math.max(8, Math.min(window.innerWidth - 72, saved.left)) + 'px';
-        box.style.right = 'auto';
+    const composers = document.querySelectorAll('.surface-composer, .surface-composer-card');
+    for (const c of composers) {
+      if (isElementVisible(c)) {
+        const r = c.getBoundingClientRect();
+        if (r.top > window.innerHeight * 0.45 && r.width >= 260) return c;
       }
-      if (saved && saved.collapsed) box.classList.add('is-collapsed');
-    } catch {}
+    }
 
-    box.innerHTML = \`
-      <div class="gk-avatar-wrap" title="点击摸头 / 折叠时点此展开">
-        <img class="gk-sprite-img" alt="gemineko" />
+    const inputs = document.querySelectorAll('textarea, [contenteditable="true"], [role="textbox"]');
+    for (const inp of inputs) {
+      if (!isElementVisible(inp)) continue;
+      let cur = inp;
+      let best = null;
+      for (let i = 0; i < 8 && cur && cur !== document.body; i++) {
+        const r = cur.getBoundingClientRect();
+        if (r.width >= 260 && r.height >= 55 && r.height <= 360 && r.bottom > window.innerHeight - 160) {
+          best = cur;
+        }
+        cur = cur.parentElement;
+      }
+      if (best) return best;
+    }
+    return null;
+  }
+
+  function ensureDock() {
+    ensureStyle();
+    let dock = document.getElementById(DOCK_ID);
+    if (dock) return dock;
+
+    dock = document.createElement('div');
+    dock.id = DOCK_ID;
+    if (collapsed) dock.classList.add('is-collapsed');
+
+    dock.innerHTML = \`
+      <div class="gk-dock-cat" title="点击摸头 💖（固定在输入栏左上沿）">
+        <img class="gk-dock-sprite" alt="gemineko" />
       </div>
-      <div class="gk-meta">
-        <div class="gk-top-row">
-          <span class="gk-phase">编排模式</span>
-          <span class="gk-action">思考中</span>
+      <div class="gk-dock-badge">
+        <div class="gk-dock-badge-body">
+          <div class="gk-top-row">
+            <span class="gk-phase">编排模式</span>
+            <span class="gk-action">思考中</span>
+          </div>
+          <div class="gk-sub-row">
+            <span class="gk-model">gemini-4-neon</span>
+            <span class="gk-tool"></span>
+          </div>
         </div>
-        <div class="gk-model">gemini-4-neon</div>
-        <div class="gk-tool">准备就绪</div>
+        <button type="button" class="gk-collapse-btn" title="展开/收起状态标签">\${collapsed ? '›' : '‹'}</button>
       </div>
-      <button class="gk-collapse-btn" title="折叠/展开挂件">–</button>
     \`;
 
-    const avatarWrap = box.querySelector('.gk-avatar-wrap');
-    const collapseBtn = box.querySelector('.gk-collapse-btn');
+    const catEl = dock.querySelector('.gk-dock-cat');
+    const collapseBtn = dock.querySelector('.gk-collapse-btn');
 
-    avatarWrap.addEventListener('click', (e) => {
-      if (box.classList.contains('is-collapsed')) {
-        box.classList.remove('is-collapsed');
-        savePos(box);
-        return;
-      }
-      spawnHeart(e.clientX - 8, e.clientY - 12);
+    catEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      spawnHeart(e.clientX - 8, e.clientY - 14);
     });
 
     collapseBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      box.classList.toggle('is-collapsed');
-      savePos(box);
+      collapsed = !collapsed;
+      dock.classList.toggle('is-collapsed', collapsed);
+      collapseBtn.textContent = collapsed ? '›' : '‹';
+      try { localStorage.setItem(COLLAPSE_PREF_KEY, collapsed ? '1' : '0'); } catch {}
+      scheduleSync();
     });
 
-    let dragging = false;
-    let startX = 0, startY = 0, origLeft = 0, origTop = 0;
-    box.addEventListener('mousedown', (e) => {
-      if (e.target === collapseBtn) return;
-      dragging = true;
-      const rect = box.getBoundingClientRect();
-      startX = e.clientX;
-      startY = e.clientY;
-      origLeft = rect.left;
-      origTop = rect.top;
-      box.style.cursor = 'grabbing';
-    });
-    const onMove = (e) => {
-      if (!dragging) return;
-      const nx = Math.max(8, Math.min(window.innerWidth - box.offsetWidth - 8, origLeft + (e.clientX - startX)));
-      const ny = Math.max(8, Math.min(window.innerHeight - box.offsetHeight - 8, origTop + (e.clientY - startY)));
-      box.style.left = nx + 'px';
-      box.style.top = ny + 'px';
-      box.style.right = 'auto';
-    };
-    const onUp = () => {
-      if (!dragging) return;
-      dragging = false;
-      box.style.cursor = 'grab';
-      savePos(box);
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-
-    box.__gkCleanup = () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-
-    document.body.appendChild(box);
-    renderCapsule();
-    return box;
+    document.body.appendChild(dock);
+    renderDockState();
+    return dock;
   }
 
-  function savePos(box) {
-    try {
-      const rect = box.getBoundingClientRect();
-      localStorage.setItem(STATE_KEY, JSON.stringify({
-        top: Math.round(rect.top),
-        left: Math.round(rect.left),
-        collapsed: box.classList.contains('is-collapsed')
-      }));
-    } catch {}
+  function syncDockPosition() {
+    if (stopped) return;
+    const dock = ensureDock();
+    dock.classList.toggle('is-dark', isHostDarkTheme());
+
+    const anchor = findComposerAnchor();
+    if (anchor !== currentAnchor) {
+      if (anchorResizeObserver) anchorResizeObserver.disconnect();
+      currentAnchor = anchor;
+      if (anchor && typeof ResizeObserver === 'function') {
+        anchorResizeObserver = new ResizeObserver(() => scheduleSync());
+        anchorResizeObserver.observe(anchor);
+      }
+    }
+
+    if (!anchor) {
+      dock.classList.add('is-hidden');
+      return;
+    }
+
+    const r = anchor.getBoundingClientRect();
+    if (r.width < 120 || r.top < 80 || r.bottom > window.innerHeight + 40) {
+      dock.classList.add('is-hidden');
+      return;
+    }
+
+    dock.classList.remove('is-hidden');
+    const dockHeight = dock.offsetHeight || 68;
+    const left = Math.max(8, Math.min(window.innerWidth - 120, Math.round(r.left + 12)));
+    // 下摆轻轻坐落在输入栏顶部边框，与右侧系统像素小宠物底座齐平
+    const top = Math.max(40, Math.round(r.top - dockHeight + 10));
+    if (dock.style.left !== left + 'px') dock.style.left = left + 'px';
+    if (dock.style.top !== top + 'px') dock.style.top = top + 'px';
   }
 
-  function renderCapsule() {
-    const box = document.getElementById(OVERLAY_ID);
-    if (!box) return;
-    const img = box.querySelector('.gk-sprite-img');
-    const phaseEl = box.querySelector('.gk-phase');
-    const actionEl = box.querySelector('.gk-action');
-    const modelEl = box.querySelector('.gk-model');
-    const toolEl = box.querySelector('.gk-tool');
+  function actionClassFor(action) {
+    if (action === 'editing') return 'gk-act-editing';
+    if (action === 'reading') return 'gk-act-reading';
+    if (action === 'running') return 'gk-act-running';
+    if (action === 'asking') return 'gk-act-asking';
+    if (action === 'idle') return 'gk-act-idle';
+    return 'gk-act-thinking';
+  }
 
-    const spriteName = latestState.spriteFile || \`\${latestState.role}-\${latestState.action}.png\`;
-    const nextSrc = \`\${SERVER}/gemineko-sprites/\${spriteName}\`;
+  function actionSparkFor(action) {
+    if (action === 'editing') return '⌨️';
+    if (action === 'reading') return '🔍';
+    if (action === 'running') return '⚡';
+    if (action === 'asking') return '❓';
+    if (action === 'idle') return '💤';
+    return '✨';
+  }
+
+  function getActiveSpriteUrl() {
+    const role = latestState.role || 'neon';
+    const act = latestState.action && latestState.action !== 'asking' ? latestState.action : (latestState.active ? 'thinking' : 'idle');
+    const spriteName = latestState.spriteFile || \`\${role}-\${act}.png\`;
+    return \`\${SERVER}/gemineko-sprites/\${spriteName}?v=0.3.0\`;
+  }
+
+  function renderDockState() {
+    const dock = document.getElementById(DOCK_ID);
+    if (!dock) return;
+    const img = dock.querySelector('img.gk-dock-sprite');
+    const phaseEl = dock.querySelector('.gk-phase');
+    const actionEl = dock.querySelector('.gk-action');
+    const modelEl = dock.querySelector('.gk-model');
+    const toolEl = dock.querySelector('.gk-tool');
+
+    const nextSrc = getActiveSpriteUrl();
     if (img.getAttribute('data-src') !== nextSrc) {
       img.setAttribute('data-src', nextSrc);
       img.src = nextSrc;
     }
-    phaseEl.textContent = latestState.phaseLabel || '编排模式';
-    phaseEl.className = 'gk-phase ' + (latestState.phase === 'executor' ? 'is-executor' : latestState.phase === 'idle' ? 'is-idle' : '');
-    actionEl.textContent = latestState.actionLabel || '思考中';
-    modelEl.textContent = latestState.model || 'gemini-4-neon';
-    toolEl.textContent = latestState.lastTool ? \`工具: \${latestState.lastTool}\` : (latestState.active ? '思维流运转中' : '等待新指令');
+    const actCls = actionClassFor(latestState.action);
+    const nextImgCls = 'gk-dock-sprite ' + actCls;
+    if (img.className !== nextImgCls) img.className = nextImgCls;
+
+    const nextPhaseText = latestState.phaseLabel || '编排模式';
+    if (phaseEl.textContent !== nextPhaseText) phaseEl.textContent = nextPhaseText;
+    const nextPhaseCls = 'gk-phase ' + (latestState.phase === 'executor' ? 'is-executor' : latestState.phase === 'idle' ? 'is-idle' : '');
+    if (phaseEl.className !== nextPhaseCls) phaseEl.className = nextPhaseCls;
+
+    const nextActText = latestState.actionLabel || '思考中';
+    if (actionEl.textContent !== nextActText) actionEl.textContent = nextActText;
+
+    const shortModel = String(latestState.model || 'gemini-4-neon').replace(/-preview$/i, '');
+    if (modelEl.textContent !== shortModel) modelEl.textContent = shortModel;
+
+    const nextTool = latestState.lastTool ? \`· \${latestState.lastTool}\` : '';
+    if (toolEl.textContent !== nextTool) toolEl.textContent = nextTool;
   }
 
-  function decorateChatStream() {
-    // 严格只扫描交互型步骤按钮（button / summary / [role="button"]），绝不扫描外层 div，防止多层竖排叠图
-    const stepCandidates = document.querySelectorAll('button, summary, [role="button"]');
-    for (const el of stepCandidates) {
-      if (el.getAttribute('data-gemineko-step') === '1') continue;
-      if (el.closest('[data-gemineko-step="1"]')) continue;
-      if (el.querySelector('.gk-step-avatar')) continue;
-      const text = (el.textContent || '').trim();
-      if (!text || text.length > 40) continue;
-      if (!/^Worked for\s+\d/i.test(text)) continue;
+  function syncActiveStatusSprite() {
+    if (stopped) return;
+    const activePattern = /^(Thinking(?:\\s+for\\s+\\d|\\s*\\d|$)|Working(?:\\b|\\s*$)|Running\\b|Planning\\b|Reading\\b|Editing\\b|Analyzing\\b)/i;
+    const anchor = findComposerAnchor();
+    const maxY = anchor ? anchor.getBoundingClientRect().top - 4 : window.innerHeight - 60;
+    let bestCandidate = null;
+    let bestTop = -Infinity;
 
-      const cs = window.getComputedStyle ? window.getComputedStyle(el) : null;
-      if (cs && /flex/.test(cs.display) && cs.flexDirection === 'column') continue;
+    if (document.body) {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const txt = (node.nodeValue || '').trim();
+        if (!txt || txt.length > 72 || !activePattern.test(txt)) continue;
+        const p = node.parentElement;
+        if (!p) continue;
+        if (p.closest('#' + DOCK_ID) || p.closest('.' + INLINE_CLASS)) continue;
+        if (p.closest('code, pre, textarea, [contenteditable="true"], .monaco-editor')) continue;
+        // 排除已折叠的历史 Worked for 块内部文本
+        const btn = p.closest('button, summary');
+        if (btn && /^Worked for\\b/i.test((btn.textContent || '').trim())) continue;
 
-      const avatar = document.createElement('img');
-      avatar.className = 'gk-step-avatar';
-      const role = latestState.role || 'neon';
-      const act = latestState.action && latestState.action !== 'asking' ? latestState.action : 'thinking';
-      avatar.src = \`\${SERVER}/gemineko-sprites/\${role}-\${act}.png\`;
-      el.setAttribute('data-gemineko-step', '1');
-      el.prepend(avatar);
-    }
+        const r = p.getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0 || r.height > 64) continue;
+        if (r.bottom < 45 || r.top > maxY) continue;
 
-    if (LOGO_URI) {
-      const links = document.querySelectorAll('a, button');
-      for (const node of links) {
-        if (node.getAttribute('data-gemineko-pill') === '1') continue;
-        if (!/Open the Swarm UI/i.test(node.textContent || '')) continue;
-        const svg = node.querySelector('svg');
-        if (svg) {
-          const img = document.createElement('img');
-          img.src = LOGO_URI;
-          img.style.width = '16px';
-          img.style.height = '16px';
-          img.style.borderRadius = '4px';
-          img.style.verticalAlign = 'middle';
-          img.style.marginRight = '4px';
-          svg.replaceWith(img);
-          node.setAttribute('data-gemineko-pill', '1');
+        // 优先横向 flex 容器作为锚定行
+        const row = (p.parentElement && /flex/.test(getComputedStyle(p.parentElement).display) && getComputedStyle(p.parentElement).flexDirection !== 'column')
+          ? p.parentElement
+          : p;
+
+        if (r.top > bestTop) {
+          bestTop = r.top;
+          bestCandidate = row;
         }
       }
     }
+
+    // 清除不再活跃的历史挂件
+    document.querySelectorAll('.' + INLINE_CLASS).forEach((el) => {
+      if (!bestCandidate || el.parentElement !== bestCandidate) {
+        el.remove();
+      }
+    });
+
+    if (!bestCandidate) return;
+
+    let wrap = bestCandidate.querySelector('.' + INLINE_CLASS);
+    if (!wrap) {
+      wrap = document.createElement('span');
+      wrap.className = INLINE_CLASS;
+      wrap.innerHTML = '<img class="gk-inline-sprite" alt="" /><span class="gk-inline-spark"></span>';
+      bestCandidate.prepend(wrap);
+    }
+
+    const spriteUrl = getActiveSpriteUrl();
+    const effectiveAction = latestState.active ? (latestState.action || 'thinking') : 'thinking';
+    const img = wrap.querySelector('img.gk-inline-sprite');
+    const spark = wrap.querySelector('.gk-inline-spark');
+    if (img && img.getAttribute('data-src') !== spriteUrl) {
+      img.setAttribute('data-src', spriteUrl);
+      img.src = spriteUrl;
+    }
+    const imgCls = 'gk-inline-sprite ' + actionClassFor(effectiveAction);
+    if (img && img.className !== imgCls) img.className = imgCls;
+    const sp = actionSparkFor(effectiveAction);
+    if (spark && spark.textContent !== sp) spark.textContent = sp;
+  }
+
+  function replaceOpenSwarmPillLogo() {
+    if (!LOGO_URI) return;
+    const links = document.querySelectorAll('a, button');
+    for (const node of links) {
+      if (node.getAttribute('data-gemineko-pill') === '1') continue;
+      if (!/Open the Swarm UI/i.test(node.textContent || '')) continue;
+      const svg = node.querySelector('svg');
+      if (svg) {
+        const img = document.createElement('img');
+        img.src = LOGO_URI;
+        img.style.width = '16px';
+        img.style.height = '16px';
+        img.style.borderRadius = '4px';
+        img.style.verticalAlign = 'middle';
+        img.style.marginRight = '4px';
+        svg.replaceWith(img);
+        node.setAttribute('data-gemineko-pill', '1');
+      }
+    }
+  }
+
+  function scheduleSync() {
+    if (stopped || syncRaf) return;
+    syncRaf = requestAnimationFrame(() => {
+      syncRaf = null;
+      if (stopped) return;
+      syncDockPosition();
+      syncActiveStatusSprite();
+      replaceOpenSwarmPillLogo();
+    });
   }
 
   async function pollActivity() {
     if (stopped) return;
     try {
-      const res = await fetch(\`\${SERVER}/api/live-activity\`);
+      const convId = getCurrentConversationId();
+      const qs = convId ? \`?conversationId=\${encodeURIComponent(convId)}\` : '';
+      const res = await fetch(\`\${SERVER}/api/live-activity\${qs}\`);
       if (res.ok) {
         const data = await res.json();
         if (data && data.activity) {
           latestState = { ...latestState, ...data.activity };
-          renderCapsule();
+          renderDockState();
+          syncActiveStatusSprite();
         }
       }
     } catch {}
-    decorateChatStream();
+    syncDockPosition();
     if (!stopped) {
       pollTimer = setTimeout(pollActivity, ${POLL_INTERVAL_MS});
     }
   }
 
-  createCapsule();
-  decorateChatStream();
-  observer = new MutationObserver(() => {
-    if (!stopped) decorateChatStream();
+  const onViewportChange = () => scheduleSync();
+  const onUrlCheck = () => {
+    if (location.pathname !== lastPathname) {
+      lastPathname = location.pathname;
+      if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+      pollActivity();
+    }
+    scheduleSync();
+  };
+
+  ensureDock();
+  syncDockPosition();
+  syncActiveStatusSprite();
+  replaceOpenSwarmPillLogo();
+
+  domObserver = new MutationObserver(() => {
+    if (stopped) return;
+    onUrlCheck();
   });
   if (document.body) {
-    observer.observe(document.body, { childList: true, subtree: true });
+    domObserver.observe(document.body, { childList: true, subtree: true });
   }
+  window.addEventListener('resize', onViewportChange);
+  window.addEventListener('scroll', onViewportChange, true);
+  window.addEventListener('popstate', onUrlCheck);
   pollActivity();
 
   window.__GEMINEKO_CDP_OVERLAY_V2__ = true;
+  window.__GEMINEKO_CDP_OVERLAY_V3__ = true;
   window.__GEMINEKO_CDP_UNMOUNT__ = () => {
     stopped = true;
     if (pollTimer) clearTimeout(pollTimer);
-    if (observer) observer.disconnect();
-    cleanupStepAvatars();
-    const box = document.getElementById(OVERLAY_ID);
-    if (box) {
-      if (typeof box.__gkCleanup === 'function') box.__gkCleanup();
-      box.remove();
-    }
+    if (syncRaf) cancelAnimationFrame(syncRaf);
+    if (domObserver) domObserver.disconnect();
+    if (anchorResizeObserver) anchorResizeObserver.disconnect();
+    window.removeEventListener('resize', onViewportChange);
+    window.removeEventListener('scroll', onViewportChange, true);
+    window.removeEventListener('popstate', onUrlCheck);
+    cleanupLegacyNodes();
+    const dock = document.getElementById(DOCK_ID);
+    if (dock) dock.remove();
     const st = document.getElementById(STYLE_ID);
     if (st) st.remove();
     window.__GEMINEKO_CDP_OVERLAY_V2__ = false;
+    window.__GEMINEKO_CDP_OVERLAY_V3__ = false;
   };
 })();`;
 }
@@ -511,7 +802,9 @@ export class CdpHostInjector {
     this.connectedUrl = '';
     this.ws = null;
     this.retryTimer = null;
+    this.heartbeatTimer = null;
     this.msgId = 1;
+    this.pendingRpc = new Map();
   }
 
   /**
@@ -538,7 +831,7 @@ export class CdpHostInjector {
       await this.evaluateOnTarget('if (window.__GEMINEKO_CDP_UNMOUNT__) window.__GEMINEKO_CDP_UNMOUNT__();');
       this.closeWs();
       this.state = 'disabled-by-user';
-      this.hint = '已在开关中暂停主对话区猫娘悬浮挂载';
+      this.hint = '已在开关中暂停主对话区猫娘固定挂载';
       return this.getStatus();
     }
     await this.tryAttach();
@@ -546,7 +839,7 @@ export class CdpHostInjector {
   }
 
   /**
-   * 启动并调度轻量重连探测。
+   * 启动重连探测与 10 秒保活心跳。
    */
   start() {
     if (!this.enabled) return;
@@ -559,6 +852,14 @@ export class CdpHostInjector {
       }, 15_000);
       this.retryTimer.unref?.();
     }
+    if (!this.heartbeatTimer) {
+      this.heartbeatTimer = setInterval(() => {
+        if (this.enabled && this.state === 'attached') {
+          this.verifyAndReinject().catch(() => {});
+        }
+      }, HEARTBEAT_INTERVAL_MS);
+      this.heartbeatTimer.unref?.();
+    }
   }
 
   /**
@@ -569,11 +870,20 @@ export class CdpHostInjector {
       clearInterval(this.retryTimer);
       this.retryTimer = null;
     }
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
     this.closeWs();
     this.state = 'stopped';
   }
 
   closeWs() {
+    for (const [, p] of this.pendingRpc) {
+      clearTimeout(p.timer);
+      p.resolve(null);
+    }
+    this.pendingRpc.clear();
     if (this.ws) {
       try { this.ws.close(); } catch {}
       this.ws = null;
@@ -582,18 +892,64 @@ export class CdpHostInjector {
   }
 
   /**
+   * 发送 CDP 命令并等待结果。
+   * @param {string} method
+   * @param {object} params
+   * @returns {Promise<any>}
+   */
+  sendRpc(method, params) {
+    if (!this.ws || this.ws.readyState !== 1) return Promise.resolve(null);
+    const id = this.msgId++;
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.pendingRpc.delete(id);
+        resolve(null);
+      }, 2500);
+      this.pendingRpc.set(id, { resolve, timer });
+      try {
+        this.ws.send(JSON.stringify({ id, method, params }));
+      } catch {
+        clearTimeout(timer);
+        this.pendingRpc.delete(id);
+        resolve(null);
+      }
+    });
+  }
+
+  /**
    * 向已连接的 CDP 会话下发脚本求值。
    * @param {string} expression
+   * @param {boolean} [waitResult]
    */
-  async evaluateOnTarget(expression) {
+  async evaluateOnTarget(expression, waitResult = false) {
     if (!this.ws || this.ws.readyState !== 1) return false;
-    const id = this.msgId++;
-    this.ws.send(JSON.stringify({
-      id,
-      method: 'Runtime.evaluate',
-      params: { expression, awaitPromise: false },
-    }));
-    return true;
+    if (!waitResult) {
+      const id = this.msgId++;
+      this.ws.send(JSON.stringify({
+        id,
+        method: 'Runtime.evaluate',
+        params: { expression, awaitPromise: false },
+      }));
+      return true;
+    }
+    const resp = await this.sendRpc('Runtime.evaluate', {
+      expression,
+      awaitPromise: false,
+      returnByValue: true,
+    });
+    return resp?.result?.result?.value;
+  }
+
+  /**
+   * 周期探活：若宿主刷新或重绘导致注入标记丢失，自动重新注入。
+   */
+  async verifyAndReinject() {
+    if (!this.enabled || !this.ws || this.ws.readyState !== 1) return;
+    const alive = await this.evaluateOnTarget('Boolean(window.__GEMINEKO_CDP_OVERLAY_V3__)', true);
+    if (alive === false) {
+      const script = buildCdpOverlayScript(this.serverBaseUrl, this.logoDataUri);
+      await this.evaluateOnTarget(script);
+    }
   }
 
   /**
@@ -609,7 +965,7 @@ export class CdpHostInjector {
 
     if (!target) {
       this.state = 'debug-port-disabled';
-      this.hint = `未检测到本地 Antigravity CDP 调试端口（尝试端口 ${candidatePort}）。以 --remote-debugging-port=${DEFAULT_DEBUG_PORT} 启动 Antigravity 后即可自动在主对话区显示实时猫娘悬浮胶囊`;
+      this.hint = `未检测到本地 Antigravity CDP 调试端口（尝试端口 ${candidatePort}）。以 --remote-debugging-port=${DEFAULT_DEBUG_PORT} 启动 Antigravity 后即可自动在输入栏上方显示透明动态猫娘`;
       return this.getStatus();
     }
 
@@ -643,12 +999,24 @@ export class CdpHostInjector {
         finish();
       }, 2500);
 
+      ws.addEventListener('message', (ev) => {
+        try {
+          const msg = JSON.parse(String(ev.data || ''));
+          if (msg && typeof msg.id === 'number' && this.pendingRpc.has(msg.id)) {
+            const p = this.pendingRpc.get(msg.id);
+            this.pendingRpc.delete(msg.id);
+            clearTimeout(p.timer);
+            p.resolve(msg);
+          }
+        } catch {}
+      });
+
       ws.addEventListener('open', () => {
         clearTimeout(timeout);
         this.ws = ws;
         this.connectedUrl = target.webSocketDebuggerUrl;
         this.state = 'attached';
-        this.hint = '已成功挂载到主对话窗口';
+        this.hint = '已固定挂载到主对话输入栏与底部活跃状态行';
         this.lastError = '';
         const script = buildCdpOverlayScript(this.serverBaseUrl, this.logoDataUri);
         this.evaluateOnTarget(script).catch(() => {});

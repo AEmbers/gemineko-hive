@@ -101,7 +101,7 @@ function createFakeSwarmSandbox() {
   return { root, swarmDir, origIndex, origMain, origLogoSvg, logoSvgPath: path.join(assetsDir, 'logo.svg'), appDataDir, convDir, convId };
 }
 
-test('25 张角色×动作 128x128 PNG 立绘全部就绪且格式尺寸合规', () => {
+test('30 张角色×动作 128x128 PNG 立绘全部就绪且具备 RGBA 透明通道', () => {
   const roles = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'];
   const actions = ['thinking', 'reading', 'editing', 'running', 'idle'];
   const spritesDir = path.join(REPO_ROOT, 'assets', 'sprites');
@@ -111,27 +111,30 @@ test('25 张角色×动作 128x128 PNG 立绘全部就绪且格式尺寸合规',
       const filePath = path.join(spritesDir, `${role}-${action}.png`);
       assert.ok(fs.existsSync(filePath), `缺少精灵图: ${role}-${action}.png`);
       const buf = fs.readFileSync(filePath);
-      // 校验 PNG 魔数 + IHDR 宽高 (offset 16..24 big-endian uint32)
       assert.equal(buf.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', `${role}-${action}.png 不是合法 PNG`);
-      const width = buf.readUInt32BE(16);
-      const height = buf.readUInt32BE(20);
-      assert.equal(width, 128, `${role}-${action}.png 宽度应为 128`);
-      assert.equal(height, 128, `${role}-${action}.png 高度应为 128`);
+      assert.equal(buf.readUInt32BE(16), 128, `${role}-${action}.png 宽度应为 128`);
+      assert.equal(buf.readUInt32BE(20), 128, `${role}-${action}.png 高度应为 128`);
+      // PNG IHDR byte 25 为 colorType，6 表示带 Alpha 透明通道的 RGBA
+      assert.equal(buf[25], 6, `${role}-${action}.png 应为 RGBA(colorType=6) 透明 PNG`);
     }
   }
 });
 
-test('buildGeminekoBundle 生成轻量化自包含脚本并内联花名与动作模块', () => {
+test('buildGeminekoBundle 生成轻量化自包含脚本并包含透明猫窝/花名与全量汉化能力', () => {
   const res = buildGeminekoBundle();
   assert.ok(fs.existsSync(res.outPath));
-  // 拆分为按需路由加载后应显著小于旧版 ~550KB（仅保留 logo 内联）
-  assert.ok(res.bytes > 20_000 && res.bytes < 400_000, `意外的主包字节数: ${res.bytes}`);
+  assert.ok(res.bytes > 20_000 && res.bytes < 420_000, `意外的主包字节数: ${res.bytes}`);
   const content = fs.readFileSync(res.outPath, 'utf8');
   assert.match(content, /GEMINEKO_ASSETS/);
   assert.match(content, /resolveMemeNickname/);
   assert.match(content, /drawPixelSprite/);
   assert.match(content, /buildDemoSwarmSnapshot/);
   assert.match(content, /mo\.disconnect\(\)/);
+  assert.match(content, /gn-settings-panel/);
+  assert.match(content, /--gn-catnest-pattern/);
+  assert.match(content, /extractFullNodeIdFromGroup/);
+  assert.match(content, /传话连线/);
+  assert.match(content, /隐藏摸鱼猫/);
 });
 
 test('activity-tracker 正确识别 5 大模型、工具动作与编排/执行阶段', () => {
@@ -159,6 +162,25 @@ test('activity-tracker 正确识别 5 大模型、工具动作与编排/执行�
 
     const latest = findActiveConversationActivity([sb.appDataDir], Date.now());
     assert.equal(latest?.conversationId, sb.convId);
+
+    // 制造一个更新时间的后台会话，验证传入 preferredConversationId 时绝不串台
+    const otherId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    const otherLogs = path.join(sb.appDataDir, 'brain', otherId, '.system_generated', 'logs');
+    fs.mkdirSync(otherLogs, { recursive: true });
+    fs.writeFileSync(
+      path.join(otherLogs, 'transcript.jsonl'),
+      `${JSON.stringify({
+        plannerResponse: {
+          model: 'claude-sonnet-5-5-high',
+          thinking: '后台严审',
+          toolCalls: [{ name: 'run_checks' }],
+          createdAt: new Date(Date.now() + 10_000).toISOString(),
+        },
+      })}\n`,
+    );
+    const locked = findActiveConversationActivity([sb.appDataDir], Date.now(), undefined, sb.convId);
+    assert.equal(locked?.conversationId, sb.convId);
+    assert.equal(locked?.role, 'hydrogen');
 
     const enriched = enrichSwarmMembersWithActivity(
       {
@@ -250,7 +272,7 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
   try {
     const hz = await srv.inject({ url: '/healthz' });
     assert.equal(hz.statusCode, 200);
-    assert.equal(hz.json().version, '0.2.1');
+    assert.equal(hz.json().version, '0.3.0');
 
     const preloadRes = await srv.inject({ url: '/preload.js' });
     assert.equal(preloadRes.statusCode, 200);
@@ -258,7 +280,11 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
     assert.match(preloadRes.text, /window\.sidecar/);
 
     const overlayScript = buildCdpOverlayScript(srv.origin, '');
-    assert.match(overlayScript, /cleanupStepAvatars/);
+    assert.match(overlayScript, /gemineko-cdp-composer-dock/);
+    assert.match(overlayScript, /antigravity\.agentSidePanelInputBox/);
+    assert.match(overlayScript, /gk-live-inline-wrap/);
+    assert.match(overlayScript, /getCurrentConversationId/);
+    assert.doesNotMatch(overlayScript, /cursor:\s*grabbing/);
     assert.doesNotMatch(overlayScript, /querySelectorAll\(['"]button, summary, \[role="button"\], div['"]\)/);
 
     const spriteRes = await fetch(`${srv.origin}/gemineko-sprites/neon-thinking.png`);

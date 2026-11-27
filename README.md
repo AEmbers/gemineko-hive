@@ -2,16 +2,16 @@
   <img src="assets/logo.png" width="150" alt="Gemineko Hive Logo" />
 </p>
 
-<h1 align="center">Gemineko Hive · 基米窝 v0.2.0</h1>
+<h1 align="center">Gemineko Hive · 基米窝 v0.3.0</h1>
 
 <p align="center">
   <strong>“坏了，捅了基米窝了！”</strong><br />
-  为 <strong>Google Antigravity</strong> 注入 25 态活体猫娘立绘、主对话编排/执行实时挂件与高浓度玩梗花名！
+  为 <strong>Google Antigravity</strong> 注入全透明抠图 25 态动态立绘、输入栏固定伴生猫娘、活跃行实时联动与星空猫窝主题！
 </p>
 
 ---
 
-## ✨ v0.2.0 核心特性
+## ✨ v0.3.0 核心特性
 
 - **看立绘就知道谁在干活、在干什么（5 模型 × 5 动作 = 全套 25 张 Q 版立绘 + 32×32 像素手搓版）**：
   - **5 大差异化人设**：
@@ -23,7 +23,7 @@
   - **5 大工具动作具象化**：**思考中**（托腮星光）、**读代码**（金边眼镜 + 放大镜看卷轴）、**改文件**（敲发光机械键盘）、**跑终端**（戴耳机盯绿屏终端）、**打盹**（抱枕眯眼休息）——**图内纯洁无字，清晰一眼辨别！**
 - **Antigravity 主对话区实时挂载（免改 `app.asar`）**：
   - 实时读取会话 `transcript.jsonl` 尾部日志，精准区分当前是 **编排模式（Planner）** 还是 **执行模式（Executor）**；
-  - 通过本地 CDP 自动在主对话右上角挂载 **可拖拽猫娘悬浮胶囊**（摸头会冒爱心 💖），并在聊天中 `Worked for` / `Inspecting` / `Analyzed` / `Ran` 等步骤条前自动贴上当前模型小立绘！
+  - 通过本地 CDP 自动在**主对话输入栏左上沿固定锚定**透明动态猫娘（不可拖拽、自适应字号与缩放、摸头会冒爱心 💖），并在聊天流最底部正在干活的 `Thinking for ...` / `Working` / `Running` 行旁同步挂载动态动作小立绘（回合结束自动收起）！
   - 注：主对话挂件需要 Antigravity 以 `--remote-debugging-port=19222` 启动（Windows 开始菜单快捷方式默认已带此参数；未开启时插件会自动静默待机，不影响独立面板）。
 - **Swarm 全链路无损美化 & 入口小蜜蜂替换**：
   - 支持对官方 `swarm_board` 无损换肤并同步备份替换 `swarm/assets/logo.svg`，连聊天气泡里的 `[Open the Swarm UI]` 按钮也会变成可爱的基米窝图标！随时一键字节级还原官方原版。

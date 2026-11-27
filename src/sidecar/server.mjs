@@ -326,7 +326,7 @@ export async function createHiveSidecarServer(options = {}) {
     }
 
     if (req.method === 'GET' && pathname === '/healthz') {
-      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.2.1', sidecar: 'hive_board' });
+      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.3.0', sidecar: 'hive_board' });
       return;
     }
 
@@ -364,7 +364,7 @@ export async function createHiveSidecarServer(options = {}) {
       res.writeHead(200, {
         ...CORS_HEADERS,
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=3600',
+        'Cache-Control': 'no-cache',
       });
       res.end(fs.readFileSync(absFile));
       return;
@@ -372,11 +372,12 @@ export async function createHiveSidecarServer(options = {}) {
 
     if (req.method === 'GET' && pathname === '/api/live-activity') {
       const dirs = findAppDataDirs(options.appDataDirs);
-      const activity = findActiveConversationActivity(dirs);
+      const preferredConvId = String(urlObj.searchParams.get('conversationId') || '').trim();
+      const activity = findActiveConversationActivity(dirs, Date.now(), undefined, preferredConvId);
       sendJson(res, 200, {
         ok: true,
         activity: activity || {
-          conversationId: '',
+          conversationId: preferredConvId || '',
           active: false,
           phase: 'idle',
           phaseLabel: '待机中',

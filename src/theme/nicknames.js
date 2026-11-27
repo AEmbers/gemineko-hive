@@ -1,17 +1,91 @@
 /**
- * @file 哈基米高浓度玩梗花名引擎（支持原生 @id 与花名无缝切换）
+ * @file 哈基米高浓度玩梗花名引擎（支持原生 @id 与花名无缝切换，扩充池大幅降低重复编号）
  */
 
 const ROLE_NAME_POOLS = {
-  coordinator: ['哈基米大统领', '基米窝总管', '猫耳大军师'],
-  reviewer: ['95分严审圣女', '挑刺大祭司', '铁面打回喵'],
-  scout: ['雷达嗅探猫', '图谱巡逻官', '摸底侦察喵'],
-  wiki: ['史官整理猫', '文档织布喵', '错题本书记'],
-  gpt: ['烧Token大龙娘', '天价翡翠龙', '白毛算力龙'],
-  claude: ['95分严审圣女', '严谨红茶猫', '红笔质检官'],
-  carbon: ['重炮推理大猫', '暗夜星冠猫', '深度思考王'],
-  hydrogen: ['光速敲码猫', '白米饭精', '哈气修锅王', '芥末奶巡逻官', '罐头搬运喵', '闪电跑腿喵'],
-  neon: ['星辰编排猫娘', '异瞳大管家', '熬夜画饼喵'],
+  coordinator: ['哈基米大统领', '基米窝总管', '猫耳大军师', '星穹统帅喵'],
+  reviewer: [
+    '95分严审圣女',
+    '挑刺大祭司',
+    '铁面打回喵',
+    '红笔判官喵',
+    '严谨红茶猫',
+    '毒舌质检官',
+    '代码安检喵',
+    '缺陷零容忍',
+    '终审守门猫',
+    '红牌巡检官',
+  ],
+  scout: [
+    '雷达嗅探猫',
+    '图谱巡逻官',
+    '摸底侦察喵',
+    '线索追踪猫',
+    '顺藤摸瓜喵',
+    '猫耳哨兵官',
+    '暗影探路猫',
+    '全仓扫雷喵',
+    '情报收集猫',
+    '足迹嗅探官',
+  ],
+  wiki: [
+    '史官整理猫',
+    '文档织布喵',
+    '错题本书记',
+    '卷宗归档喵',
+    '记忆编织猫',
+    '索引抄录官',
+  ],
+  gpt: [
+    '烧Token大龙娘',
+    '天价翡翠龙',
+    '白毛算力龙',
+    '深思龙裔姬',
+    '氪金演算龙',
+    '翡翠智囊龙',
+  ],
+  claude: [
+    '95分严审圣女',
+    '严谨红茶猫',
+    '红笔质检官',
+    '挑刺大小姐',
+    '茶会审稿喵',
+    '零容错学姐',
+  ],
+  carbon: [
+    '重炮推理大猫',
+    '暗夜星冠猫',
+    '深度思考王',
+    '黑金夜巡喵',
+    '渊博星瞳猫',
+    '紫金算力王',
+  ],
+  hydrogen: [
+    '光速敲码猫',
+    '白米饭精',
+    '哈气修锅王',
+    '芥末奶巡逻官',
+    '罐头搬运喵',
+    '闪电跑腿喵',
+    '键盘侠喵',
+    '熬夜肝帝猫',
+    '甜酷修Bug喵',
+    '冰青冲锋猫',
+    '猫条补给员',
+    '并发流水喵',
+    '热修急先锋',
+    '代码缝合喵',
+  ],
+  neon: [
+    '星辰编排猫娘',
+    '异瞳大管家',
+    '熬夜画饼喵',
+    '双瞳星使猫',
+    '霓虹调度官',
+    '猫窝大导演',
+    '架构领航喵',
+    '紫星指挥猫',
+  ],
 };
 
 /**
@@ -40,10 +114,10 @@ function detectNicknameBucket(member = {}) {
   const model = String(member.model || '').toLowerCase();
 
   if (member.isCoordinator || id === 'coordinator' || roleStr === 'coordinator') return 'coordinator';
-  if (/review|audit|verifier|strict/.test(id) || /claude|sonnet|opus|haiku/.test(model)) return 'reviewer';
+  if (/review|audit|verifier|strict|check/.test(id) || /claude|sonnet|opus|haiku/.test(model)) return 'reviewer';
   if (/gpt|codex|\bsol\b|\bastra\b|\bo1\b|\bo3\b|\bo4\b/.test(id) || /gpt|codex|\bsol\b|\bastra\b|\bo1\b|\bo3\b/.test(model)) return 'gpt';
-  if (/scout|explore|search/.test(id)) return 'scout';
-  if (/wiki|doc/.test(id)) return 'wiki';
+  if (/scout|explore|search|spy/.test(id)) return 'scout';
+  if (/wiki|doc|note/.test(id)) return 'wiki';
   if (/carbon|ultra|argon/.test(model) || /carbon/.test(roleStr)) return 'carbon';
   if (/neon|\bpro\b/.test(model) || /neon/.test(roleStr)) return 'neon';
   if (/hydrogen|flash|lite/.test(model) || /hydrogen/.test(roleStr)) return 'hydrogen';
@@ -65,9 +139,17 @@ export function resolveMemeNickname(member = {}, options = {}) {
 
   let picked = pool[stableHash(rawId) % pool.length];
   if (usedNames && usedNames.has(picked)) {
-    const unused = pool.find((candidate) => !usedNames.has(candidate));
-    if (unused) {
-      picked = unused;
+    const startIdx = stableHash(rawId) % pool.length;
+    let found = null;
+    for (let i = 1; i < pool.length; i += 1) {
+      const candidate = pool[(startIdx + i) % pool.length];
+      if (!usedNames.has(candidate)) {
+        found = candidate;
+        break;
+      }
+    }
+    if (found) {
+      picked = found;
     } else {
       const idx = (stableHash(rawId) % 9) + 1;
       picked = `${picked}#${idx}`;
