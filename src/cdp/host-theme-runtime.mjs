@@ -254,6 +254,7 @@ export function buildHostThemeRuntimeSnippet() {
     const AURORA_HOST_ID = 'gemineko-conv-aurora';
     const WATERMARK_ID = 'gemineko-corner-watermark';
     const HOME_STAGE_ID = 'gemineko-home-stage';
+    const HOME_EMBLEM_ID = 'gemineko-home-emblem';
     const NIGHT_LAYER_ID = 'gemineko-night-lamp-layer';
     const AURORA_SWEEP_ID = 'gemineko-aurora-sweep';
     const OUTLINE_FAB_ID = 'gemineko-paw-outline-fab';
@@ -1493,51 +1494,70 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-ne
   transform: scale(1.08) rotate(-4deg) !important;
 }
 
-/* 焦点 3：空白首页中央大 A 全量替换为 84×84 旋转炫彩猫耳星环水晶徽标 + 流动渐变问候 */
-html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] .home-greeting-mark {
+/* 焦点 3：空白首页中央大 A 全量替换为真实 HTML 节点 #gemineko-home-emblem（炫彩背光晕 + 旋转棱镜环 + 悬浮猫耳水晶徽标 + 流动渐变问候） */
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home .home-greeting-mark,
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="home-greeting"] .home-greeting-mark {
+  display: none !important;
+}
+#\${HOME_EMBLEM_ID} {
   position: relative !important;
-  width: 84px !important;
-  height: 84px !important;
-  min-width: 84px !important;
-  min-height: 84px !important;
-  display: inline-flex !important;
+  width: 92px !important;
+  height: 92px !important;
+  min-width: 92px !important;
+  min-height: 92px !important;
+  margin: 0 auto 14px !important;
+  display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  margin: 0 auto 14px !important;
-  background: transparent !important;
-  -webkit-mask-image: none !important;
-  mask-image: none !important;
+  cursor: pointer !important;
+  user-select: none !important;
   overflow: visible !important;
+  flex-shrink: 0 !important;
 }
-html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] .home-greeting-mark > *,
-html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] .home-greeting-mark svg {
-  opacity: 0 !important;
-  pointer-events: none !important;
+#\${HOME_EMBLEM_ID} .gk-he-halo {
+  position: absolute;
+  inset: -26px;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(22px);
+  opacity: 0.65;
+  background:
+    radial-gradient(circle at 30% 35%, rgba(56, 189, 248, 0.55) 0%, transparent 58%),
+    radial-gradient(circle at 72% 40%, rgba(139, 92, 246, 0.52) 0%, transparent 58%),
+    radial-gradient(circle at 52% 75%, rgba(236, 72, 153, 0.45) 0%, rgba(245, 158, 11, 0.24) 42%, transparent 72%);
+  animation: gkAuroraFlowDriftA 7.2s ease-in-out infinite;
 }
-html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] .home-greeting-mark::before {
-  content: "";
+#\${HOME_EMBLEM_ID} .gk-he-ring {
   position: absolute;
   inset: 0;
   border-radius: 999px;
+  pointer-events: none;
   background: conic-gradient(from 0deg, #38BDF8, #6366F1, #A855F7, #EC4899, #F59E0B, #22D3EE, #38BDF8);
   -webkit-mask-image: radial-gradient(circle, transparent 58%, #000 61%, #000 69%, transparent 72%);
   mask-image: radial-gradient(circle, transparent 58%, #000 61%, #000 69%, transparent 72%);
-  filter: drop-shadow(0 0 12px rgba(139, 92, 246, 0.36));
+  filter: drop-shadow(0 0 12px rgba(139, 92, 246, 0.42));
   animation: gkHomeRingSpin 10s linear infinite;
-  pointer-events: none;
 }
-html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] .home-greeting-mark::after {
-  content: "";
-  position: absolute;
-  width: 64px;
-  height: 64px;
+#\${HOME_EMBLEM_ID} .gk-he-cat {
+  position: relative;
+  z-index: 1;
+  width: 66px;
+  height: 66px;
+  pointer-events: none;
   background-image: \${HOME_BRAND_CAT_URI};
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  filter: drop-shadow(0 8px 22px rgba(139, 92, 246, 0.34)) drop-shadow(0 2px 6px rgba(14, 165, 233, 0.24));
+  filter: drop-shadow(0 8px 20px rgba(139, 92, 246, 0.36)) drop-shadow(0 2px 6px rgba(14, 165, 233, 0.25));
+  transition: transform 0.2s var(--gk-ease-spring);
   animation: gkHomeLogoFloat 4.2s ease-in-out infinite;
-  pointer-events: none;
+}
+#\${HOME_EMBLEM_ID}:hover .gk-he-cat {
+  transform: scale(1.08);
+}
+html[data-gk-theme] .agy-home > :not(#\${AURORA_HOST_ID}):not(#\${WATERMARK_ID}) {
+  position: relative;
+  z-index: 1;
 }
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1) {
   background: linear-gradient(110deg, #1E1B4B 0%, #4F46E5 26%, #9333EA 50%, #DB2777 74%, #0284C7 100%) !important;
@@ -1906,29 +1926,29 @@ html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] #\
 html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] #\${AURORA_HOST_ID}::before {
   content: "";
   position: absolute;
-  inset: 14% -14% -18% -14%;
+  inset: 10% -12% -14% -12%;
   pointer-events: none;
   filter: blur(36px) saturate(145%);
   background:
     radial-gradient(
       44% 82% at 18% 96%,
-      rgba(14, 165, 233, 0.40) 0%,
-      rgba(56, 189, 248, 0.24) 28%,
-      rgba(14, 165, 233, 0.08) 56%,
+      rgba(14, 165, 233, 0.48) 0%,
+      rgba(56, 189, 248, 0.28) 28%,
+      rgba(14, 165, 233, 0.09) 56%,
       transparent 82%
     ),
     radial-gradient(
       46% 84% at 82% 96%,
-      rgba(236, 72, 153, 0.36) 0%,
-      rgba(244, 114, 182, 0.21) 28%,
-      rgba(236, 72, 153, 0.07) 56%,
+      rgba(236, 72, 153, 0.44) 0%,
+      rgba(244, 114, 182, 0.25) 28%,
+      rgba(236, 72, 153, 0.08) 56%,
       transparent 82%
     ),
     radial-gradient(
       42% 76% at 54% 92%,
-      rgba(139, 92, 246, 0.34) 0%,
-      rgba(168, 85, 247, 0.18) 32%,
-      rgba(139, 92, 246, 0.05) 60%,
+      rgba(139, 92, 246, 0.40) 0%,
+      rgba(168, 85, 247, 0.21) 32%,
+      rgba(139, 92, 246, 0.06) 60%,
       transparent 84%
     );
   animation: gkAuroraFlowDriftA 7.2s ease-in-out infinite;
@@ -1943,14 +1963,14 @@ html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] #\
   background:
     radial-gradient(
       38% 68% at 64% 96%,
-      rgba(245, 158, 11, 0.30) 0%,
-      rgba(251, 191, 36, 0.16) 32%,
+      rgba(245, 158, 11, 0.34) 0%,
+      rgba(251, 191, 36, 0.18) 32%,
       transparent 76%
     ),
     radial-gradient(
       42% 64% at 38% 96%,
-      rgba(34, 211, 238, 0.30) 0%,
-      rgba(56, 189, 248, 0.14) 36%,
+      rgba(34, 211, 238, 0.34) 0%,
+      rgba(56, 189, 248, 0.16) 36%,
       transparent 78%
     ),
     radial-gradient(
@@ -1976,8 +1996,9 @@ html[data-gk-theme]:is([data-gk-focus="1"], [data-gk-motion="off"]) :is(
   div:has(> [data-testid="overview-panel"])::before,
   [data-testid="app-icon-new-conversation-button"]::before,
   [data-testid="conversation-row-sidebar"][data-selected="true"]::after,
-  .agy-home [data-testid="home-greeting"] .home-greeting-mark::before,
-  .agy-home [data-testid="home-greeting"] .home-greeting-mark::after,
+  #\${HOME_EMBLEM_ID} .gk-he-halo,
+  #\${HOME_EMBLEM_ID} .gk-he-ring,
+  #\${HOME_EMBLEM_ID} .gk-he-cat,
   .agy-home [data-testid="home-greeting"] :is(.home-greeting-title, h1)
 ) {
   animation: none !important;
@@ -2003,7 +2024,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-spinner','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-active','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
           root.removeAttribute(attr);
         }
-        for (const id of [THEME_STYLE_ID, AURORA_HOST_ID, HOME_STAGE_ID, WATERMARK_ID]) {
+        for (const id of [THEME_STYLE_ID, AURORA_HOST_ID, HOME_STAGE_ID, HOME_EMBLEM_ID, WATERMARK_ID]) {
           const n = document.getElementById(id);
           if (n) n.remove();
         }
@@ -2053,6 +2074,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
 
       syncConvAurora();
       syncCornerWatermark(activity, roleId);
+      syncHomeBrandEmblem();
       syncHomeStage();
       syncAskQuestionStage(roleId);
       syncWallpaperLayer();
@@ -2061,14 +2083,52 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       syncOutlineVisibility();
     }
 
+    function syncHomeBrandEmblem() {
+      const intensity = cfg.themeIntensity === 'balanced' ? 'optical-neko' : (cfg.themeIntensity || 'optical-neko');
+      if (!cfg.enabled || intensity === 'minimal') {
+        const old = document.getElementById(HOME_EMBLEM_ID);
+        if (old) old.remove();
+        return;
+      }
+      const markEl = document.querySelector('.agy-home .home-greeting-mark, [data-testid="home-greeting"] .home-greeting-mark, [data-testid="home-greeting"] svg');
+      const greetingEl = markEl?.closest?.('[data-testid="home-greeting"]')
+        || document.querySelector('.agy-home [data-testid="home-greeting"], [data-testid="home-greeting"]')
+        || document.querySelector('.agy-home .home-greeting-title, .agy-home h1')?.parentElement;
+      if (!greetingEl && !markEl) {
+        const old = document.getElementById(HOME_EMBLEM_ID);
+        if (old) old.remove();
+        return;
+      }
+      const host = markEl?.parentElement || greetingEl;
+      if (!host) return;
+
+      let emblem = document.getElementById(HOME_EMBLEM_ID);
+      if (!emblem) {
+        emblem = document.createElement('div');
+        emblem.id = HOME_EMBLEM_ID;
+        emblem.title = '点击摸摸基米窝旋转星环徽标 ✨';
+        emblem.innerHTML = '<span class="gk-he-halo"></span><span class="gk-he-ring"></span><span class="gk-he-cat"></span>';
+        emblem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          onDockPoke(resolveActiveRoleId(ctx.getActivity()), e.clientX, e.clientY);
+        });
+      }
+      if (markEl && markEl.parentElement === host) {
+        if (emblem.nextElementSibling !== markEl) host.insertBefore(emblem, markEl);
+      } else if (emblem.parentElement !== host || host.firstElementChild !== emblem) {
+        host.prepend(emblem);
+      }
+    }
+
     function syncConvAurora() {
       if (!cfg.enabled || cfg.focusMode || cfg.themeIntensity === 'minimal' || (cfg.wallpaper?.mode && cfg.wallpaper.mode !== 'off')) {
         const old = document.getElementById(AURORA_HOST_ID);
         if (old) old.remove();
         return;
       }
-      const convView = document.querySelector('[data-testid="conversation-view"]');
-      if (!convView || convView.getAttribute('data-has-browser-hole') === 'true') {
+      const hostView = document.querySelector('[data-testid="conversation-view"]:not([data-has-browser-hole="true"])')
+        || document.querySelector('.agy-home:not([data-has-browser-hole="true"])');
+      if (!hostView || hostView.getAttribute('data-has-browser-hole') === 'true') {
         const old = document.getElementById(AURORA_HOST_ID);
         if (old) old.remove();
         return;
@@ -2077,9 +2137,9 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       if (!au) {
         au = document.createElement('div');
         au.id = AURORA_HOST_ID;
-        convView.prepend(au);
-      } else if (au.parentElement !== convView) {
-        convView.prepend(au);
+        hostView.prepend(au);
+      } else if (au.parentElement !== hostView) {
+        hostView.prepend(au);
       }
     }
 
@@ -3163,6 +3223,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         if (cfg.enabled) {
           syncConvAurora();
           syncCornerWatermark(ctx.getActivity(), resolveActiveRoleId(ctx.getActivity()));
+          syncHomeBrandEmblem();
           syncHomeStage();
           syncAskQuestionStage(resolveActiveRoleId(ctx.getActivity()));
         }
@@ -3203,7 +3264,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       document.removeEventListener('click', onGlobalClickCloseMenus, true);
       window.removeEventListener('keydown', onKeyDownComposerOrEgg, true);
 
-      for (const id of [THEME_STYLE_ID, WP_LAYER_ID, AURORA_HOST_ID, WATERMARK_ID, HOME_STAGE_ID, NIGHT_LAYER_ID, AURORA_SWEEP_ID, OUTLINE_FAB_ID, OUTLINE_POP_ID, CTX_MENU_ID, MINI_BAR_ID]) {
+      for (const id of [THEME_STYLE_ID, WP_LAYER_ID, AURORA_HOST_ID, WATERMARK_ID, HOME_STAGE_ID, HOME_EMBLEM_ID, NIGHT_LAYER_ID, AURORA_SWEEP_ID, OUTLINE_FAB_ID, OUTLINE_POP_ID, CTX_MENU_ID, MINI_BAR_ID]) {
         const el = document.getElementById(id);
         if (el) el.remove();
       }

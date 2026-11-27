@@ -622,6 +622,8 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /gkPrismHairlineFlow/);
     assert.match(cdpScript, /app-icon-new-conversation-button/);
     assert.match(cdpScript, /home-greeting-mark/);
+    assert.match(cdpScript, /gemineko-home-emblem/);
+    assert.match(cdpScript, /syncHomeBrandEmblem/);
     assert.match(cdpScript, /autoscroll-viewport/);
     assert.match(cdpScript, /--gk-rx/);
     assert.match(cdpScript, /gk-ask-thought-bubble/);

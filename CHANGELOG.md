@@ -11,7 +11,7 @@
   - 底部极光收拢至 `38%` 化作双层异步漂移高透炫彩极光浪（`gkAuroraFlowDriftA` / `gkAuroraFlowDriftB`，运行态 `data-gk-active="1"` 自动提速），输入框/Overview 顶部采用 `1.5px` 流动棱镜光丝（`gkPrismHairlineFlow`），侧栏选中项左侧配 `3px` 垂直流动棱镜光针（`gkPrismVerticalFlow`）；
 - **两处官方 Brand Logo 全量替换 + 首页问候补全**：
   - 左上角 `[data-testid="app-icon-new-conversation-button"]` 替换为《基米窝》发光炫彩猫爪星芒宝石徽章；
-  - 空白首页中央 `.home-greeting-mark` 替换为 `84×84` 旋转炫彩猫耳星环水晶徽标，`host-i18n-runtime.mjs` 补齐 `Hey <name>, what should we build today?` 等首页问候句式并赋予流动渐变标题；
+  - 空白首页中央改用真实 HTML 实体徽标节点 `#gemineko-home-emblem`（解决 `<svg>` 不支持 CSS 伪元素导致隐藏原图腾后留白问题），渲染 `92×92` 背光呼吸晕 + 旋转炫彩棱镜环 + `66×66` 悬浮猫耳水晶徽标，并同步打通首页 `.agy-home` 底部流动极光浪；`host-i18n-runtime.mjs` 补齐 `Hey <name>, what should we build today?` 等首页问候句式并赋予流动渐变标题；
 - **修复侧边栏戳一戳气泡被左侧边界裁切**：
   - `src/theme/gemineko-runtime.js` `spawnBubbleAt` 改为挂载后按 `offsetWidth` / `offsetHeight` 与视口宽高比精准夹紧，`.gn-float-bubble` 支持安全换行不越界。
 
