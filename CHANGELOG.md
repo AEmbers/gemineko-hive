@@ -12,6 +12,8 @@
 ## [Unreleased]
 
 ### Fixed
+- **重绘氢基米 `running` 与 `reading` 四帧立绘对齐全库视觉体量（#9）**：
+  - 按 [q-hydrogen.png](assets/triviews/q-hydrogen.png) 严格重绘 [hydrogen-running.png](assets/sprites/hydrogen-running.png)（将全息终端紧凑置于胸前下方并补全 Q 版全身，高度占比从 `58.2%` 拉齐至 `90.6%~94.9%`，宽高比 `1.63` → `0.72~0.74`）与 [hydrogen-reading.png](assets/sprites/hydrogen-reading.png)（金丝圆框眼镜 + 四芒星魔导书与放大镜全身构图，高度占比从 `77.1%` 拉齐至 `90.6%~94.9%`，宽高比 `1.23` → `0.76~0.78`），彻底消除切换动作时角色骤缩的问题；
 - **根治宿主汉化防抖饥饿、React 复用节点失译导致弹窗与输入栏退回英文（#8）**：
   - 修复 [host-i18n-runtime.mjs](src/cdp/host-i18n-runtime.mjs) `MutationObserver` 尾部防抖在流式输出与实时刷新下的饥饿问题，改为固定 `60ms` 节流队列、补充 `attributes` 与开放 `ShadowRoot` 扫描、使用 `TreeWalker` 剪枝跳过正文/代码块，并增加 `1500ms` 安全网与点击/切页兜底重扫；
   - 将原文本/属性缓存升级为 `{ orig, applied }` 双字段状态机，彻底解决 React 复用 `Text` 或 DOM 属性时因旧缓存失配导致的英文回退与切回英文错乱；
