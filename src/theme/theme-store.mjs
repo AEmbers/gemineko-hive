@@ -15,6 +15,7 @@ import { ALLOWED_PRESETS, ALLOWED_THEME_INTENSITIES, ROLE_PALETTES, THEME_PRESET
 const STORE_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_BUNDLED_REGISTRY_PATH = resolve(STORE_DIR, '..', '..', 'themes', 'registry.json');
 const PACK_ID_RE = /^[a-z0-9][a-z0-9-]{1,47}$/;
+const OFFICIAL_BUILTIN_IDS = new Set(['official-gemineko', 'official-carbon-obsidian']);
 const TOKEN_KEY_RE = /^--[a-zA-Z0-9-]{1,48}$/;
 const SAFE_COLOR_RE = /^(?:#[0-9a-fA-F]{3,8}|rgba?\(\s*[\d.\s,%\/]+\)|hsla?\(\s*[\d.\s,%deg\/]+\))$/;
 const ALLOWED_SCHEMES = new Set(['light', 'dark', 'auto']);
@@ -126,8 +127,8 @@ export function sanitizeThemePack(rawPack, options = {}) {
   if (!PACK_ID_RE.test(id)) {
     return { ok: false, error: '主题 ID 须为 2~48 位小写字母、数字或连字符（如 kyoto-sakura-glass）' };
   }
-  if (!allowOfficial && id === 'official-gemineko') {
-    return { ok: false, error: 'official-gemineko 为官方保留主题 ID，请更换自定义 ID' };
+  if (!allowOfficial && OFFICIAL_BUILTIN_IDS.has(id)) {
+    return { ok: false, error: `${id} 为官方保留主题 ID，请更换自定义 ID` };
   }
 
   const name = String(rawPack.name || '').replace(/[\r\n\t]/g, ' ').trim().slice(0, 64);
@@ -398,7 +399,7 @@ export function createThemePackManager(options = {}) {
     const mergedMap = new Map();
 
     for (const item of baseList) {
-      const isOfficial = item.id === 'official-gemineko';
+      const isOfficial = OFFICIAL_BUILTIN_IDS.has(item.id);
       const installedLocal = installedMap.get(item.id);
       mergedMap.set(item.id, {
         ...(installedLocal || item),
@@ -434,7 +435,7 @@ export function createThemePackManager(options = {}) {
   function getPackById(packId) {
     const id = String(packId || '').trim().toLowerCase();
     if (!id) return null;
-    if (id !== 'official-gemineko' && PACK_ID_RE.test(id)) {
+    if (!OFFICIAL_BUILTIN_IDS.has(id) && PACK_ID_RE.test(id)) {
       const localPath = path.join(packsDir, `${id}.json`);
       if (existsSync(localPath)) {
         try {
@@ -511,8 +512,8 @@ export function createThemePackManager(options = {}) {
     if (!PACK_ID_RE.test(id)) {
       return { ok: false, error: '非法的主题 ID' };
     }
-    if (id === 'official-gemineko') {
-      return { ok: false, error: '官方旗舰主题不允许卸载' };
+    if (OFFICIAL_BUILTIN_IDS.has(id)) {
+      return { ok: false, error: '官方内置主题不允许卸载' };
     }
     const targetPath = path.join(packsDir, `${id}.json`);
     if (!existsSync(targetPath)) {
@@ -525,7 +526,7 @@ export function createThemePackManager(options = {}) {
   function exportThemePack(currentConfig, meta = {}) {
     const cfg = currentConfig && typeof currentConfig === 'object' ? currentConfig : {};
     const rawId = String(meta.id || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
-    const id = PACK_ID_RE.test(rawId) && rawId !== 'official-gemineko' ? rawId : `my-gemineko-theme-${Date.now().toString(36).slice(-4)}`;
+    const id = PACK_ID_RE.test(rawId) && !OFFICIAL_BUILTIN_IDS.has(rawId) ? rawId : `my-gemineko-theme-${Date.now().toString(36).slice(-4)}`;
     const activeRole = ROLE_PALETTES[cfg.accentMode] || ROLE_PALETTES.neon;
     const presetObj = THEME_PRESETS[cfg.preset] || THEME_PRESETS['nebula-day'];
     const scheme = cfg.preset === 'auto' ? 'auto' : (presetObj?.scheme || 'light');

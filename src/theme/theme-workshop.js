@@ -608,7 +608,7 @@ export function createThemeWorkshopController(deps) {
       }
       const presetBtn = e.target.closest('[data-ws-preset]');
       if (presetBtn) {
-        void savePatch({ enabled: true, preset: presetBtn.getAttribute('data-ws-preset') });
+        void savePatch({ enabled: true, preset: presetBtn.getAttribute('data-ws-preset'), activeThemePackId: 'official-gemineko' });
         return;
       }
       const eggBtn = e.target.closest('[data-ws-egg]');

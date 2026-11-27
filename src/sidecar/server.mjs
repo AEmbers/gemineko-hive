@@ -789,7 +789,9 @@ export async function createHiveSidecarServer(options = {}) {
       } else if (typeof body?.packId === 'string' && body.packId.trim()) {
         const found = packManager.getPackById(body.packId);
         installRes = found
-          ? (found.id === 'official-gemineko' ? { ok: true, pack: found, warnings: [] } : packManager.installPack(found))
+          ? (found.id === 'official-gemineko' || found.id === 'official-carbon-obsidian'
+              ? { ok: true, pack: found, warnings: [] }
+              : packManager.installPack(found))
           : { ok: false, error: `商店目录中未找到主题 ${body.packId}` };
       } else {
         installRes = { ok: false, error: '请提供 url、pack 或 packId' };

@@ -41,6 +41,31 @@
     },
     {
       "schemaVersion": 1,
+      "id": "official-carbon-obsidian",
+      "name": "碳晶黑曜 · 纯黑高定（官方深色）",
+      "version": "0.7.1",
+      "scheme": "dark",
+      "builtin": true,
+      "official": true,
+      "author": {
+        "name": "AEmbers",
+        "url": "https://github.com/AEmbers"
+      },
+      "license": "MIT / CC BY-NC-SA 4.0",
+      "description": "极纯深邃石墨黑曜石画布 + 冷银镜面高光 + 保留 5 角色炫彩极光动态流转（不泛绿不发灰）。",
+      "tags": ["官方深色", "纯黑曜石", "高对比"],
+      "swatches": ["#040406", "#07080B", "#818CF8", "#EC4899"],
+      "basePreset": "carbon-obsidian",
+      "themeIntensity": "optical-neko",
+      "tokens": {},
+      "aurora": [],
+      "accent": {},
+      "customCss": "",
+      "watermarkText": "Carbon Obsidian · by AEmbers",
+      "homepage": "https://github.com/AEmbers/gemineko-hive"
+    },
+    {
+      "schemaVersion": 1,
       "id": "kyoto-sakura-glass",
       "name": "京都樱吹雪 · 光学玻璃",
       "version": "1.0.0",

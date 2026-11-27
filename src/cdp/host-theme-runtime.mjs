@@ -1819,19 +1819,50 @@ html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="light"] {
   --gk-optical-rim-core: rgba(255, 255, 255, 0.98);
   --gk-optical-specular-spot: rgba(255, 255, 255, 0.72);
 }
+html[data-gk-theme="cream-paper"][data-gk-intensity="optical-neko"][data-gk-scheme="light"] {
+  --background: #FCF8F0 !important;
+  --content: #FCF8F0 !important;
+  --body-background: #FCF8F0 !important;
+  --shell: #FCF8F0 !important;
+  --sidebar: #F4EDE1 !important;
+  --shell-canvas: #F4EDE1 !important;
+  --card: #FFFDF8 !important;
+  --gk-optical-canvas: #FCF8F0;
+  --gk-optical-sidebar: #F4EDE1;
+  --gk-optical-titlebar: #F7F1E6;
+  --gk-optical-card-fill: #FFFDF8;
+  --gk-optical-glass-fill: rgba(255, 253, 248, 0.92);
+}
 html[data-gk-theme][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] {
-  --gk-optical-canvas: #0D0F14;
-  --gk-optical-sidebar: #090B0F;
-  --gk-optical-titlebar: #0B0D12;
-  --gk-optical-card-fill: rgba(20, 23, 32, 0.93);
-  --gk-optical-glass-fill: rgba(18, 21, 30, 0.88);
-  --gk-optical-sheen: linear-gradient(172deg, rgba(255, 255, 255, 0.068) 0%, rgba(168, 196, 255, 0.022) 34%, rgba(8, 10, 16, 0.22) 100%);
+  --gk-optical-canvas: #101225;
+  --gk-optical-sidebar: #0A0C1A;
+  --gk-optical-titlebar: #0D0F20;
+  --gk-optical-card-fill: rgba(24, 27, 48, 0.92);
+  --gk-optical-glass-fill: rgba(20, 23, 42, 0.88);
+  --gk-optical-sheen: linear-gradient(172deg, rgba(255, 255, 255, 0.068) 0%, rgba(168, 196, 255, 0.026) 34%, rgba(10, 12, 26, 0.24) 100%);
   --gk-optical-border-top: rgba(255, 255, 255, 0.15);
-  --gk-optical-border-base: rgba(218, 228, 255, 0.08);
+  --gk-optical-border-base: rgba(218, 228, 255, 0.09);
   --gk-optical-shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.36), 0 18px 42px -14px rgba(0, 0, 0, 0.56);
   --gk-optical-shadow-float: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 4px 12px rgba(0, 0, 0, 0.42), 0 28px 64px -18px rgba(0, 0, 0, 0.68);
   --gk-optical-rim-core: rgba(255, 255, 255, 0.94);
   --gk-optical-specular-spot: rgba(232, 242, 255, 0.11);
+}
+html[data-gk-theme="carbon-obsidian"][data-gk-intensity="optical-neko"][data-gk-scheme="dark"] {
+  --background: #07080B !important;
+  --content: #07080B !important;
+  --body-background: #07080B !important;
+  --shell: #07080B !important;
+  --sidebar: #040406 !important;
+  --shell-canvas: #040406 !important;
+  --card: #0E1016 !important;
+  --gk-optical-canvas: #07080B;
+  --gk-optical-sidebar: #040406;
+  --gk-optical-titlebar: #060709;
+  --gk-optical-card-fill: rgba(14, 16, 22, 0.96);
+  --gk-optical-glass-fill: rgba(12, 14, 19, 0.92);
+  --gk-optical-sheen: linear-gradient(172deg, rgba(255, 255, 255, 0.075) 0%, rgba(226, 232, 240, 0.018) 32%, rgba(4, 4, 6, 0.36) 100%);
+  --gk-optical-border-top: rgba(226, 232, 240, 0.18);
+  --gk-optical-border-base: rgba(203, 213, 225, 0.09);
 }
 
 /* 中性高通透表面层次（浅色回归纯白×冷银白，严格排除 Browser Hole） */
@@ -3355,8 +3386,8 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         const i18nMode = btn.getAttribute('data-i18n');
         const act = btn.getAttribute('data-act');
         if (preset) {
-          applyConfig({ ...cfg, enabled: true, preset });
-          persistPatch({ enabled: true, preset });
+          applyConfig({ ...cfg, enabled: true, preset, activeThemePackId: 'official-gemineko', activeThemePack: null });
+          persistPatch({ enabled: true, preset, activeThemePackId: 'official-gemineko' });
         } else if (intensity) {
           applyConfig({ ...cfg, enabled: true, themeIntensity: intensity });
           persistPatch({ enabled: true, themeIntensity: intensity });

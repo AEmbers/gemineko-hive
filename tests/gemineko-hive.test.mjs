@@ -649,6 +649,8 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /data-gk-pack/);
     assert.match(cdpScript, /gk-home-brand-foot/);
     assert.match(cdpScript, /AEmbers\/gemineko-hive/);
+    assert.match(cdpScript, /#07080B/);
+    assert.match(cdpScript, /#101225/);
     assert.match(cdpScript, /gk-he-gem/);
     assert.match(cdpScript, /gk-he-caustic/);
     assert.match(cdpScript, /gkGem3DFloat/);
@@ -785,6 +787,7 @@ test('开放主题引擎安全门禁：CSS 注入拦截、GitHub Raw URL 规范�
     const reg = await mgr.getCommunityRegistry();
     assert.equal(reg.ok, true);
     assert.ok(reg.registry.some((t) => t.id === 'official-gemineko' && t.official));
+    assert.ok(reg.registry.some((t) => t.id === 'official-carbon-obsidian' && t.official));
     assert.ok(reg.registry.some((t) => t.id === 'kyoto-sakura-glass'));
 
     const inst = mgr.installPack({
