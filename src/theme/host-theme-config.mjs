@@ -47,6 +47,74 @@ export const ALLOWED_I18N_AUTO_STYLES = new Set(['neko-zh', 'zh']);
 export const ALLOWED_SPRITE_QUALITIES = new Set(['384', '512', '1024']);
 export const ALLOWED_DOCK_SIDES = new Set(['left', 'right']);
 
+/**
+ * 首页沉睡水晶哈基米「跨版本拯救物语」5 章连载注册表。
+ * 随插件版本更新逐章推进，直到第 5 章破壳而出、重获新生。
+ */
+export const CRYSTAL_STORY_CURRENT_CHAPTER = 1;
+export const CRYSTAL_STORY_CHAPTERS = [
+  {
+    chapter: 1,
+    id: 'ch1-whisper',
+    title: '第 1 章 · 晶中微语',
+    status: 'unlocked',
+    unlockedInVersion: '0.8.2',
+    requiredClicks: 10,
+    bubbleText: '主人，救救我……',
+    rattleAudio: 'crystal-rattle.mp3',
+    voiceAudio: 'crystal-ch1-help.mp3',
+    teaser: '连点 10 次惊动封眠的水晶，听见里面传出的微弱呼救……',
+  },
+  {
+    chapter: 2,
+    id: 'ch2-fissure',
+    title: '第 2 章 · 初绽裂纹',
+    status: 'upcoming',
+    unlockedInVersion: '0.8.x',
+    requiredClicks: 10,
+    bubbleText: '再靠近一点点……水晶好像裂开一丝缝隙了！',
+    rattleAudio: 'crystal-rattle.mp3',
+    voiceAudio: '',
+    teaser: '下个版本更新开启：棱镜表面浮现第一道星芒裂痕与喘息声',
+  },
+  {
+    chapter: 3,
+    id: 'ch3-touch',
+    title: '第 3 章 · 掌心星光',
+    status: 'upcoming',
+    unlockedInVersion: '0.9.x',
+    requiredClicks: 10,
+    bubbleText: '抓到主人的指尖了……再等等我呀！',
+    rattleAudio: 'crystal-rattle.mp3',
+    voiceAudio: '',
+    teaser: '后续版本预告：沉睡中的哈基米隔着晶壁与指尖产生光晕共鸣',
+  },
+  {
+    chapter: 4,
+    id: 'ch4-resonance',
+    title: '第 4 章 · 棱镜共鸣',
+    status: 'upcoming',
+    unlockedInVersion: '0.9.x',
+    requiredClicks: 10,
+    bubbleText: '大家的力量正在聚拢……封印要松动啦！',
+    rattleAudio: 'crystal-rattle.mp3',
+    voiceAudio: '',
+    teaser: '后续版本预告：五角色星轨唤醒共振，虹光贯通整颗水晶',
+  },
+  {
+    chapter: 5,
+    id: 'ch5-rebirth',
+    title: '第 5 章 · 破壳新生',
+    status: 'upcoming',
+    unlockedInVersion: '1.0.0',
+    requiredClicks: 10,
+    bubbleText: '主人！我终于从水晶里出来啦——以后请多指教喵！',
+    rattleAudio: 'crystal-rattle.mp3',
+    voiceAudio: '',
+    teaser: '终章预告：水晶破壳碎裂飞散，全新自由态哈基米降临首页舞台',
+  },
+];
+
 /** 13 个自研控件专属哈基米热梗彩蛋目录（全收集解锁终极圆头耄耋星河大阅兵） */
 export const EASTER_EGG_CATALOG = [
   {
@@ -59,13 +127,17 @@ export const EASTER_EGG_CATALOG = [
     hint: '对着输入框边的小猫连点两下试试，当心炸毛…',
   },
   {
-    id: 'emblem-greenbean',
+    id: 'emblem-crystal-rescue',
     scope: 'host',
-    widget: '首页 3D 星钻徽章',
-    title: '南北绿豆浆·绿豆折射雨',
-    meme: '南北绿豆浆',
-    gesture: '点击或长按首页中央星钻',
-    hint: '戳一戳空白首页中央发光的星钻宝石…',
+    isStory: true,
+    storyChapter: CRYSTAL_STORY_CURRENT_CHAPTER,
+    storyTotalChapters: CRYSTAL_STORY_CHAPTERS.length,
+    storyChapterTitle: '第 1 章 · 晶中微语',
+    widget: '首页沉睡水晶星钻',
+    title: '晶中哈基米 · 第1章：晶中微语',
+    meme: '跨版本拯救主线 1/5',
+    gesture: '快速连续点击首页水晶星钻 10 次',
+    hint: '水晶里似乎沉睡着某位熟悉的猫娘…试着连续敲击星钻唤醒她吧（连点 10 次）…',
   },
   {
     id: 'stage-mambo-choir',

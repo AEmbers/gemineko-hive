@@ -675,6 +675,19 @@ export function bootGeminekoHive() {
     if (lastSidecarThemeConfig?.easterEggs?.soundEnabled === false) return false;
     return true;
   }
+  function playSidecarEggVoice(fileName, fallbackVariant = 'crunch') {
+    if (!isSidecarEggSoundOn()) return;
+    try {
+      const audio = new Audio(`/gemineko-audio/${encodeURIComponent(fileName)}?v=0.8.2`);
+      audio.volume = 0.9;
+      const p = audio.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => playMeow(fallbackVariant));
+      }
+    } catch {
+      playMeow(fallbackVariant);
+    }
+  }
   function playMeow(variant = 'pat') {
     if (!prefs.sound) return;
     if ((variant === 'zoomies' || variant === 'crunch' || variant === 'alchemy') && !isSidecarEggSoundOn()) return;
@@ -873,7 +886,7 @@ export function bootGeminekoHive() {
       }
     });
 
-    playMeow('crunch');
+    playSidecarEggVoice('egg-dried-fish.mp3', 'crunch');
     void unlockSidecarEgg('sidecar-dried-fish', '投喂小鱼干·全窝围观');
   }
 

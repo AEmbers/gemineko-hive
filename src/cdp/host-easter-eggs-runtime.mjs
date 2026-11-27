@@ -5,7 +5,11 @@
  * 3. unmount() 全量回收样式、浮层节点、定时器和事件监听。
  */
 
-import { EASTER_EGG_CATALOG } from '../theme/host-theme-config.mjs';
+import {
+  CRYSTAL_STORY_CHAPTERS,
+  CRYSTAL_STORY_CURRENT_CHAPTER,
+  EASTER_EGG_CATALOG,
+} from '../theme/host-theme-config.mjs';
 
 /**
  * 构造注入宿主 Renderer 的彩蛋引擎源码片段（定义 initHostEasterEggs）。
@@ -13,6 +17,8 @@ import { EASTER_EGG_CATALOG } from '../theme/host-theme-config.mjs';
  */
 export function buildHostEasterEggsRuntimeSnippet() {
   const catalogJson = JSON.stringify(EASTER_EGG_CATALOG);
+  const storyChaptersJson = JSON.stringify(CRYSTAL_STORY_CHAPTERS);
+  const currentStoryChapterJson = JSON.stringify(CRYSTAL_STORY_CURRENT_CHAPTER);
   return `
   function initHostEasterEggs(ctx) {
     const STYLE_ID = 'gemineko-host-eggs-style-v1';
@@ -20,17 +26,24 @@ export function buildHostEasterEggsRuntimeSnippet() {
     const OVERLAY_CLASS = 'gk-egg-temp-fx';
     const CATALOG = ${catalogJson};
     const CATALOG_MAP = new Map(CATALOG.map((it) => [it.id, it]));
+    const CRYSTAL_CHAPTERS = ${storyChaptersJson};
+    const CRYSTAL_CURRENT_CH = Number(${currentStoryChapterJson}) || 1;
+    const activeCrystalStory = CRYSTAL_CHAPTERS.find((c) => c.chapter === CRYSTAL_CURRENT_CH) || CRYSTAL_CHAPTERS[0];
 
     let cfg = ctx.initialConfig && typeof ctx.initialConfig === 'object' ? ctx.initialConfig : {};
     let stopped = false;
     let audioCtx = null;
     const timers = new Set();
     const intervals = new Set();
+    const activeAudios = new Set();
     let unlockedSet = new Set(Array.isArray(cfg.easterEggs?.unlocked) ? cfg.easterEggs.unlocked : []);
 
     // 各控件交互状态记录
     let mamboHits = [];
     let minibarTitleHits = [];
+    let crystalTapCount = 0;
+    let crystalLastTapAt = 0;
+    let crystalRescuing = false;
     const inlineClickState = new WeakMap();
     const outlineFlipHistory = [];
     let spinoTimer = null;
@@ -157,30 +170,100 @@ export function buildHostEasterEggsRuntimeSnippet() {
   0% { transform: translate(0, 0) scale(0.75); opacity: 1; }
   100% { transform: translate(var(--wx, 38px), var(--wy, -44px)) scale(1.25); opacity: 0; }
 }
-/* 2. 南北绿豆浆：星钻 */
-#gemineko-home-emblem.gk-egg-greenbean-spin .gk-he-stage {
-  animation: gkBeanSpin 0.9s cubic-bezier(.22,1.4,.36,1) !important;
+/* 2. 首页沉睡水晶哈基米 · 跨版本拯救物语（第1章：晶中微语） */
+#gemineko-home-emblem.gk-egg-crystal-nudge .gk-he-stage {
+  animation: gkCrystalNudge 0.34s cubic-bezier(.36,.07,.19,.97) !important;
 }
-@keyframes gkBeanSpin {
-  0% { transform: rotate(0deg) scale(1); }
-  45% { transform: rotate(220deg) scale(1.22); }
-  100% { transform: rotate(360deg) scale(1); }
+#gemineko-home-emblem.gk-egg-crystal-shake .gk-he-stage {
+  animation: gkCrystalRattleShake 0.68s cubic-bezier(.36,.07,.19,.97) !important;
+  filter: drop-shadow(0 0 22px rgba(96, 165, 250, 0.85)) brightness(1.12);
 }
-.gk-egg-bean-cup {
+@keyframes gkCrystalNudge {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  28% { transform: rotate(-4deg) scale(1.04); }
+  65% { transform: rotate(4deg) scale(1.02); }
+}
+@keyframes gkCrystalRattleShake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1.02); }
+  12% { transform: translate(-6px, -2px) rotate(-6deg) scale(1.06); }
+  25% { transform: translate(7px, 2px) rotate(6deg) scale(1.08); }
+  38% { transform: translate(-7px, 1px) rotate(-5deg) scale(1.07); }
+  52% { transform: translate(6px, -2px) rotate(5deg) scale(1.06); }
+  66% { transform: translate(-4px, 1px) rotate(-3deg) scale(1.04); }
+  82% { transform: translate(3px, 0) rotate(2deg) scale(1.02); }
+}
+.gk-egg-crystal-bubble {
+  position: fixed;
+  z-index: 2147483646;
+  pointer-events: none;
+  min-width: 196px;
+  max-width: min(300px, calc(100vw - 24px));
+  padding: 10px 14px 11px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(167, 139, 250, 0.72);
+  background: linear-gradient(145deg, rgba(19, 24, 52, 0.94), rgba(49, 28, 78, 0.92));
+  color: #f5f3ff;
+  box-shadow: 0 16px 38px rgba(59, 130, 246, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(14px);
+  transform: translate(-50%, -100%);
+  animation: gkCrystalBubbleIn 0.36s cubic-bezier(.22,1.3,.36,1) forwards;
+}
+.gk-egg-crystal-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  background: rgba(39, 27, 68, 0.94);
+  border-right: 1.5px solid rgba(167, 139, 250, 0.72);
+  border-bottom: 1.5px solid rgba(167, 139, 250, 0.72);
+  transform: translateX(-50%) rotate(45deg);
+}
+.gk-egg-crystal-ch {
+  font-size: calc(10px * var(--gk-host-font-scale, 1)) !important;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #93c5fd;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.gk-egg-crystal-line {
+  font-size: calc(14px * var(--gk-host-font-scale, 1)) !important;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fdf4ff;
+  text-shadow: 0 0 12px rgba(236, 72, 153, 0.45);
+  line-height: 1.45;
+}
+.gk-egg-crystal-ch-char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(4px);
+  animation: gkCrystalCharIn 0.28s ease forwards;
+}
+@keyframes gkCrystalBubbleIn {
+  0% { opacity: 0; transform: translate(-50%, calc(-100% + 14px)) scale(0.84); }
+  100% { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+}
+@keyframes gkCrystalCharIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+.gk-egg-crystal-spark {
   position: fixed;
   z-index: 2147483645;
   pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  animation: gkBeanPop 3s ease forwards;
+  font-size: 13px;
+  color: #bae6fd;
+  text-shadow: 0 0 10px rgba(96, 165, 250, 0.9);
+  animation: gkCrystalSparkFly var(--sdur, 1s) ease-out forwards;
 }
-.gk-egg-bean-cup img {
-  width: 110px;
-  height: 110px;
-  object-fit: contain;
-  filter: drop-shadow(0 8px 20px rgba(34, 197, 94, 0.55));
+@keyframes gkCrystalSparkFly {
+  0% { opacity: 1; transform: translate(0, 0) scale(0.7); }
+  100% { opacity: 0; transform: translate(var(--sx, 40px), var(--sy, -50px)) scale(1.25); }
 }
 .gk-egg-bean-banner {
   padding: 4px 12px;
@@ -192,27 +275,17 @@ export function buildHostEasterEggsRuntimeSnippet() {
   box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
   white-space: nowrap;
 }
-@keyframes gkBeanPop {
-  0% { opacity: 0; transform: translate(-50%, 14px) scale(0.7); }
-  14% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-  84% { opacity: 1; transform: translate(-50%, -6px) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -20px) scale(0.92); }
+.gk-egg-fortune-bean {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.gk-egg-bean-particle {
-  position: fixed;
-  z-index: 2147483644;
-  pointer-events: none;
-  width: 12px;
-  height: 15px;
-  border-radius: 50% 50% 48% 48% / 60% 60% 40% 40%;
-  background: radial-gradient(circle at 35% 30%, #bbf7d0, #16a34a 70%, #14532d);
-  box-shadow: 0 0 10px rgba(74, 222, 128, 0.72);
-  animation: gkBeanDrop var(--bdur, 1.4s) cubic-bezier(.22,.6,.38,1) forwards;
-}
-@keyframes gkBeanDrop {
-  0% { transform: translate(0, 0) scale(0.6) rotate(0deg); opacity: 1; }
-  75% { opacity: 1; }
-  100% { transform: translate(var(--bx, 60px), var(--by, 120px)) scale(1.05) rotate(var(--brot, 260deg)); opacity: 0; }
+.gk-egg-fortune-bean img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 10px rgba(16, 185, 129, 0.45));
 }
 /* 3. 首页舞台曼波舞 */
 #gemineko-home-stage .gk-home-actor.gk-egg-note-lit {
@@ -474,9 +547,19 @@ export function buildHostEasterEggsRuntimeSnippet() {
           src.connect(bp); bp.connect(g); g.connect(audioCtx.destination);
           src.start(now);
           playTone(210, 120, 0.22, 'sawtooth', 0.05, 0.02);
-        } else if (kind === 'soy-chime') {
-          [1046.5, 1318.5, 1568, 1975.5].forEach((f, i) => playTone(f, f * 1.02, 0.22, 'triangle', 0.06, i * 0.06));
-          playTone(320, 540, 0.14, 'sine', 0.05, 0.18);
+        } else if (kind === 'crystal-tap') {
+          const baseF = 1180 + Math.min(9, step) * 95;
+          playTone(baseF, baseF * 1.15, 0.14, 'sine', 0.055, 0);
+          playTone(baseF * 1.5, baseF * 1.62, 0.18, 'triangle', 0.03, 0.02);
+        } else if (kind === 'crystal-rattle') {
+          [2140, 2290, 2080].forEach((f, i) => {
+            playTone(f, f * 0.96, 0.16, 'sine', 0.075, i * 0.12);
+            playTone(f * 1.62, f * 1.58, 0.14, 'triangle', 0.045, i * 0.12 + 0.02);
+          });
+        } else if (kind === 'crystal-whisper') {
+          [659.25, 783.99, 987.77, 1318.5].forEach((f, i) => {
+            playTone(f, f * 1.01, 0.36, 'sine', 0.055, i * 0.14);
+          });
         } else if (kind === 'mambo-note') {
           const notes = [523.25, 587.33, 659.25, 783.99, 880];
           const f = notes[Math.abs(step) % notes.length];
@@ -520,6 +603,39 @@ export function buildHostEasterEggsRuntimeSnippet() {
         }
       } catch {
         /* 忽略 autoplay 限制 */
+      }
+    }
+
+    /** 优先播放 Sidecar 克隆配音/物理音效 MP3，受限或离线时无缝回退至 WebAudio 合成音效 */
+    function playEggAudio(fileName, opts = {}) {
+      if (!isSoundOn()) return;
+      const fallbackSfx = opts?.fallbackSfx || null;
+      const fallbackStep = opts?.fallbackStep || 0;
+      if (!fileName || !ctx.server) {
+        if (fallbackSfx) playEggSfx(fallbackSfx, fallbackStep);
+        return;
+      }
+      try {
+        const audio = new Audio(\`\${ctx.server}/gemineko-audio/\${encodeURIComponent(fileName)}?v=0.8.2\`);
+        audio.volume = typeof opts.volume === 'number' ? Math.max(0.05, Math.min(1, opts.volume)) : 0.92;
+        activeAudios.add(audio);
+        const cleanup = () => {
+          activeAudios.delete(audio);
+        };
+        audio.addEventListener('ended', cleanup, { once: true });
+        audio.addEventListener('error', () => {
+          cleanup();
+          if (fallbackSfx) playEggSfx(fallbackSfx, fallbackStep);
+        }, { once: true });
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {
+            cleanup();
+            if (fallbackSfx) playEggSfx(fallbackSfx, fallbackStep);
+          });
+        }
+      } catch {
+        if (fallbackSfx) playEggSfx(fallbackSfx, fallbackStep);
       }
     }
 
@@ -662,53 +778,126 @@ export function buildHostEasterEggsRuntimeSnippet() {
         }, idx * 140);
       });
 
-      playEggSfx('hiss');
+      playEggAudio('egg-spinosaurus-hiss.mp3', { volume: 0.92, fallbackSfx: 'hiss' });
       unlockEgg('dock-spinosaurus');
     }
 
-    function runEmblemGreenbean(anchor) {
+    function spawnCrystalSparks(cx, cy, count = 12) {
+      const symbols = ['✦', '✧', '❄', '⋆'];
+      for (let i = 0; i < count; i++) {
+        const s = document.createElement('div');
+        s.className = 'gk-egg-crystal-spark ' + OVERLAY_CLASS;
+        s.textContent = symbols[i % symbols.length];
+        const ang = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.35;
+        const dist = 48 + Math.random() * 88;
+        s.style.left = Math.round(cx - 6) + 'px';
+        s.style.top = Math.round(cy - 6) + 'px';
+        s.style.setProperty('--sx', Math.round(Math.cos(ang) * dist) + 'px');
+        s.style.setProperty('--sy', Math.round(Math.sin(ang) * dist) + 'px');
+        s.style.setProperty('--sdur', (0.75 + Math.random() * 0.5).toFixed(2) + 's');
+        document.body?.appendChild(s);
+        setManagedTimeout(() => { if (s.isConnected) s.remove(); }, 1350);
+      }
+    }
+
+    function runEmblemCrystalRescue(anchor = {}) {
       ensureStyle();
-      const emblem = anchor?.el || document.getElementById('gemineko-home-emblem');
+      const ch = activeCrystalStory || {
+        chapter: 1,
+        title: '第 1 章 · 晶中微语',
+        bubbleText: '主人，救救我……',
+        rattleAudio: 'crystal-rattle.mp3',
+        voiceAudio: 'crystal-ch1-help.mp3',
+      };
+      const emblem = (anchor?.el && anchor.el.isConnected ? anchor.el : null) || document.getElementById('gemineko-home-emblem');
+      const er = emblem ? emblem.getBoundingClientRect() : null;
+      const cx = Math.max(120, Math.min(window.innerWidth - 120, Math.round(er ? er.left + er.width / 2 : (anchor?.x || window.innerWidth / 2))));
+      const cy = Math.max(130, Math.min(window.innerHeight - 120, Math.round(er ? er.top + 14 : (anchor?.y || window.innerHeight * 0.34))));
+
+      crystalRescuing = true;
+      document.querySelectorAll('.gk-egg-crystal-bubble').forEach((n) => n.remove());
+
+      // 第一拍：水晶摇晃震颤 + 玻璃/水晶碰撞摇晃音效
+      if (emblem) {
+        emblem.classList.remove('gk-egg-crystal-nudge', 'gk-egg-crystal-shake');
+        void emblem.offsetWidth;
+        emblem.classList.add('gk-egg-crystal-shake');
+        setManagedTimeout(() => emblem.classList.remove('gk-egg-crystal-shake'), 720);
+      }
+      spawnCrystalSparks(cx, (er ? er.top + er.height / 2 : cy + 40), 10);
+      playEggAudio(ch.rattleAudio || 'crystal-rattle.mp3', { volume: 0.94, fallbackSfx: 'crystal-rattle' });
+
+      // 第二拍（520ms 后，摇晃收尾瞬间）：气泡与逐字台词 + 克隆呼救配音同步出现
+      setManagedTimeout(() => {
+        if (stopped) return;
+        const bubble = document.createElement('div');
+        bubble.className = 'gk-egg-crystal-bubble ' + OVERLAY_CLASS;
+        bubble.style.left = cx + 'px';
+        bubble.style.top = Math.max(76, cy - 8) + 'px';
+
+        const header = document.createElement('div');
+        header.className = 'gk-egg-crystal-ch';
+        header.innerHTML = \`<span>💎 \${ch.title}</span><span>连载 \${ch.chapter}/\${CRYSTAL_CHAPTERS.length}</span>\`;
+
+        const lineEl = document.createElement('div');
+        lineEl.className = 'gk-egg-crystal-line';
+        const chars = Array.from(String(ch.bubbleText || '主人，救救我……'));
+        chars.forEach((c, idx) => {
+          const sp = document.createElement('span');
+          sp.className = 'gk-egg-crystal-ch-char';
+          sp.textContent = c;
+          sp.style.animationDelay = (idx * 75) + 'ms';
+          lineEl.appendChild(sp);
+        });
+
+        bubble.appendChild(header);
+        bubble.appendChild(lineEl);
+        document.body?.appendChild(bubble);
+
+        spawnCrystalSparks(cx, cy + 20, 14);
+        playEggAudio(ch.voiceAudio || 'crystal-ch1-help.mp3', { volume: 0.96, fallbackSfx: 'crystal-whisper' });
+        unlockEgg('emblem-crystal-rescue');
+
+        setManagedTimeout(() => {
+          if (bubble.isConnected) bubble.remove();
+          crystalRescuing = false;
+        }, 4200);
+      }, 520);
+    }
+
+    function onHomeEmblemTap(anchor = {}) {
+      if (!isAllowed()) return false;
+      ensureStyle();
+      const ch = activeCrystalStory || { requiredClicks: 10 };
+      const needed = Number(ch.requiredClicks) || 10;
+      const now = Date.now();
+      if (now - crystalLastTapAt > 1800) {
+        crystalTapCount = 0;
+      }
+      crystalLastTapAt = now;
+      if (crystalRescuing) return true;
+
+      crystalTapCount += 1;
+      const emblem = (anchor?.el && anchor.el.isConnected ? anchor.el : null) || document.getElementById('gemineko-home-emblem');
       const er = emblem ? emblem.getBoundingClientRect() : null;
       const cx = anchor?.x || (er ? er.left + er.width / 2 : window.innerWidth / 2);
       const cy = anchor?.y || (er ? er.top + er.height / 2 : window.innerHeight * 0.36);
 
-      if (emblem) {
-        emblem.classList.remove('gk-egg-greenbean-spin');
-        void emblem.offsetWidth;
-        emblem.classList.add('gk-egg-greenbean-spin');
-        setManagedTimeout(() => emblem.classList.remove('gk-egg-greenbean-spin'), 950);
+      if (crystalTapCount < needed) {
+        if (emblem) {
+          emblem.classList.remove('gk-egg-crystal-nudge');
+          void emblem.offsetWidth;
+          emblem.classList.add('gk-egg-crystal-nudge');
+          setManagedTimeout(() => emblem.classList.remove('gk-egg-crystal-nudge'), 360);
+        }
+        spawnCrystalSparks(cx, cy, Math.min(8, 2 + Math.floor(crystalTapCount / 2)));
+        playEggSfx('crystal-tap', crystalTapCount);
+        return true;
       }
 
-      document.querySelectorAll('.gk-egg-bean-cup').forEach((n) => n.remove());
-      const cup = document.createElement('div');
-      cup.className = 'gk-egg-bean-cup ' + OVERLAY_CLASS;
-      cup.style.left = Math.max(96, Math.min(window.innerWidth - 96, Math.round(cx))) + 'px';
-      cup.style.top = Math.max(18, Math.round(cy - 138)) + 'px';
-      cup.innerHTML = \`
-        <img src="\${ctx.server}/gemineko-sprites/egg-greenbean-soy.png?v=0.8.1" alt="南北绿豆浆" />
-        <div class="gk-egg-bean-banner">🫛 既见哈基，为何不咪 · 南北绿豆浆已满杯</div>
-      \`;
-      document.body?.appendChild(cup);
-      setManagedTimeout(() => { if (cup.isConnected) cup.remove(); }, 3050);
-
-      for (let i = 0; i < 24; i++) {
-        const b = document.createElement('div');
-        b.className = 'gk-egg-bean-particle ' + OVERLAY_CLASS;
-        const angle = (Math.PI * 2 * i) / 24 + (Math.random() - 0.5) * 0.25;
-        const dist = 70 + Math.random() * 140;
-        b.style.left = Math.round(cx - 6) + 'px';
-        b.style.top = Math.round(cy - 6) + 'px';
-        b.style.setProperty('--bx', Math.round(Math.cos(angle) * dist) + 'px');
-        b.style.setProperty('--by', Math.round(Math.sin(angle) * dist + 40) + 'px');
-        b.style.setProperty('--brot', Math.round((Math.random() - 0.5) * 420) + 'deg');
-        b.style.setProperty('--bdur', (0.95 + Math.random() * 0.6).toFixed(2) + 's');
-        document.body?.appendChild(b);
-        setManagedTimeout(() => { if (b.isConnected) b.remove(); }, 1650);
-      }
-
-      playEggSfx('soy-chime');
-      unlockEgg('emblem-greenbean');
+      crystalTapCount = 0;
+      runEmblemCrystalRescue({ x: cx, y: cy, el: emblem });
+      return true;
     }
 
     function runStageMamboChoir() {
@@ -725,7 +914,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
       const sy = sr ? sr.top : window.innerHeight * 0.55;
       spawnFloatingMsg(sx, sy, '🎵 曼波~ 哈基米曼波~ 阿西嘎！（全员合唱模式开启）', 'hydrogen');
       ctx.spawnStardust?.(sx, sy, 22, 'confetti', 'hydrogen');
-      playEggSfx('mambo-choir');
+      playEggAudio('egg-mambo-choir.mp3', { volume: 0.88, fallbackSfx: 'mambo-choir' });
       unlockEgg('stage-mambo-choir');
     }
 
@@ -790,7 +979,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
         setManagedTimeout(() => { if (card.isConnected) card.remove(); }, 3400);
         spawnFloatingMsg(window.innerWidth - 130, window.innerHeight - 235, '阁下也是来挑战博古架的？哈气预警！😾', 'claude');
       }
-      playEggSfx('maodie');
+      playEggAudio('egg-maodie-boss.mp3', { volume: 0.9, fallbackSfx: 'maodie' });
       unlockEgg('watermark-maodie');
     }
 
@@ -816,7 +1005,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
         }, i * 70);
       }
       spawnFloatingMsg(fr.left, fr.top, '别拽啦！哈基米已经流成一滩液体猫了喵💧', 'neon');
-      playEggSfx('boing');
+      playEggAudio('egg-liquid-cat.mp3', { volume: 0.88, fallbackSfx: 'boing' });
       unlockEgg('outline-liquid-cat');
     }
 
@@ -848,7 +1037,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
             clearManagedInterval(iv);
             const br = bubble.getBoundingClientRect();
             spawnFloatingMsg(br.left + br.width / 2, br.top, \`🐾 哈基米抓阄就选「\${letters[finalIdx]}」啦！（仅供参考不代点）\`, 'carbon');
-            playEggSfx('lottery-win');
+            playEggAudio('egg-claw-lottery.mp3', { volume: 0.88, fallbackSfx: 'lottery-win' });
             setManagedTimeout(() => optEls.forEach((n) => n.classList.remove('gk-egg-lottery-pick')), 3500);
           }
         }, 95);
@@ -876,7 +1065,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
         } else {
           clearManagedInterval(iv2);
           spin.textContent = \`🐾 猫爪拍板锁定：「\${pick}」号选项（绝不代点提交）\`;
-          playEggSfx('lottery-win');
+          playEggAudio('egg-claw-lottery.mp3', { volume: 0.88, fallbackSfx: 'lottery-win' });
         }
       }, 95);
       demo.addEventListener('click', () => demo.remove());
@@ -962,9 +1151,14 @@ export function buildHostEasterEggsRuntimeSnippet() {
       const card = document.createElement('div');
       card.className = 'gk-egg-fortune-card ' + OVERLAY_CLASS;
       card.innerHTML = \`
-        <div style="font-weight:800;font-size:13px;color:#fbbf24;margin-bottom:4px;">🎋 叮咚鸡 · 哈基米运势盲盒</div>
-        <div style="font-size:12px;line-height:1.55;">\${quote}</div>
-        <div style="font-size:10px;opacity:0.65;margin-top:6px;">点击收起签文 · 阿西嘎~</div>
+        <div class="gk-egg-fortune-bean">
+          <img src="\${ctx.server}/gemineko-sprites/egg-greenbean-soy.png?v=0.8.2" alt="南北绿豆浆" />
+          <div>
+            <div style="font-weight:800;font-size:13px;color:#fbbf24;margin-bottom:4px;">🎋 叮咚鸡 · 哈基米运势盲盒</div>
+            <div style="font-size:12px;line-height:1.55;">\${quote}</div>
+            <div style="font-size:10px;opacity:0.68;margin-top:5px;">附赠：南北绿豆浆今日份特调 · 点击收起</div>
+          </div>
+        </div>
       \`;
       const x = Math.max(16, Math.min(window.innerWidth - 340, Math.round(anchor?.x || window.innerWidth * 0.45)));
       const y = Math.max(24, Math.min(window.innerHeight - 140, Math.round(anchor?.y || window.innerHeight * 0.45)));
@@ -1003,7 +1197,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
               playEggSfx('inflate', step);
             } else {
               if (em) em.style.transform = 'scale(1)';
-              playEggSfx('pop');
+              playEggAudio('egg-chubby-pop.mp3', { volume: 0.9, fallbackSfx: 'pop' });
               spawnFishExplosion(window.innerWidth / 2, 160);
               spawnFloatingMsg(window.innerWidth / 2, 120, '💥 啵！胖宝宝充气爆出一地小鱼干啦🐟', 'claude');
               setManagedTimeout(() => demo.remove(), 1100);
@@ -1035,7 +1229,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
         el.style.transform = '';
         spawnFishExplosion(cx, cy);
         spawnFloatingMsg(cx, cy, '💥 啵！胖宝宝充气爆出一地小鱼干啦🐟', 'claude');
-        playEggSfx('pop');
+        playEggAudio('egg-chubby-pop.mp3', { volume: 0.9, fallbackSfx: 'pop' });
         unlockEgg('meme-chubby-pop');
       }
     }
@@ -1081,7 +1275,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
       if (!isAllowed()) return false;
       switch (eggId) {
         case 'dock-spinosaurus': runDockSpinosaurus(anchor); return true;
-        case 'emblem-greenbean': runEmblemGreenbean(anchor); return true;
+        case 'emblem-crystal-rescue': runEmblemCrystalRescue(anchor); return true;
         case 'stage-mambo-choir': runStageMamboChoir(); return true;
         case 'watermark-maodie': runWatermarkMaodie(); return true;
         case 'outline-liquid-cat': runOutlineLiquidCat(); return true;
@@ -1203,6 +1397,11 @@ export function buildHostEasterEggsRuntimeSnippet() {
 
     function unmount() {
       stopped = true;
+      crystalRescuing = false;
+      for (const a of activeAudios) {
+        try { a.pause(); a.src = ''; } catch {}
+      }
+      activeAudios.clear();
       for (const id of timers) clearTimeout(id);
       timers.clear();
       for (const id of intervals) clearInterval(id);
@@ -1225,6 +1424,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
       applyConfig,
       triggerById,
       triggerSupremeParade,
+      onHomeEmblemTap,
       onHomeStageActorClick,
       onOutlineDragY,
       onInlineMemeClick,

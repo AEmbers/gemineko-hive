@@ -33,6 +33,8 @@ import {
 } from '../src/theme/gemineko-runtime.js';
 import {
   ALLOWED_EASTER_EGG_IDS,
+  CRYSTAL_STORY_CHAPTERS,
+  CRYSTAL_STORY_CURRENT_CHAPTER,
   DEFAULT_HOST_THEME_CONFIG,
   EASTER_EGG_CATALOG,
   ROLE_PALETTES,
@@ -1064,14 +1066,34 @@ test('Sidecar 社区商店接口、GitHub Star 与版本更新推送缓存闭环
   }
 });
 
-test('13 控件哈基米专属彩蛋目录、3 张专属 PNG、配置清洗、解锁接口与 CDP/侧栏注入闭环', async () => {
+test('13 控件哈基米专属彩蛋目录、水晶拯救跨版本连载、语音静态路由、解锁接口与 CDP/侧栏注入闭环', async () => {
   assert.equal(EASTER_EGG_CATALOG.length, 13);
   assert.equal(ALLOWED_EASTER_EGG_IDS.size, 13);
+  assert.equal(CRYSTAL_STORY_CHAPTERS.length, 5);
+  assert.equal(CRYSTAL_STORY_CURRENT_CHAPTER, 1);
+  assert.ok(ALLOWED_EASTER_EGG_IDS.has('emblem-crystal-rescue'), '首页星钻应升级为 emblem-crystal-rescue 跨版本主线彩蛋');
+  assert.ok(!ALLOWED_EASTER_EGG_IDS.has('emblem-greenbean'), '旧 emblem-greenbean 应已从首页目录撤下');
 
   for (const fname of ['egg-spinosaurus-hiss.png', 'egg-maodie-boss.png', 'egg-greenbean-soy.png']) {
     const abs = path.join(REPO_ROOT, 'assets', 'sprites', fname);
     assert.ok(fs.existsSync(abs), `缺少专属彩蛋贴图 ${fname}`);
     assert.ok(fs.statSync(abs).size > 10_000, `贴图 ${fname} 过小`);
+  }
+
+  for (const af of [
+    'crystal-rattle.mp3',
+    'crystal-ch1-help.mp3',
+    'egg-spinosaurus-hiss.mp3',
+    'egg-maodie-boss.mp3',
+    'egg-mambo-choir.mp3',
+    'egg-liquid-cat.mp3',
+    'egg-claw-lottery.mp3',
+    'egg-chubby-pop.mp3',
+    'egg-dried-fish.mp3',
+  ]) {
+    const absA = path.join(REPO_ROOT, 'assets', 'audio', af);
+    assert.ok(fs.existsSync(absA), `缺少彩蛋语音/音效 ${af}`);
+    assert.ok(fs.statSync(absA).size > 2_000, `音频 ${af} 过小`);
   }
 
   const sanitized = sanitizeHostThemeConfig({
@@ -1123,10 +1145,24 @@ test('13 控件哈基米专属彩蛋目录、3 张专属 PNG、配置清洗、�
     assert.equal(eggImg.headers['x-gemineko-sprite-cache'], 'static-egg');
     assert.doesNotMatch(cdpScript, /gk-egg-spino-pop/, 'Dock 脊背龙彩蛋应使用原位立绘变身而非额外弹窗叠罗汉');
     assert.match(cdpScript, /restoreDockSpinosaurus/, '应具备 3.6s 还原与 unmount 原位还原函数');
+    assert.match(cdpScript, /onHomeEmblemTap/, '应注入首页水晶 10 连击触发入口');
+    assert.match(cdpScript, /主人，救救我……/, '应包含第 1 章水晶呼救台词');
+
+    const audioOk = await srv.inject({ url: '/gemineko-audio/crystal-ch1-help.mp3?v=0.8.2' });
+    assert.equal(audioOk.statusCode, 200);
+    assert.equal(audioOk.headers['content-type'], 'audio/mpeg');
+    const audioRattle = await srv.inject({ url: '/gemineko-audio/crystal-rattle.mp3' });
+    assert.equal(audioRattle.statusCode, 200);
+    const audioBad = await srv.inject({ url: '/gemineko-audio/../../package.json' });
+    assert.equal(audioBad.statusCode, 404);
+    const audioInvalidExt = await srv.inject({ url: '/gemineko-audio/..%2Fpackage.json' });
+    assert.equal(audioInvalidExt.statusCode, 400);
 
     const cfgRes = await srv.inject({ url: '/api/theme/config' });
     assert.equal(cfgRes.statusCode, 200);
     assert.equal(cfgRes.json().eggCatalog.length, 13);
+    assert.equal(cfgRes.json().crystalStory?.currentChapter, 1);
+    assert.equal(cfgRes.json().crystalStory?.chapters?.length, 5);
 
     const badUnlock = await srv.inject({
       method: 'POST',

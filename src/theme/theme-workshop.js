@@ -23,6 +23,7 @@ export function createThemeWorkshopController(deps) {
     presets: {},
     rolePalettes: {},
     eggCatalog: [],
+    crystalStory: null,
     brand: null,
     registry: [],
     registrySource: 'bundled',
@@ -206,6 +207,7 @@ export function createThemeWorkshopController(deps) {
         state.presets = cfgRes.presets || {};
         state.rolePalettes = cfgRes.rolePalettes || {};
         if (Array.isArray(cfgRes.eggCatalog)) state.eggCatalog = cfgRes.eggCatalog;
+        if (cfgRes.crystalStory) state.crystalStory = cfgRes.crystalStory;
         if (cfgRes.brand) state.brand = cfgRes.brand;
         notifyHostTheme(state.config, cfgRes.hostScheme);
       }
@@ -845,16 +847,31 @@ export function createThemeWorkshopController(deps) {
     const pct = Math.min(100, Math.round((found / Math.max(1, total)) * 100));
     const allDone = found >= total && total > 0;
 
+    const storyInfo = state.crystalStory && Array.isArray(state.crystalStory.chapters) ? state.crystalStory : null;
+    const nextStoryCh = storyInfo
+      ? storyInfo.chapters.find((ch) => Number(ch.chapter) === Number(storyInfo.currentChapter || 1) + 1)
+      : null;
+
     const cardsHtml = catalog.map((egg) => {
       const done = unlockedSet.has(egg.id);
+      const isStory = Boolean(egg.isStory);
+      const storyBadge = isStory
+        ? `<span class="gn-egg-story-badge">📖 跨版本主线 ${escWorkshopHtml(egg.storyChapter || 1)}/${escWorkshopHtml(egg.storyTotalChapters || 5)}</span>`
+        : '';
+      const replayLabel = isStory ? `▶ 重温第${escWorkshopHtml(egg.storyChapter || 1)}章` : '▶ 重温';
+      const hintLine = done
+        ? (isStory && nextStoryCh
+            ? `${egg.gesture}（${egg.meme}） · 🔮 下版本预告：${nextStoryCh.title}`
+            : `${egg.gesture}（${egg.meme}）`)
+        : egg.hint;
       return `
-        <div class="gn-egg-card ${done ? 'is-unlocked' : ''}">
+        <div class="gn-egg-card ${done ? 'is-unlocked' : ''} ${isStory ? 'is-story-card' : ''}">
           <div class="gn-egg-card-top">
-            <span>${done ? '✨' : '🔒'} ${escWorkshopHtml(done ? egg.title : '？？？待发掘')}</span>
-            ${done ? `<button type="button" class="gn-pill" data-ws-replay-egg="${escWorkshopHtml(egg.id)}" data-ws-replay-scope="${escWorkshopHtml(egg.scope)}">▶ 重温</button>` : ''}
+            <span>${done ? (isStory ? '💎' : '✨') : '🔒'} ${escWorkshopHtml(done ? egg.title : (isStory ? '沉睡水晶·未知呼救' : '？？？待发掘'))}</span>
+            ${done ? `<button type="button" class="gn-pill" data-ws-replay-egg="${escWorkshopHtml(egg.id)}" data-ws-replay-scope="${escWorkshopHtml(egg.scope)}">${replayLabel}</button>` : ''}
           </div>
-          <div class="gn-egg-card-widget">${escWorkshopHtml(egg.widget)} · ${egg.scope === 'sidecar' ? '侧边栏' : '主窗口'}</div>
-          <div class="gn-egg-card-hint">${escWorkshopHtml(done ? `${egg.gesture}（${egg.meme}）` : egg.hint)}</div>
+          <div class="gn-egg-card-widget">${escWorkshopHtml(egg.widget)} · ${egg.scope === 'sidecar' ? '侧边栏' : '主窗口'} ${storyBadge}</div>
+          <div class="gn-egg-card-hint">${escWorkshopHtml(hintLine)}</div>
         </div>
       `;
     }).join('');

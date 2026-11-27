@@ -23,6 +23,8 @@ import { buildDemoSwarmSnapshot } from '../theme/demo-data.js';
 import {
   ALLOWED_EASTER_EGG_IDS,
   ALLOWED_SPRITE_QUALITIES,
+  CRYSTAL_STORY_CHAPTERS,
+  CRYSTAL_STORY_CURRENT_CHAPTER,
   EASTER_EGG_CATALOG,
   ROLE_PALETTES,
   THEME_PRESETS,
@@ -352,6 +354,9 @@ export async function createHiveSidecarServer(options = {}) {
   const spritesSourceDir = options.spritesSourceDir
     ? path.resolve(options.spritesSourceDir)
     : path.join(REPO_ROOT, 'assets', 'sprites');
+  const audioSourceDir = options.audioSourceDir
+    ? path.resolve(options.audioSourceDir)
+    : path.join(REPO_ROOT, 'assets', 'audio');
   const logoPngPath = options.logoPngPath
     ? path.resolve(options.logoPngPath)
     : path.join(REPO_ROOT, 'assets', 'logo.png');
@@ -757,6 +762,39 @@ export async function createHiveSidecarServer(options = {}) {
       return;
     }
 
+    const AUDIO_MIME_MAP = {
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.ogg': 'audio/ogg',
+    };
+
+    // 彩蛋语音与物理音效静态路由（仅允许 assets/audio 下安全文件名，禁止路径穿越，不挤占 bundle 体积）
+    if (req.method === 'GET' && pathname.startsWith('/gemineko-audio/')) {
+      const fileName = pathname.slice('/gemineko-audio/'.length);
+      if (!/^[a-z0-9][a-z0-9_-]{0,60}\.(mp3|wav|ogg)$/i.test(fileName)) {
+        res.writeHead(400, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Invalid audio name');
+        return;
+      }
+      const absAudio = path.join(audioSourceDir, fileName);
+      if (!fs.existsSync(absAudio)) {
+        res.writeHead(404, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Audio not found');
+        return;
+      }
+      const ext = path.extname(fileName).toLowerCase();
+      const buf = fs.readFileSync(absAudio);
+      res.writeHead(200, {
+        ...CORS_HEADERS,
+        'Content-Type': AUDIO_MIME_MAP[ext] || 'application/octet-stream',
+        'Content-Length': buf.length,
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'no-cache',
+      });
+      res.end(buf);
+      return;
+    }
+
     // 精灵 PNG 图片路由（禁止路径穿越；缺失动作精灵自动回退至同角色 thinking 或 neon-thinking，杜绝 404）
     if (req.method === 'GET' && pathname.startsWith('/gemineko-sprites/')) {
       const fileName = pathname.slice('/gemineko-sprites/'.length);
@@ -840,6 +878,11 @@ export async function createHiveSidecarServer(options = {}) {
         presets: THEME_PRESETS,
         rolePalettes: ROLE_PALETTES,
         eggCatalog: EASTER_EGG_CATALOG,
+        crystalStory: {
+          currentChapter: CRYSTAL_STORY_CURRENT_CHAPTER,
+          totalChapters: CRYSTAL_STORY_CHAPTERS.length,
+          chapters: CRYSTAL_STORY_CHAPTERS,
+        },
         brand: BRAND_META,
       });
       return;

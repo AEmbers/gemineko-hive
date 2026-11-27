@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.2] - 2026-11-27
+
+### Added
+- **首页沉睡水晶哈基米「跨版本拯救物语」第 1 章与二创音色克隆配音体系（#7）**：
+  - **5 章跨版本连载注册表（[host-theme-config.mjs](src/theme/host-theme-config.mjs)）**：导出 `CRYSTAL_STORY_CURRENT_CHAPTER` 与 5 章剧情配置 `CRYSTAL_STORY_CHAPTERS`（第 1 章《晶中微语》→ 第 2 章《初绽裂纹》→ 第 3 章《掌心星光》→ 第 4 章《棱镜共鸣》→ 终章《破壳新生》）；原首页「南北绿豆浆」贴纸退居幕后，继续保留在 13/13 终极圆头耄耋大阅兵与右键运势盲盒联名展示中；
+  - **10 连击水晶呼救演出（[host-easter-eggs-runtime.mjs](src/cdp/host-easter-eggs-runtime.mjs)、[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs)）**：快速连点首页沉睡水晶 `#gemineko-home-emblem` 1~9 次反馈递增微颤星尘与水晶叩击声，第 10 击先播放 `crystal-rattle.mp3` 玻璃摇晃音效并剧烈颤动，紧接着弹出棱镜气泡逐字显影 **`「主人，救救我……」`** 并同步播放音色克隆配音 `crystal-ch1-help.mp3`；
+  - **二创克隆全彩蛋配音 & `/gemineko-audio/` 路由（[server.mjs](src/sidecar/server.mjs)、[gemineko-runtime.js](src/theme/gemineko-runtime.js)）**：参考社区二创 Gemini 角色主题曲音色通过零样本音色克隆与本地声学滤镜精调，为晶中呼救、脊背龙极怒哈气、圆头耄耋、曼波大合唱、液体猫、抓阄、胖宝宝与侧栏小鱼干配上专属 `.mp3` 语音，经 Sidecar 安全静态路由零占主包体播放，支持失败自动回退 WebAudio 合成音；
+  - **工坊主线进展与版本预告卡片（[theme-workshop.js](src/theme/theme-workshop.js)、[gemineko-theme.css](src/theme/gemineko-theme.css)）**：`GET /api/theme/config` 返回 `crystalStory`，彩蛋图鉴高亮显示跨版本主线章节徽章（`1/5`）与下版本解锁预告。
+
 ## [Unreleased]
 
 ### Fixed

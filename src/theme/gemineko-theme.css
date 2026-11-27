@@ -1478,6 +1478,22 @@ body {
   border-color: color-mix(in srgb, var(--gn-hive-accent, #8b5cf6) 52%, rgba(245, 158, 11, 0.4));
   background: linear-gradient(155deg, rgba(139, 92, 246, 0.10), rgba(236, 72, 153, 0.06));
 }
+.gn-egg-card.is-story-card {
+  grid-column: span 2;
+  border-color: rgba(96, 165, 250, 0.48);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.11), rgba(168, 85, 247, 0.10));
+}
+.gn-egg-story-badge {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fde68a;
+  background: rgba(139, 92, 246, 0.34);
+  border: 1px solid rgba(251, 191, 36, 0.42);
+}
 .gn-egg-card-top {
   display: flex;
   align-items: center;
