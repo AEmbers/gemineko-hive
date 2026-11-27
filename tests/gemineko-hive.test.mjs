@@ -759,6 +759,11 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /surface-composer-card/);
     assert.match(cdpScript, /overlay-scrollbar-thumb/);
     assert.match(cdpScript, /捅了基米窝/);
+    assert.doesNotMatch(cdpScript, /z-index:\s*99980;/);
+    assert.match(cdpScript, /z-index:\s*25;/);
+    assert.match(cdpScript, /hasBlockingNativeOverlay/);
+    assert.match(cdpScript, /\[data-radix-popper-content-wrapper\]/);
+    assert.match(cdpScript, /is-hidden \* \{\s*pointer-events:\s*none !important;/);
 
     // 验证 /api/memes/list 与 /api/memes/file/ 安全门禁（拦截目录穿越 ../）
     const memeList = await srv.inject({ url: '/api/memes/list' });

@@ -12,6 +12,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **降低输入栏猫娘挂件层级并在原生弹出菜单/对话框重叠时自动避让隐藏（#10）**：
+  - 将 [host-injector.mjs](src/cdp/host-injector.mjs) 中 `#gemineko-cdp-composer-dock` 常驻 `z-index` 从 `99980` 降至 `25`，并加固 `.is-hidden` 与其子节点的 `pointer-events: none !important`；
+  - 新增 `hasBlockingNativeOverlay` 实时碰撞与模态弹窗检测（覆盖 `[role="menu"]`、`[role="listbox"]`、`[role="dialog"]`、`[data-radix-popper-content-wrapper]`、`[data-floating-ui-portal]` 等），配合稳定尺寸缓存与点击/按键捕获帧监听，在模型菜单或设置弹窗打开时自动优雅避让隐藏，彻底杜绝遮挡与闪烁；
 - **重绘氢基米 `running` 与 `reading` 四帧立绘对齐全库视觉体量（#9）**：
   - 按 [q-hydrogen.png](assets/triviews/q-hydrogen.png) 严格重绘 [hydrogen-running.png](assets/sprites/hydrogen-running.png)（将全息终端紧凑置于胸前下方并补全 Q 版全身，高度占比从 `58.2%` 拉齐至 `90.6%~94.9%`，宽高比 `1.63` → `0.72~0.74`）与 [hydrogen-reading.png](assets/sprites/hydrogen-reading.png)（金丝圆框眼镜 + 四芒星魔导书与放大镜全身构图，高度占比从 `77.1%` 拉齐至 `90.6%~94.9%`，宽高比 `1.23` → `0.76~0.78`），彻底消除切换动作时角色骤缩的问题；
 - **根治宿主汉化防抖饥饿、React 复用节点失译导致弹窗与输入栏退回英文（#8）**：

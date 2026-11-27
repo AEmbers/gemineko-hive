@@ -215,6 +215,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   let anchorResizeObserver = null;
   let dockResizeObserver = null;
   let currentAnchor = null;
+  let lastDockW = 180;
+  let lastDockH = 100;
   let lastPathname = location.pathname;
   let collapsed = false;
   try {
@@ -259,7 +261,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     style.textContent = \`
       #\${DOCK_ID} {
         position: fixed;
-        z-index: 99980;
+        z-index: 25;
         display: flex;
         align-items: flex-end;
         gap: calc(7px * var(--gk-dock-badge-scale, 1.15));
@@ -279,6 +281,10 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       #\${DOCK_ID}.is-hidden {
         opacity: 0 !important;
         visibility: hidden !important;
+        pointer-events: none !important;
+      }
+      #\${DOCK_ID}.is-hidden * {
+        pointer-events: none !important;
       }
       #\${DOCK_ID} .gk-dock-cat {
         position: relative;
@@ -621,6 +627,30 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     return { side: 'left', catSize: 100, badgeScale: 120, sidecarAvatarSize: 64 };
   }
 
+  const NATIVE_OVERLAY_SEL = '[role="menu"], [role="listbox"], [role="dialog"], [role="alertdialog"], [aria-modal="true"], [data-radix-popper-content-wrapper], [data-floating-ui-portal], [data-state="open"][role]';
+  const SELF_OVERLAY_SEL = '#' + DOCK_ID + ', #gemineko-dock-minibar, #gemineko-paw-outline-pop, #gemineko-context-menu, #gemineko-meme-picker, #gemineko-home-stage, #gemineko-corner-watermark';
+
+  function hasBlockingNativeOverlay(dockBox) {
+    const els = document.querySelectorAll(NATIVE_OVERLAY_SEL);
+    for (let i = 0; i < els.length; i++) {
+      const el = els[i];
+      if (!el || !el.isConnected) continue;
+      if (el.closest && el.closest(SELF_OVERLAY_SEL)) continue;
+      if (el.querySelector && el.querySelector('#' + DOCK_ID)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 24 || r.height < 24) continue;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) continue;
+      const role = el.getAttribute('role') || '';
+      const isModal = role === 'dialog' || role === 'alertdialog' || el.getAttribute('aria-modal') === 'true';
+      if (isModal && r.width > 200 && r.height > 120) return true;
+      if (!(r.right < dockBox.left - 6 || r.left > dockBox.right + 6 || r.bottom < dockBox.top - 6 || r.top > dockBox.bottom + 6)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function syncDockPosition() {
     if (stopped) return;
     const dock = ensureDock();
@@ -673,15 +703,28 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       return;
     }
 
-    dock.classList.remove('is-hidden');
     dock.style.setProperty('--gk-composer-w', Math.round(r.width) + 'px');
     const dr = dock.getBoundingClientRect();
-    const dockW = Math.ceil(dr.width || dock.offsetWidth || 160);
-    const dockH = Math.ceil(dr.height || dock.offsetHeight || dockCfg.catSize || 100);
+    const measuredW = Math.ceil(dr.width || dock.offsetWidth || 0);
+    const measuredH = Math.ceil(dr.height || dock.offsetHeight || 0);
+    const dockW = measuredW > 20 ? measuredW : lastDockW;
+    const dockH = measuredH > 20 ? measuredH : (lastDockH || dockCfg.catSize || 100);
     const rawLeft = isRight ? Math.round(r.right - dockW - 12) : Math.round(r.left + 12);
     const left = Math.max(8, Math.min(Math.max(8, window.innerWidth - dockW - 8), rawLeft));
     // 严格停靠在输入栏顶部 2px 之上，确保小猫与气泡无论放大缩小都不压入输入区
     const top = Math.max(40, Math.round(r.top - dockH - 2));
+    const dockBox = { left, top, right: left + dockW, bottom: top + dockH };
+
+    if (hasBlockingNativeOverlay(dockBox)) {
+      dock.classList.add('is-hidden');
+      return;
+    }
+
+    dock.classList.remove('is-hidden');
+    if (measuredW > 20 && measuredH > 20) {
+      lastDockW = measuredW;
+      lastDockH = measuredH;
+    }
     if (dock.style.left !== left + 'px') dock.style.left = left + 'px';
     if (dock.style.top !== top + 'px') dock.style.top = top + 'px';
   }
@@ -1035,6 +1078,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   }
 
   const onViewportChange = () => scheduleSync();
+  const onOverlayTrigger = () => requestAnimationFrame(() => scheduleSync());
   const onUrlCheck = () => {
     if (location.pathname !== lastPathname) {
       lastPathname = location.pathname;
@@ -1110,6 +1154,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   window.addEventListener('resize', onViewportChange);
   window.addEventListener('scroll', onViewportChange, true);
   window.addEventListener('popstate', onUrlCheck);
+  document.addEventListener('click', onOverlayTrigger, true);
+  document.addEventListener('keydown', onOverlayTrigger, true);
   pollActivity();
 
   window.__GEMINEKO_CDP_OVERLAY_V2__ = true;
@@ -1128,6 +1174,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     window.removeEventListener('resize', onViewportChange);
     window.removeEventListener('scroll', onViewportChange, true);
     window.removeEventListener('popstate', onUrlCheck);
+    document.removeEventListener('click', onOverlayTrigger, true);
+    document.removeEventListener('keydown', onOverlayTrigger, true);
     i18nEngine?.unmount?.();
     memeEngine?.unmount?.();
     eggEngine?.unmount?.();
