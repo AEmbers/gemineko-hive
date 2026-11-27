@@ -1,6 +1,7 @@
 /**
  * Gemineko Hive 32×32 高精复古像素精灵绘制器（纯 Canvas，无需外链图）。
- * 支持角色：neko-queen / gemini / claude / gpt 以及「全员彩色哈基米」色相映射。
+ * 支持角色：queen / neon / hydrogen / carbon / claude / gpt 以及「全员彩色哈基米」色相映射。
+ * 支持动作：thinking / reading / editing / running / asking / idle。
  */
 
 function hslToHex(h, s, l) {
@@ -23,11 +24,15 @@ const HACHIMI_HUES = [245, 290, 200, 325, 34, 165, 270, 15, 218, 138];
 
 /**
  * 为指定角色名和色相计算像素调色板。
+ * @param {string} kind
+ * @param {string} memberName
+ * @param {string} roleMode
  */
 export function resolvePixelPalette(kind, memberName, roleMode) {
-  if (roleMode === 'all-hachimi' || kind === 'gemini' || kind === 'queen') {
+  const k = String(kind || 'neon').toLowerCase();
+  if (roleMode === 'all-hachimi' && k !== 'queen') {
     const baseHue =
-      roleMode === 'all-hachimi' && memberName !== 'coordinator'
+      memberName !== 'coordinator'
         ? HACHIMI_HUES[hashStr(memberName) % HACHIMI_HUES.length]
         : 245;
     return {
@@ -43,12 +48,56 @@ export function resolvePixelPalette(kind, memberName, roleMode) {
       collar: '#1E1B4B',
       accent: '#FBBF24',
       isDragon: false,
-      isQueen: kind === 'queen',
+      isQueen: false,
       hasStarPin: true,
       hasSunflower: false,
+      hasCrownTiara: false,
     };
   }
-  if (kind === 'claude') {
+
+  if (k === 'hydrogen') {
+    return {
+      outline: '#164E63',
+      hair: '#67E8F9',
+      hairDark: '#06B6D4',
+      hairTip: '#A5F3FC',
+      earInner: '#CCFBF1',
+      skin: '#FFF2ED',
+      blush: '#FDA4AF',
+      eyeLeft: '#C084FC',
+      eyeRight: '#F59E0B',
+      collar: '#0E7490',
+      accent: '#FDE047',
+      isDragon: false,
+      isQueen: false,
+      hasStarPin: true,
+      hasSunflower: false,
+      hasCrownTiara: false,
+    };
+  }
+
+  if (k === 'carbon') {
+    return {
+      outline: '#18102B',
+      hair: '#312352',
+      hairDark: '#1F1638',
+      hairTip: '#FBBF24',
+      earInner: '#D97706',
+      skin: '#FFF0EA',
+      blush: '#FDA4AF',
+      eyeLeft: '#A855F7',
+      eyeRight: '#F59E0B',
+      collar: '#110C22',
+      accent: '#FBBF24',
+      isDragon: false,
+      isQueen: false,
+      hasStarPin: false,
+      hasSunflower: false,
+      hasCrownTiara: true,
+    };
+  }
+
+  if (k === 'claude') {
     return {
       outline: '#4A2511',
       hair: '#FB923C',
@@ -65,32 +114,74 @@ export function resolvePixelPalette(kind, memberName, roleMode) {
       isQueen: false,
       hasStarPin: false,
       hasSunflower: true,
+      hasCrownTiara: false,
     };
   }
-  // GPT 小龙娘
+
+  if (k === 'gpt') {
+    return {
+      outline: '#164E63',
+      hair: '#E2E8F0',
+      hairDark: '#94A3B8',
+      hairTip: '#6EE7B7',
+      earInner: '#10B981',
+      skin: '#FFF1EC',
+      blush: '#FDA4AF',
+      eyeLeft: '#10B981',
+      eyeRight: '#10B981',
+      collar: '#0F172A',
+      accent: '#34D399',
+      isDragon: true,
+      isQueen: false,
+      hasStarPin: false,
+      hasSunflower: false,
+      hasCrownTiara: false,
+    };
+  }
+
+  // queen 或 neon（紫罗兰猫娘）
   return {
-    outline: '#164E63',
-    hair: '#E2E8F0',
-    hairDark: '#94A3B8',
-    hairTip: '#6EE7B7',
-    earInner: '#10B981',
-    skin: '#FFF1EC',
+    outline: '#2D2148',
+    hair: '#8B7CF6',
+    hairDark: '#5B4BC4',
+    hairTip: '#E879F9',
+    earInner: '#F9A8D4',
+    skin: '#FFF0EA',
     blush: '#FDA4AF',
-    eyeLeft: '#10B981',
-    eyeRight: '#10B981',
-    collar: '#0F172A',
-    accent: '#34D399',
-    isDragon: true,
-    isQueen: false,
-    hasStarPin: false,
+    eyeLeft: '#C084FC',
+    eyeRight: '#F59E0B',
+    collar: '#1E1B4B',
+    accent: '#FBBF24',
+    isDragon: false,
+    isQueen: k === 'queen',
+    hasStarPin: true,
     hasSunflower: false,
+    hasCrownTiara: false,
   };
 }
 
 /**
- * 在 32×32 Canvas 上绘制像素风 AI 娘精灵。
+ * 归一化动作名称到 6 个标准像素姿态。
+ * @param {string} action
+ * @param {string} state
+ */
+function normalizePixelAction(action, state) {
+  const a = String(action || '').toLowerCase();
+  if (a === 'thinking' || a === 'reading' || a === 'editing' || a === 'running' || a === 'asking' || a === 'idle') {
+    return a;
+  }
+  const s = String(state || '').toLowerCase();
+  if (s === 'parked' || s === 'sleep' || s === 'done' || s === 'landed' || s === 'waiting' || s === 'retired') {
+    return 'idle';
+  }
+  if (s === 'needs_you') return 'asking';
+  return 'thinking';
+}
+
+/**
+ * 在 32×32 Canvas 上绘制像素风 AI 娘精灵与对应工具动作道具。
  * @param {HTMLCanvasElement} canvas
- * @param {{ kind: string, memberName: string, roleMode: string, state: string, frame: number }} opts
+ * @param {{ kind: string, memberName: string, roleMode: string, state?: string, action?: string, frame?: number }} opts
  */
 export function drawPixelSprite(canvas, opts) {
   const W = 32;
@@ -103,7 +194,8 @@ export function drawPixelSprite(canvas, opts) {
 
   const pal = resolvePixelPalette(opts.kind, opts.memberName, opts.roleMode);
   const frame = opts.frame ? 1 : 0;
-  const asleep = opts.state === 'parked' || opts.state === 'sleep' || opts.state === 'done';
+  const action = normalizePixelAction(opts.action, opts.state);
+  const asleep = action === 'idle';
   const yOff = frame === 1 && !asleep ? -1 : 0;
 
   const px = (x, y, col) => {
@@ -126,7 +218,6 @@ export function drawPixelSprite(canvas, opts) {
 
   // 猫耳 或 翡翠龙角
   if (pal.isDragon) {
-    // 左/右龙角
     for (let dy = 0; dy < 5; dy += 1) {
       px(8 - Math.floor(dy / 2), 8 - dy, pal.outline);
       px(9 - Math.floor(dy / 2), 8 - dy, dy < 3 ? '#10B981' : '#6EE7B7');
@@ -134,7 +225,6 @@ export function drawPixelSprite(canvas, opts) {
       px(22 + Math.floor(dy / 2), 8 - dy, dy < 3 ? '#10B981' : '#6EE7B7');
     }
   } else if (!pal.hasSunflower) {
-    // 蓝紫猫耳（工作时 frame 1 抖动耳朵）
     const earDrop = asleep ? 1 : 0;
     const earBob = frame === 1 && !asleep ? -1 : 0;
     rect(6, 5 + earDrop + earBob, 5, 5, pal.outline);
@@ -149,12 +239,11 @@ export function drawPixelSprite(canvas, opts) {
   // 头部与头发
   rect(8, 8, 16, 14, pal.outline);
   rect(9, 9, 14, 12, pal.hair);
-  // 呆毛
   px(15, 7, pal.hair);
   px(16, 6, pal.hair);
   px(17, 6, pal.hairDark);
 
-  // 领队皇冠
+  // 领队皇冠 或 Carbon 黑金星冠
   if (pal.isQueen) {
     rect(12, 5, 8, 3, '#D97706');
     rect(13, 4, 2, 3, '#FDE047');
@@ -162,18 +251,23 @@ export function drawPixelSprite(canvas, opts) {
     rect(17, 4, 2, 3, '#FDE047');
     px(15, 6, '#A855F7');
     px(16, 6, '#F472B6');
+  } else if (pal.hasCrownTiara) {
+    rect(13, 6, 6, 2, '#110C22');
+    px(15, 5, '#FBBF24');
+    px(16, 5, '#FDE047');
+    px(14, 7, '#F59E0B');
+    px(17, 7, '#F59E0B');
   }
 
-  // 脸颊与肤色区域
+  // 脸颊与刘海
   rect(10, 14, 12, 8, pal.skin);
-  // 刘海遮盖
   rect(9, 10, 14, 4, pal.hair);
   px(11, 14, pal.hair);
   px(15, 14, pal.hair);
   px(16, 14, pal.hair);
   px(20, 14, pal.hair);
 
-  // 标志发饰：右侧四角星 或 Claude 向日葵
+  // 发饰
   if (pal.hasStarPin) {
     px(22, 11, '#FBBF24');
     px(21, 12, '#A78BFA');
@@ -185,19 +279,28 @@ export function drawPixelSprite(canvas, opts) {
     rect(21, 8, 2, 2, '#78350F');
   }
 
-  // 眼睛与表情
+  // 眼睛与动作神态
   if (asleep) {
     rect(11, 17, 3, 1, pal.outline);
     rect(18, 17, 3, 1, pal.outline);
   } else {
-    // 左眼
     rect(11, 16, 3, 3, pal.outline);
     rect(11, 17, 2, 2, pal.eyeLeft);
     px(11, 16, '#FFFFFF');
-    // 右眼
     rect(18, 16, 3, 3, pal.outline);
     rect(18, 17, 2, 2, pal.eyeRight);
     px(18, 16, '#FFFFFF');
+  }
+
+  // 阅读状态加金边小圆眼镜
+  if (action === 'reading') {
+    rect(10, 15, 5, 5, 'rgba(0,0,0,0)');
+    rect(10, 15, 5, 1, '#D97706');
+    rect(10, 19, 5, 1, '#D97706');
+    px(15, 17, '#D97706');
+    px(16, 17, '#D97706');
+    rect(17, 15, 5, 1, '#D97706');
+    rect(17, 19, 5, 1, '#D97706');
   }
 
   // 腮红与小嘴
@@ -214,11 +317,52 @@ export function drawPixelSprite(canvas, opts) {
   rect(12, 24, 8, 5, pal.collar);
   rect(15, 24, 2, 2, pal.accent);
 
-  // 挥动的小爪子（工作态 frame 1 抬起）
-  px(9, 26 - frame, pal.skin);
-  px(10, 26 - frame, pal.skin);
-  px(21, 26 - frame, pal.skin);
-  px(22, 26 - frame, pal.skin);
+  // 6 大动作专属像素道具与光效
+  if (action === 'thinking') {
+    // 托腮小手 + 右上角星光灵感点
+    rect(13, 21, 2, 2, pal.skin);
+    px(26, 6 - frame, '#FDE047');
+    px(27, 5 - frame, '#FEF08A');
+    px(28, 6 - frame, '#FDE047');
+    px(27, 7 - frame, '#F59E0B');
+  } else if (action === 'reading') {
+    // 左侧放大镜 + 右侧发光蓝色全息卷轴
+    rect(2, 18, 4, 4, '#D97706');
+    rect(3, 19, 2, 2, '#BAE6FD');
+    px(5, 22, '#78350F');
+    rect(23, 18, 6, 8, '#38BDF8');
+    rect(24, 19, 4, 6, '#E0F2FE');
+    px(25, 21, '#0284C7');
+    px(26, 21, '#0284C7');
+  } else if (action === 'editing') {
+    // 底部发光机械键盘 + 跃动小爪子
+    rect(6, 26, 20, 5, '#334155');
+    rect(7, 27, 18, 3, '#E2E8F0');
+    px(9, 28, '#A855F7');
+    px(13, 28, '#38BDF8');
+    px(17, 28, '#F472B6');
+    px(21, 28, '#FBBF24');
+    px(10, 25 - frame, pal.skin);
+    px(21, 25 - frame, pal.skin);
+  } else if (action === 'running') {
+    // 右侧黑绿屏终端主机
+    rect(21, 20, 9, 8, '#0F172A');
+    rect(22, 21, 7, 5, '#064E3B');
+    px(23, 22, '#34D399');
+    px(25, 23, '#34D399');
+    px(26, 22 + frame, '#6EE7B7');
+  } else if (action === 'asking') {
+    // 右上角高亮感叹/问号提示
+    rect(25, 4 - frame, 4, 7, '#F59E0B');
+    rect(26, 5 - frame, 2, 3, '#FEF08A');
+    px(26, 9 - frame, '#FFFFFF');
+  } else {
+    // 打盹双手平放
+    px(9, 26, pal.skin);
+    px(10, 26, pal.skin);
+    px(21, 26, pal.skin);
+    px(22, 26, pal.skin);
+  }
 }
 
 const pixelImgCache = new Map();
@@ -227,7 +371,7 @@ const pixelImgCache = new Map();
  * 生成（带缓存）像素精灵 PNG Data URI，用于静态头像与 GIF 导出。
  */
 export function getPixelSpriteDataUri(opts) {
-  const key = `${opts.kind}|${opts.memberName}|${opts.roleMode}|${opts.state}|${opts.frame || 0}`;
+  const key = `${opts.kind}|${opts.memberName}|${opts.roleMode}|${opts.action || ''}|${opts.state || ''}|${opts.frame || 0}`;
   if (pixelImgCache.has(key)) return pixelImgCache.get(key);
   const cv = document.createElement('canvas');
   drawPixelSprite(cv, opts);

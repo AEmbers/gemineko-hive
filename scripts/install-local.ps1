@@ -29,15 +29,20 @@ foreach ($file in $rootFiles) {
     }
 }
 
-$copyDirs = @("assets", "bin", "dist", "docs", "scripts", "sidecars", "skills", "src")
+$copyDirs = @("assets", "bin", "dist", "docs", "rules", "scripts", "sidecars", "skills", "src")
 foreach ($dir in $copyDirs) {
     $srcSub = Join-Path $SourceDir $dir
     $dstSub = Join-Path $TargetDir $dir
-    if (Test-Path $srcSub) {
-        if (Test-Path $dstSub) {
-            Remove-Item -Recurse -Force $dstSub
+    if (-not (Test-Path $srcSub)) { continue }
+    New-Item -ItemType Directory -Force -Path $dstSub | Out-Null
+    Get-ChildItem -Path $srcSub -Recurse -File | ForEach-Object {
+        $rel = $_.FullName.Substring($srcSub.Length).TrimStart('\', '/')
+        $dstFile = Join-Path $dstSub $rel
+        $dstParent = Split-Path -Parent $dstFile
+        if (-not (Test-Path $dstParent)) {
+            New-Item -ItemType Directory -Force -Path $dstParent | Out-Null
         }
-        Copy-Item -Recurse -Force $srcSub $dstSub
+        Copy-Item -Force $_.FullName $dstFile
     }
 }
 

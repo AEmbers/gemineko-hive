@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.0] - 2026-11-27
+
+### Added
+- **5 模型 × 5 动作全员 25 张 Q 版立绘 & 32×32 像素手搓版**：
+  - 在 `assets/sprites/` 新增并集成 `neon`、`hydrogen`、`carbon`、`claude`、`gpt` 五大角色各 5 种工作姿态（`thinking` / `reading` / `editing` / `running` / `idle`），每张立绘统一无文字纯洁白底 `128×128 PNG`，紫色 `neon`、冰青 `hydrogen`、暗夜流金 `carbon`、橙发大小姐 `claude`、银发翡翠双龙角 `gpt` 一眼精准辨识；
+  - `src/theme/pixel-sprites.js` 同步扩展至 `6 角色 × 6 动作` 像素绘制，自带放大镜、卷轴、键盘、终端与星光细节。
+- **实时 `transcript.jsonl` 编排/执行阶段与动作追踪器（`src/activity-tracker.mjs`）**：
+  - 高效扫描当前活跃会话 `.system_generated/logs/transcript.jsonl` 尾部 `64 KB`，自动区分 `编排模式（Planner）`、`执行模式（Executor）` 与 `待机中（Idle）`，并将具体工具调用归类为思考/读代码/改文件/跑终端/等待确认/打盹。
+- **Antigravity 主对话区 CDP 实时挂载（`src/cdp/host-injector.mjs`，免改 `app.asar`）**：
+  - 在检测到本地调试端口（`DevToolsActivePort` 或 `127.0.0.1:19222`）时，自动向主对话右上角注入可拖拽实时悬浮胶囊（支持折叠、记忆坐标与点击摸头冒爱心），并为聊天气泡内的折叠工具步骤条前置 `20×20` 当前模型动作头像；无调试端口时保持静默待机绝不报错。
+- **高浓度哈基米玩梗花名引擎（`src/theme/nicknames.js`）**：
+  - 默认显示「哈基米大统领」「95分严审圣女」「烧Token大龙娘」「哈气修锅王」「白米饭精」「雷达嗅探猫」等梗名（悬停保留真实 `@id` 提示），工具栏可一键切回原 `@ID`。
+- **无损替换官方 Swarm 入口小蜜蜂图标 & 轻量化主包**：
+  - `src/native-patcher.mjs` 新增独立 PNG 路由注入与 `swarm/assets/logo.svg` 无损备份替换（`restore` 时字节级还原）；
+  - `scripts/build-bundle.mjs` 改为精灵图按需路由加载，主包体积大幅瘦身，加载更轻快。
+- 新增极简 `rules/AGENTS.md`，并更新 Demo 快照与完整单测套件 `tests/gemineko-hive.test.mjs`。
+
 ## [0.1.0] - 2026-11-27
 
 ### Added

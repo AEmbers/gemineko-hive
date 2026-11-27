@@ -1,7 +1,7 @@
 {
   "name": "gemineko-hive",
-  "version": "0.1.0",
-  "description": "Gemineko Hive · 基米窝：Google Antigravity 原生 Swarm 面板双模式美化插件（AI 娘宇宙 & 全员哈基米、高清 Q 版 & 32x32 像素双画风、捅窝彩蛋、GIF 同步与一键无损换肤）",
+  "version": "0.2.0",
+  "description": "Gemineko Hive · 基米窝：Google Antigravity 25态模型动作哈基米看板、主对话区 CDP 实时挂载、高浓度玩梗花名与原生 Swarm 一键无损换肤插件",
   "type": "module",
   "license": "MIT",
   "author": "AEmbers",

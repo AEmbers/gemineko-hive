@@ -1,9 +1,10 @@
 /**
  * Gemineko Hive · 基米窝独立伴生 Sidecar HTTP 服务（零外部依赖）。
- * 1. 只读扫描本地 ~/.gemini/<product>/brain/<conv>/.system_generated/swarm/ 提供兼容官方的 /api/swarm；
- * 2. 若本机存在官方内置 swarm_board 前端静态资源，联合注入 /gemineko-hive.js 直接呈现完整《基米窝》面板；
- *    否则提供内置轻量级兜底页面；
- * 3. 提供 /api/native-patch/{status,apply,restore} 供侧边栏顶部状态胶囊一键换肤与还原。
+ * 1. 只读扫描本地 ~/.gemini/<product>/brain/<conv>/ 提供兼容官方的 /api/swarm（并实时注入 25 态动作）；
+ * 2. 提供 /gemineko-sprites/*.png 本地静态精灵图路由（带跨域头，支持主对话 CDP 挂件直接读取）；
+ * 3. 提供 /api/live-activity 实时解析主对话区当前是编排模式还是执行模式及具体工具动作；
+ * 4. 提供 /api/cdp/{status,toggle} 启停 Antigravity 主窗口 CDP 实时悬浮挂载；
+ * 5. 提供 /api/native-patch/{status,apply,restore} 供侧边栏一键换肤与无损还原。
  */
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
@@ -12,6 +13,8 @@ import { createServer } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { enrichSwarmMembersWithActivity, findActiveConversationActivity } from '../activity-tracker.mjs';
+import { CdpHostInjector } from '../cdp/host-injector.mjs';
 import { applyNativePatch, getNativePatchStatus, resolveSwarmPaths, restoreNativePatch } from '../native-patcher.mjs';
 import { buildDemoSwarmSnapshot } from '../theme/demo-data.js';
 
@@ -25,6 +28,12 @@ const NATIVE_STATIC_TYPES = {
   '/hive.js': ['hive.js', 'application/javascript; charset=utf-8'],
   '/gif.js': ['gif.js', 'application/javascript; charset=utf-8'],
   '/narrator_bootstrap.js': ['narrator_bootstrap.js', 'text/plain; charset=utf-8'],
+};
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Sidecar-Token',
 };
 
 function safeTokenCompare(a, b) {
@@ -64,7 +73,7 @@ function findAppDataDirs(overrideAppDataDirs) {
 }
 
 /**
- * 扫描或定位最近活跃的本地 Swarm 目录，并组装只读快照。
+ * 扫描或定位最近活跃的本地 Swarm 目录，并组装只读快照（补充实时动作）。
  * @param {string} requestedConv
  * @param {string[]} [overrideAppDataDirs]
  */
@@ -115,7 +124,10 @@ function readReadOnlySwarmSnapshot(requestedConv, overrideAppDataDirs) {
     model: m?.model || '',
     status: m?.killed ? 'retired' : m?.status || 'idle',
     killed: Boolean(m?.killed),
-    conversation_id: m?.conversation_id || '',
+    conversationId: m?.conversation_id || m?.conversationId || '',
+    conversation_id: m?.conversation_id || m?.conversationId || '',
+    currentTask: m?.currentTask || m?.task || '',
+    note: m?.note || '',
     posts: 0,
     local: true,
   }));
@@ -157,7 +169,7 @@ function readReadOnlySwarmSnapshot(requestedConv, overrideAppDataDirs) {
     }
   }
 
-  return {
+  const snapshot = {
     conversationId: chosen.conv,
     swarm: chosen.conv,
     id: chosen.conv,
@@ -173,6 +185,22 @@ function readReadOnlySwarmSnapshot(requestedConv, overrideAppDataDirs) {
     builtinOverview: true,
     etag: `${chosen.conv}|${Math.floor(chosen.mtimeMs)}|${messages.length}`,
   };
+
+  return enrichSwarmMembersWithActivity(snapshot, dirs);
+}
+
+/**
+ * 读取 POST 请求体 JSON。
+ */
+async function readJsonBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  if (!chunks.length) return {};
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch {
+    return {};
+  }
 }
 
 /**
@@ -198,7 +226,20 @@ export async function createHiveSidecarServer(options = {}) {
   const bundlePath = options.bundlePath
     ? path.resolve(options.bundlePath)
     : path.join(REPO_ROOT, 'dist', 'gemineko-hive.js');
-  const swarmPaths = resolveSwarmPaths({ swarmDir: options.swarmDir, bundlePath });
+  const spritesSourceDir = options.spritesSourceDir
+    ? path.resolve(options.spritesSourceDir)
+    : path.join(REPO_ROOT, 'assets', 'sprites');
+  const logoPngPath = options.logoPngPath
+    ? path.resolve(options.logoPngPath)
+    : path.join(REPO_ROOT, 'assets', 'logo.png');
+
+  const swarmPaths = resolveSwarmPaths({
+    swarmDir: options.swarmDir,
+    bundlePath,
+    spritesSourceDir,
+    logoPngPath,
+  });
+
   const generatedToken = options.sideToken || randomBytes(24).toString('hex');
   const hostEnvToken = String(
     process.env.ANTIGRAVITY_SIDECAR_UI_TOKEN ||
@@ -214,9 +255,15 @@ export async function createHiveSidecarServer(options = {}) {
   );
   const listenPort = options.port !== undefined ? Number(options.port) : Number.isFinite(envPort) ? envPort : 0;
 
+  let logoDataUri = '';
+  if (fs.existsSync(logoPngPath)) {
+    logoDataUri = `data:image/png;base64,${fs.readFileSync(logoPngPath).toString('base64')}`;
+  }
+
   function sendJson(res, status, data) {
     const body = JSON.stringify(data);
     res.writeHead(status, {
+      ...CORS_HEADERS,
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
     });
@@ -228,12 +275,20 @@ export async function createHiveSidecarServer(options = {}) {
     return validTokens.some((tk) => safeTokenCompare(reqTok, tk));
   }
 
+  let cdpInjector = null;
+
   async function dispatch(req, res) {
     const urlObj = new URL(req.url || '/', 'http://127.0.0.1');
     const pathname = urlObj.pathname;
 
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, CORS_HEADERS);
+      res.end();
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/healthz') {
-      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', sidecar: 'hive_board' });
+      sendJson(res, 200, { ok: true, plugin: 'gemineko-hive', version: '0.2.0', sidecar: 'hive_board' });
       return;
     }
 
@@ -254,8 +309,77 @@ export async function createHiveSidecarServer(options = {}) {
       return;
     }
 
+    // 精灵 PNG 图片路由（禁止路径穿越）
+    if (req.method === 'GET' && pathname.startsWith('/gemineko-sprites/')) {
+      const fileName = pathname.slice('/gemineko-sprites/'.length);
+      if (!/^[a-z0-9_-]+\.png$/i.test(fileName)) {
+        res.writeHead(400, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Invalid sprite name');
+        return;
+      }
+      const absFile = path.join(swarmPaths.spritesSourceDir, fileName);
+      if (!fs.existsSync(absFile)) {
+        res.writeHead(404, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Sprite not found');
+        return;
+      }
+      res.writeHead(200, {
+        ...CORS_HEADERS,
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=3600',
+      });
+      res.end(fs.readFileSync(absFile));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/live-activity') {
+      const dirs = findAppDataDirs(options.appDataDirs);
+      const activity = findActiveConversationActivity(dirs);
+      sendJson(res, 200, {
+        ok: true,
+        activity: activity || {
+          conversationId: '',
+          active: false,
+          phase: 'idle',
+          phaseLabel: '待机中',
+          model: 'gemini-4-neon',
+          role: 'neon',
+          action: 'idle',
+          actionLabel: '打盹摸鱼',
+          lastTool: '',
+          spriteFile: 'neon-idle.png',
+        },
+        spriteBaseUrl: `${origin}/gemineko-sprites`,
+      });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/cdp/status') {
+      sendJson(res, 200, {
+        ok: true,
+        cdp: cdpInjector ? cdpInjector.getStatus() : { enabled: false, state: 'disabled', hint: '当前模式未启用 CDP 注入' },
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/cdp/toggle') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      if (!cdpInjector) {
+        sendJson(res, 200, { ok: true, cdp: { enabled: false, state: 'disabled' } });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const nextEnabled = typeof body.enabled === 'boolean' ? body.enabled : !cdpInjector.enabled;
+      const status = await cdpInjector.setEnabled(nextEnabled);
+      sendJson(res, 200, { ok: true, cdp: status });
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/native-patch/status') {
-      sendJson(res, 200, getNativePatchStatus({ swarmDir: swarmPaths.swarmBoardDir, bundlePath: swarmPaths.bundlePath }));
+      sendJson(res, 200, getNativePatchStatus({ swarmDir: swarmPaths.swarmBoardDir, bundlePath: swarmPaths.bundlePath, spritesSourceDir: swarmPaths.spritesSourceDir, logoPngPath: swarmPaths.logoPngPath }));
       return;
     }
 
@@ -265,7 +389,7 @@ export async function createHiveSidecarServer(options = {}) {
         return;
       }
       try {
-        sendJson(res, 200, applyNativePatch({ swarmDir: swarmPaths.swarmBoardDir, bundlePath: swarmPaths.bundlePath }));
+        sendJson(res, 200, applyNativePatch({ swarmDir: swarmPaths.swarmBoardDir, bundlePath: swarmPaths.bundlePath, spritesSourceDir: swarmPaths.spritesSourceDir, logoPngPath: swarmPaths.logoPngPath }));
       } catch (err) {
         sendJson(res, 500, { ok: false, error: err?.message || String(err) });
       }
@@ -300,7 +424,6 @@ export async function createHiveSidecarServer(options = {}) {
       const tok = hostEnvToken || generatedToken;
       if (fs.existsSync(nativeIndex)) {
         let html = fs.readFileSync(nativeIndex, 'utf8');
-        // 清理可能已经注入过的标记块，再在 Sidecar 模式注入带标识的 /gemineko-hive.js
         html = html.replace(/<!-- GEMINEKO_HIVE_START -->[\s\S]*?<!-- GEMINEKO_HIVE_END -->/g, '');
         const injectBoot = `<script>window.__GEMINEKO_SIDECAR_MODE__=true;window.__SIDECAR_TOKEN__=${JSON.stringify(tok)};</script><script src="/gemineko-hive.js"></script>`;
         html = html.includes('</body>') ? html.replace('</body>', `${injectBoot}\n</body>`) : html + injectBoot;
@@ -347,6 +470,15 @@ export async function createHiveSidecarServer(options = {}) {
   const actualPort = typeof addr === 'object' && addr ? addr.port : listenPort;
   const origin = `http://127.0.0.1:${actualPort}`;
 
+  if (options.enableCdp !== false) {
+    cdpInjector = new CdpHostInjector({
+      serverBaseUrl: origin,
+      logoDataUri,
+      debugPort: options.cdpPort,
+    });
+    cdpInjector.start();
+  }
+
   const inject = async ({ method = 'GET', url = '/', headers = {}, body = '' } = {}) => {
     const res = await fetch(`${origin}${url}`, {
       method,
@@ -369,10 +501,13 @@ export async function createHiveSidecarServer(options = {}) {
     port: actualPort,
     origin,
     sideToken: generatedToken,
+    cdpInjector,
     inject,
-    close: () =>
-      new Promise((resolveClose) => {
+    close: () => {
+      if (cdpInjector) cdpInjector.stop();
+      return new Promise((resolveClose) => {
         server.close(() => resolveClose());
-      }),
+      });
+    },
   };
 }

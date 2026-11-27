@@ -1,6 +1,8 @@
 /**
- * 原生 Swarm 面板（builtin/plugins/swarm/sidecars/swarm_board）无损换肤补丁引擎。
- * 只在 index.html 和 main.mjs 中插入带标记块的单行挂载点，绝不修改官方 app.js / hive.js / gif.js / styles.css。
+ * 原生 Swarm 面板（builtin/plugins/swarm/sidecars/swarm_board）无损换肤补丁引擎 v0.2.0。
+ * 1. 只在 index.html 和 main.mjs 中插入带标记块的挂载点，绝不修改官方 app.js / hive.js / gif.js / styles.css。
+ * 2. 将 assets/sprites/*.png 复制到 swarm_board/gemineko-sprites/，并在 main.mjs 的 app.run() 前注册独立 PNG 二进制路由（严禁放进 UTF-8 STATIC）。
+ * 3. 无损备份并替换 builtin/plugins/swarm/assets/logo.svg，使对话流的 [Open the Swarm UI] 入口同步换装，还原时原样恢复。
  */
 
 import { createHash } from 'node:crypto';
@@ -17,11 +19,13 @@ const HTML_MARK_START = '<!-- GEMINEKO_HIVE_START -->';
 const HTML_MARK_END = '<!-- GEMINEKO_HIVE_END -->';
 const JS_MARK_START = '/* GEMINEKO_HIVE_START */';
 const JS_MARK_END = '/* GEMINEKO_HIVE_END */';
+const ROUTES_MARK_START = '/* GEMINEKO_HIVE_ROUTES_START */';
+const ROUTES_MARK_END = '/* GEMINEKO_HIVE_ROUTES_END */';
+const LOGO_MARKER = '<!-- GEMINEKO_HIVE_LOGO_V2 -->';
 
 /**
- * 定位内置原生 swarm_board 目录与本插件打包生成的 dist/gemineko-hive.js。
+ * 定位内置原生 swarm_board 目录、sprites 源目录、logo.png 以及打包产物。
  * @param {object} [opts]
- * @returns {{ swarmBoardDir: string, bundlePath: string }}
  */
 export function resolveSwarmPaths(opts = {}) {
   const homeDir = os.homedir();
@@ -31,15 +35,27 @@ export function resolveSwarmPaths(opts = {}) {
   const bundlePath = opts.bundlePath
     ? path.resolve(opts.bundlePath)
     : path.join(REPO_ROOT, 'dist', 'gemineko-hive.js');
-  return { swarmBoardDir, bundlePath };
+  const spritesSourceDir = opts.spritesSourceDir
+    ? path.resolve(opts.spritesSourceDir)
+    : path.join(REPO_ROOT, 'assets', 'sprites');
+  const logoPngPath = opts.logoPngPath
+    ? path.resolve(opts.logoPngPath)
+    : path.join(REPO_ROOT, 'assets', 'logo.png');
+  const swarmLogoSvgPath = path.resolve(swarmBoardDir, '..', '..', 'assets', 'logo.svg');
+  const swarmLogoBakPath = `${swarmLogoSvgPath}.gemineko.bak`;
+
+  return {
+    swarmBoardDir,
+    bundlePath,
+    spritesSourceDir,
+    logoPngPath,
+    swarmLogoSvgPath,
+    swarmLogoBakPath,
+  };
 }
 
 /**
  * 剥离文本中成对出现的标记块及其紧邻空行/空格。
- * @param {string} text
- * @param {string} startMark
- * @param {string} endMark
- * @returns {string}
  */
 function stripMarkedBlock(text, startMark, endMark) {
   const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -49,8 +65,6 @@ function stripMarkedBlock(text, startMark, endMark) {
 
 /**
  * 原子写入文件内容，保持稳定性。
- * @param {string} filePath
- * @param {string} content
  */
 function writeAtomic(filePath, content) {
   const tmp = `${filePath}.tmp.${process.pid}`;
@@ -60,8 +74,6 @@ function writeAtomic(filePath, content) {
 
 /**
  * 计算文件 SHA-256 摘要，文件不存在时返回空串。
- * @param {string} filePath
- * @returns {string}
  */
 function sha256OrEmpty(filePath) {
   if (!fs.existsSync(filePath)) return '';
@@ -69,14 +81,41 @@ function sha256OrEmpty(filePath) {
 }
 
 /**
+ * 列出 spritesSourceDir 下所有 `.png` 精灵文件名。
+ */
+function listSourceSprites(spritesSourceDir) {
+  if (!fs.existsSync(spritesSourceDir)) return [];
+  return fs
+    .readdirSync(spritesSourceDir)
+    .filter((f) => /\.png$/i.test(f))
+    .sort();
+}
+
+/**
+ * 生成嵌入 Base64 PNG 的 SVG（用于无损替换 swarm/assets/logo.svg）。
+ */
+function buildReplacementLogoSvg(logoPngPath) {
+  const b64 = fs.readFileSync(logoPngPath).toString('base64');
+  return [
+    LOGO_MARKER,
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">',
+    `  <image href="data:image/png;base64,${b64}" x="0" y="0" width="256" height="256" preserveAspectRatio="xMidYMid slice"/>`,
+    '</svg>',
+    '',
+  ].join('\n');
+}
+
+/**
  * 查询官方原生 Swarm 面板当前的《基米窝》换肤状态。
  * @param {object} [opts]
  */
 export function getNativePatchStatus(opts = {}) {
-  const { swarmBoardDir, bundlePath } = resolveSwarmPaths(opts);
+  const paths = resolveSwarmPaths(opts);
+  const { swarmBoardDir, bundlePath, spritesSourceDir, swarmLogoSvgPath, swarmLogoBakPath } = paths;
   const indexPath = path.join(swarmBoardDir, 'index.html');
   const mainPath = path.join(swarmBoardDir, 'main.mjs');
   const targetBundlePath = path.join(swarmBoardDir, 'gemineko-hive.js');
+  const targetSpritesDir = path.join(swarmBoardDir, 'gemineko-sprites');
 
   const swarmExists = fs.existsSync(indexPath) && fs.existsSync(mainPath);
   const bundleBuilt = fs.existsSync(bundlePath);
@@ -89,6 +128,8 @@ export function getNativePatchStatus(opts = {}) {
       bundleBuilt,
       patched: false,
       upToDate: false,
+      logoPatched: false,
+      spriteCount: 0,
       reason: 'not-found',
     };
   }
@@ -97,12 +138,24 @@ export function getNativePatchStatus(opts = {}) {
   const mainJs = fs.readFileSync(mainPath, 'utf8');
   const htmlPatched = html.includes(HTML_MARK_START) && html.includes(HTML_MARK_END);
   const mainPatched = mainJs.includes(JS_MARK_START) && mainJs.includes(JS_MARK_END);
+  const routesPatched = mainJs.includes(ROUTES_MARK_START) && mainJs.includes(ROUTES_MARK_END);
   const targetExists = fs.existsSync(targetBundlePath);
+
+  const expectedSprites = listSourceSprites(spritesSourceDir);
+  const actualSprites = fs.existsSync(targetSpritesDir)
+    ? fs.readdirSync(targetSpritesDir).filter((f) => /\.png$/i.test(f))
+    : [];
+  const spritesReady = expectedSprites.length === 0 || expectedSprites.every((f) => actualSprites.includes(f));
+
+  const logoPatched = fs.existsSync(swarmLogoSvgPath)
+    ? fs.readFileSync(swarmLogoSvgPath, 'utf8').includes(LOGO_MARKER)
+    : false;
+  const logoBackupExists = fs.existsSync(swarmLogoBakPath);
 
   const srcSha = sha256OrEmpty(bundlePath);
   const dstSha = sha256OrEmpty(targetBundlePath);
-  const patched = htmlPatched && mainPatched && targetExists;
-  const upToDate = Boolean(patched && srcSha && dstSha && srcSha === dstSha);
+  const patched = htmlPatched && mainPatched && routesPatched && targetExists;
+  const upToDate = Boolean(patched && spritesReady && srcSha && dstSha && srcSha === dstSha);
 
   return {
     ok: true,
@@ -111,7 +164,12 @@ export function getNativePatchStatus(opts = {}) {
     bundleBuilt,
     htmlPatched,
     mainPatched,
+    routesPatched,
     targetExists,
+    spritesReady,
+    spriteCount: actualSprites.length,
+    logoPatched,
+    logoBackupExists,
     patched,
     upToDate,
     bundleSha256: dstSha || '',
@@ -119,14 +177,16 @@ export function getNativePatchStatus(opts = {}) {
 }
 
 /**
- * 为原生 Swarm 面板无损套用（或升级覆盖恢复）《基米窝》皮肤。
+ * 为原生 Swarm 面板无损套用（或升级覆盖）《基米窝》v0.2.0 皮肤。
  * @param {object} [opts]
  */
 export function applyNativePatch(opts = {}) {
-  const { swarmBoardDir, bundlePath } = resolveSwarmPaths(opts);
+  const paths = resolveSwarmPaths(opts);
+  const { swarmBoardDir, bundlePath, spritesSourceDir, logoPngPath, swarmLogoSvgPath, swarmLogoBakPath } = paths;
   const indexPath = path.join(swarmBoardDir, 'index.html');
   const mainPath = path.join(swarmBoardDir, 'main.mjs');
   const targetBundlePath = path.join(swarmBoardDir, 'gemineko-hive.js');
+  const targetSpritesDir = path.join(swarmBoardDir, 'gemineko-sprites');
 
   if (!fs.existsSync(indexPath) || !fs.existsSync(mainPath)) {
     throw new Error(`未检测到官方原生 Swarm 目录或关键文件: ${swarmBoardDir}`);
@@ -137,7 +197,6 @@ export function applyNativePatch(opts = {}) {
 
   // 1. 注入 index.html（幂等剥离旧块后插入在 </body> 前）
   const rawHtml = fs.readFileSync(indexPath, 'utf8');
-  const htmlEol = rawHtml.includes('\r\n') ? '\r\n' : '\n';
   const cleanHtml = stripMarkedBlock(rawHtml, HTML_MARK_START, HTML_MARK_END);
   const bodyCloseIdx = cleanHtml.lastIndexOf('</body>');
   if (bodyCloseIdx === -1) {
@@ -146,17 +205,39 @@ export function applyNativePatch(opts = {}) {
   const htmlSnippet = `${HTML_MARK_START}<script src="/gemineko-hive.js"></script>${HTML_MARK_END}`;
   const nextHtml = cleanHtml.slice(0, bodyCloseIdx) + htmlSnippet + cleanHtml.slice(bodyCloseIdx);
 
-  // 2. 注入 main.mjs（幂等剥离旧块后插入在 const STATIC = { 后）
+  // 2. 注入 main.mjs：
+  //   (a) 在 const STATIC = { 中挂载 /gemineko-hive.js（UTF-8 JS）
+  //   (b) 在 app.run(); 前挂载 /gemineko-sprites/*.png 的二进制 PNG 路由（绝不写入 UTF-8 STATIC）
   const rawMain = fs.readFileSync(mainPath, 'utf8');
   const mainEol = rawMain.includes('\r\n') ? '\r\n' : '\n';
-  const cleanMain = stripMarkedBlock(rawMain, JS_MARK_START, JS_MARK_END);
+  let cleanMain = stripMarkedBlock(rawMain, JS_MARK_START, JS_MARK_END);
+  cleanMain = stripMarkedBlock(cleanMain, ROUTES_MARK_START, ROUTES_MARK_END);
+
   const staticMatch = cleanMain.match(/const\s+STATIC\s*=\s*\{/);
   if (!staticMatch || staticMatch.index === undefined) {
     throw new Error('原生 main.mjs 中未找到 const STATIC = { 挂载点，已安全中止');
   }
   const insertAt = staticMatch.index + staticMatch[0].length;
   const jsSnippet = `${mainEol}  ${JS_MARK_START}'/gemineko-hive.js': ['gemineko-hive.js', 'application/javascript'],${JS_MARK_END}`;
-  const nextMain = cleanMain.slice(0, insertAt) + jsSnippet + cleanMain.slice(insertAt);
+  let nextMain = cleanMain.slice(0, insertAt) + jsSnippet + cleanMain.slice(insertAt);
+
+  const appRunMatch = nextMain.match(/app\.run\s*\(\s*\)\s*;?/);
+  if (!appRunMatch || appRunMatch.index === undefined) {
+    throw new Error('原生 main.mjs 中未找到 app.run() 挂载点，已安全中止');
+  }
+  const sprites = listSourceSprites(spritesSourceDir);
+  const routeLines = [
+    ROUTES_MARK_START,
+    `for (const _gkFile of ${JSON.stringify(sprites)}) {`,
+    `  app.api('/gemineko-sprites/' + _gkFile, () => new Response(readFileSync(join(__dirname, 'gemineko-sprites', _gkFile)), { contentType: 'image/png', headers: { 'Cache-Control': 'private, max-age=3600' } }), 'GET');`,
+    `}`,
+    ROUTES_MARK_END,
+  ].join(mainEol);
+  nextMain =
+    nextMain.slice(0, appRunMatch.index) +
+    routeLines +
+    mainEol +
+    nextMain.slice(appRunMatch.index);
 
   // 先在临时文件进行 node --check 语法校验，避免污染原生脚本
   const syntaxTmp = path.join(os.tmpdir(), `gemineko-hive-check-${process.pid}.mjs`);
@@ -167,9 +248,25 @@ export function applyNativePatch(opts = {}) {
     fs.rmSync(syntaxTmp, { force: true });
   }
 
+  // 3. 复制全套 25+ 动作精灵图至 gemineko-sprites/
+  fs.mkdirSync(targetSpritesDir, { recursive: true });
+  for (const file of sprites) {
+    fs.copyFileSync(path.join(spritesSourceDir, file), path.join(targetSpritesDir, file));
+  }
+
+  // 4. 复制 bundle 并原子更新 HTML & main.mjs
   fs.copyFileSync(bundlePath, targetBundlePath);
   writeAtomic(indexPath, nextHtml);
   writeAtomic(mainPath, nextMain);
+
+  // 5. 无损备份并替换 swarm/assets/logo.svg（用于主对话区入口图标美化）
+  if (fs.existsSync(swarmLogoSvgPath) && fs.existsSync(logoPngPath)) {
+    const curLogo = fs.readFileSync(swarmLogoSvgPath, 'utf8');
+    if (!curLogo.includes(LOGO_MARKER) && !fs.existsSync(swarmLogoBakPath)) {
+      fs.copyFileSync(swarmLogoSvgPath, swarmLogoBakPath);
+    }
+    writeAtomic(swarmLogoSvgPath, buildReplacementLogoSvg(logoPngPath));
+  }
 
   return {
     ...getNativePatchStatus(opts),
@@ -178,14 +275,16 @@ export function applyNativePatch(opts = {}) {
 }
 
 /**
- * 将原生 Swarm 面板无损还原回官方原版小蜜蜂样式。
+ * 将原生 Swarm 面板及 swarm/assets/logo.svg 字节级无损还原回官方原版。
  * @param {object} [opts]
  */
 export function restoreNativePatch(opts = {}) {
-  const { swarmBoardDir } = resolveSwarmPaths(opts);
+  const paths = resolveSwarmPaths(opts);
+  const { swarmBoardDir, swarmLogoSvgPath, swarmLogoBakPath } = paths;
   const indexPath = path.join(swarmBoardDir, 'index.html');
   const mainPath = path.join(swarmBoardDir, 'main.mjs');
   const targetBundlePath = path.join(swarmBoardDir, 'gemineko-hive.js');
+  const targetSpritesDir = path.join(swarmBoardDir, 'gemineko-sprites');
 
   if (!fs.existsSync(indexPath) || !fs.existsSync(mainPath)) {
     throw new Error(`未检测到官方原生 Swarm 目录或关键文件: ${swarmBoardDir}`);
@@ -198,7 +297,8 @@ export function restoreNativePatch(opts = {}) {
   }
 
   const rawMain = fs.readFileSync(mainPath, 'utf8');
-  const nextMain = stripMarkedBlock(rawMain, JS_MARK_START, JS_MARK_END);
+  let nextMain = stripMarkedBlock(rawMain, JS_MARK_START, JS_MARK_END);
+  nextMain = stripMarkedBlock(nextMain, ROUTES_MARK_START, ROUTES_MARK_END);
   if (nextMain !== rawMain) {
     const syntaxTmp = path.join(os.tmpdir(), `gemineko-hive-restore-check-${process.pid}.mjs`);
     try {
@@ -210,8 +310,12 @@ export function restoreNativePatch(opts = {}) {
     writeAtomic(mainPath, nextMain);
   }
 
-  if (fs.existsSync(targetBundlePath)) {
-    fs.rmSync(targetBundlePath, { force: true });
+  fs.rmSync(targetBundlePath, { force: true });
+  fs.rmSync(targetSpritesDir, { recursive: true, force: true });
+
+  if (fs.existsSync(swarmLogoBakPath)) {
+    fs.copyFileSync(swarmLogoBakPath, swarmLogoSvgPath);
+    fs.rmSync(swarmLogoBakPath, { force: true });
   }
 
   return {

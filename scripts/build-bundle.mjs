@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * 构建脚本：将 5 张本地 PNG 精灵图 + logo、CSS 主题、像素精灵引擎、Demo 数据与运行时核心
- * 打包为单个无外部依赖的前端文件 dist/gemineko-hive.js，供原生 Swarm 换肤与独立 Sidecar 共用。
+ * 构建脚本：将 logo、高浓度花名引擎、像素精灵引擎、Demo 数据、CSS 主题与运行时核心
+ * 打包为单个轻量化无外部依赖的前端文件 dist/gemineko-hive.js，供原生 Swarm 换肤与独立 Sidecar 共用。
+ * 25 张 128x128 动作立绘通过 /gemineko-sprites/<role>-<action>.png 按需懒加载，保持主包体积精简。
  */
 
 import fs from 'node:fs';
@@ -31,16 +32,14 @@ function stripModuleSyntax(src) {
 }
 
 export function buildGeminekoBundle() {
-  const sprites = {
+  const assets = {
     logo: fileToDataUri(path.join(REPO_ROOT, 'assets', 'logo.png')),
-    queen: fileToDataUri(path.join(REPO_ROOT, 'assets', 'sprites', 'neko-queen.png')),
-    geminiWorking: fileToDataUri(path.join(REPO_ROOT, 'assets', 'sprites', 'gemini-working.png')),
-    geminiSleep: fileToDataUri(path.join(REPO_ROOT, 'assets', 'sprites', 'gemini-sleep.png')),
-    claudeWorking: fileToDataUri(path.join(REPO_ROOT, 'assets', 'sprites', 'claude-working.png')),
-    gptWorking: fileToDataUri(path.join(REPO_ROOT, 'assets', 'sprites', 'gpt-working.png')),
   };
 
   const themeCss = fs.readFileSync(path.join(REPO_ROOT, 'src', 'theme', 'gemineko-theme.css'), 'utf8');
+  const nicknamesSrc = stripModuleSyntax(
+    fs.readFileSync(path.join(REPO_ROOT, 'src', 'theme', 'nicknames.js'), 'utf8'),
+  );
   const pixelSrc = stripModuleSyntax(
     fs.readFileSync(path.join(REPO_ROOT, 'src', 'theme', 'pixel-sprites.js'), 'utf8'),
   );
@@ -52,13 +51,16 @@ export function buildGeminekoBundle() {
   );
 
   const bundle = [
-    '// Built by Gemineko Hive (scripts/build-bundle.mjs) — DO NOT EDIT DIRECTLY.',
+    '// Built by Gemineko Hive v0.2.0 (scripts/build-bundle.mjs) — DO NOT EDIT DIRECTLY.',
     '(function() {',
     '  "use strict";',
     '  if (typeof window === "undefined" || window.__GEMINEKO_HIVE_LOADED__) return;',
     '  window.__GEMINEKO_HIVE_LOADED__ = true;',
-    `  const GEMINEKO_ASSETS = ${JSON.stringify(sprites)};`,
+    `  const GEMINEKO_ASSETS = ${JSON.stringify(assets)};`,
     `  const GEMINEKO_CSS = ${JSON.stringify(themeCss)};`,
+    '',
+    '// === nicknames ===',
+    nicknamesSrc,
     '',
     '// === pixel-sprites ===',
     pixelSrc,

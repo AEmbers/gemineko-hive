@@ -1,14 +1,15 @@
 /**
- * Gemineko Hive · 基米窝核心前端运行时（原生 Swarm 与独立 Sidecar 共用）。
- * 依赖同作用域中的 GEMINEKO_ASSETS, GEMINEKO_CSS, drawPixelSprite, getPixelSpriteDataUri, buildDemoSwarmSnapshot。
+ * Gemineko Hive · 基米窝核心前端运行时 v0.2.0（原生 Swarm 与独立 Sidecar 共用）。
+ * 依赖同作用域中的 GEMINEKO_ASSETS, GEMINEKO_CSS, resolveMemeNickname, drawPixelSprite, getPixelSpriteDataUri, buildDemoSwarmSnapshot。
  */
 
 export function bootGeminekoHive() {
-  const PREFS_KEY = 'gemineko_hive_prefs_v1';
+  const PREFS_KEY = 'gemineko_hive_prefs_v2';
   const DEFAULT_PREFS = {
     roleMode: 'ai-girls', // 'ai-girls' | 'all-hachimi'
     artStyle: 'chibi', // 'chibi' | 'pixel'
     themeMode: 'starry-hive', // 'starry-hive' | 'avatar-only'
+    memeNicknames: true, // 默认开启哈基米高浓度梗名
     locale: 'neko-zh', // 'neko-zh' | 'zh' | 'en'
     sound: false,
     collapsed: false,
@@ -40,10 +41,30 @@ export function bootGeminekoHive() {
     document.head.appendChild(st);
   }
 
-  // 成员元信息缓存：name -> { model, role, status }
+  const ACTION_EMOJI = {
+    thinking: '💭',
+    reading: '🔍',
+    editing: '⌨️',
+    running: '⚡',
+    asking: '❓',
+    idle: '💤',
+  };
+
+  const ACTION_LABELS = {
+    thinking: '思考中',
+    reading: '读代码中',
+    editing: '改文件中',
+    running: '跑终端中',
+    asking: '等你拍板',
+    idle: '打盹摸鱼',
+  };
+
+  // 成员元信息缓存：name -> { model, role, status, geminekoRole, action, actionLabel, phase, lastTool }
   const memberInfoMap = new Map();
   let demoActive = false;
   let lastNativeStatus = null;
+  let lastLiveActivity = null;
+  let lastCdpStatus = null;
 
   function ingestMembersFromSnap(snap) {
     if (!snap || !snap.members) return;
@@ -54,6 +75,11 @@ export function bootGeminekoHive() {
           model: String(m.model || ''),
           role: String(m.role || ''),
           status: String(m.status || ''),
+          geminekoRole: String(m.geminekoRole || ''),
+          action: String(m.action || ''),
+          actionLabel: String(m.actionLabel || ''),
+          phase: String(m.phase || ''),
+          lastTool: String(m.lastTool || ''),
         });
       }
     } else if (typeof snap.members === 'object') {
@@ -63,6 +89,11 @@ export function bootGeminekoHive() {
           model: String(m.model || ''),
           role: String(m.role || ''),
           status: String(m.status || ''),
+          geminekoRole: String(m.geminekoRole || ''),
+          action: String(m.action || ''),
+          actionLabel: String(m.actionLabel || ''),
+          phase: String(m.phase || ''),
+          lastTool: String(m.lastTool || ''),
         });
       }
     }
@@ -91,118 +122,150 @@ export function bootGeminekoHive() {
     return String(name || 'worker');
   }
 
+  function classifyModelKind(modelStr, lowName) {
+    const s = `${modelStr} ${lowName}`.toLowerCase();
+    if (/claude|sonnet|opus|haiku/.test(s)) return 'claude';
+    if (/gpt|codex|\bsol\b|\bastra\b|\bo1\b|\bo3\b|\bo4\b/.test(s)) return 'gpt';
+    if (/carbon|ultra|argon/.test(s)) return 'carbon';
+    if (/hydrogen|flash|lite/.test(s)) return 'hydrogen';
+    return 'neon';
+  }
+
+  function normalizeSpriteAction(explicitAction, explicitState, info) {
+    const raw = String(explicitAction || info?.action || '').toLowerCase();
+    if (raw === 'thinking' || raw === 'reading' || raw === 'editing' || raw === 'running' || raw === 'idle') {
+      return raw;
+    }
+    if (raw === 'asking') return 'thinking';
+    const st = String(explicitState || info?.status || 'working').toLowerCase();
+    if (st === 'parked' || st === 'landed' || st === 'done' || st === 'idle' || st === 'waiting' || st === 'retired') {
+      return 'idle';
+    }
+    return 'thinking';
+  }
+
   function resolveMemberCharacter(rawName, explicitState) {
     const name = normalizeAgentName(rawName);
     const info = memberInfoMap.get(name);
     const state = explicitState || info?.status || 'working';
-    const asleep = state === 'parked' || state === 'landed' || state === 'done';
+    const isCoordinator = name === 'coordinator' || info?.role === 'coordinator';
+    const asleep = state === 'parked' || state === 'landed' || state === 'done' || state === 'idle' || state === 'waiting' || state === 'retired';
 
-    let kind = 'gemini';
+    let spriteRole = info?.geminekoRole || classifyModelKind(info?.model || '', name);
     if (prefs.roleMode === 'all-hachimi') {
-      kind = name === 'coordinator' || info?.role === 'coordinator' ? 'queen' : 'gemini';
-    } else {
-      const model = (info?.model || '').toLowerCase();
-      const lowName = name.toLowerCase();
-      if (name === 'coordinator' || info?.role === 'coordinator') {
-        kind = 'queen';
-      } else if (/claude|sonnet|opus|haiku/.test(model) || /claude/.test(lowName)) {
-        kind = 'claude';
-      } else if (/gpt|codex|sol|astra|o1|o3/.test(model) || /gpt|codex|sol/.test(lowName)) {
-        kind = 'gpt';
-      } else {
-        kind = 'gemini';
-      }
+      // 全员哈基米模式：按名称分派霓虹紫 / 冰青 / 暗夜黑金猫娘，不用 Claude/GPT 异族立绘
+      const hachimiCats = ['neon', 'hydrogen', 'carbon'];
+      spriteRole = isCoordinator ? 'neon' : hachimiCats[hashMember(name) % hachimiCats.length];
     }
 
-    const ringColor =
-      kind === 'queen' ? '#F59E0B' : RING_PALETTE[hashMember(name) % RING_PALETTE.length];
+    const action = normalizeSpriteAction(info?.action, state, info);
+    const pixelKind = isCoordinator && prefs.artStyle === 'pixel' ? 'queen' : spriteRole;
+    const ringColor = isCoordinator ? '#F59E0B' : RING_PALETTE[hashMember(name) % RING_PALETTE.length];
 
-    return { name, kind, state, asleep, ringColor };
+    return {
+      name,
+      isCoordinator,
+      kind: spriteRole,
+      pixelKind,
+      action,
+      displayAction: info?.action || action,
+      actionLabel: info?.actionLabel || ACTION_LABELS[action] || '思考中',
+      state,
+      asleep: action === 'idle' || asleep,
+      ringColor,
+      model: info?.model || '',
+    };
   }
 
-  // 离屏裁剪圆角 Chibi Data URI 缓存，确保 GIF 导出与 SVG <image> 渲染丝滑锐利
+  function getSpriteBaseUrl() {
+    if (typeof window.__GEMINEKO_SPRITE_BASE__ === 'string' && window.__GEMINEKO_SPRITE_BASE__) {
+      return window.__GEMINEKO_SPRITE_BASE__.replace(/\/+$/, '');
+    }
+    return '/gemineko-sprites';
+  }
+
+  function getChibiSpriteUrl(role, action) {
+    const r = ['neon', 'hydrogen', 'carbon', 'claude', 'gpt'].includes(role) ? role : 'neon';
+    const a = ['thinking', 'reading', 'editing', 'running', 'idle'].includes(action) ? action : 'thinking';
+    return `${getSpriteBaseUrl()}/${r}-${a}.png`;
+  }
+
+  // 离屏裁剪圆角 Chibi 缓存 + 预热常用精灵，确保 GIF 导出与 SVG <image> 渲染清晰
   const chibiAvatarCache = new Map();
   const chibiRawImgCache = new Map();
 
-  function getChibiKeyUri(kind, asleep) {
-    if (kind === 'queen') return GEMINEKO_ASSETS.queen;
-    if (kind === 'claude') return GEMINEKO_ASSETS.claudeWorking;
-    if (kind === 'gpt') return GEMINEKO_ASSETS.gptWorking;
-    return asleep ? GEMINEKO_ASSETS.geminiSleep : GEMINEKO_ASSETS.geminiWorking;
-  }
-
-  function warmChibiImg(srcUri, onReady) {
-    if (chibiRawImgCache.has(srcUri)) {
-      const entry = chibiRawImgCache.get(srcUri);
+  function warmChibiImg(srcUrl, onReady) {
+    if (chibiRawImgCache.has(srcUrl)) {
+      const entry = chibiRawImgCache.get(srcUrl);
       if (entry.loaded && onReady) onReady(entry.img);
       return entry.img;
     }
     const img = new Image();
     const rec = { img, loaded: false };
-    chibiRawImgCache.set(srcUri, rec);
+    chibiRawImgCache.set(srcUrl, rec);
     img.onload = () => {
       rec.loaded = true;
       chibiAvatarCache.clear();
       if (onReady) onReady(img);
     };
-    img.src = srcUri;
+    img.src = srcUrl;
     return img;
   }
 
-  // 启动即预热 5 张精灵图片以便随时同步生成圆形 GIF 头像
-  for (const uri of [
-    GEMINEKO_ASSETS.queen,
-    GEMINEKO_ASSETS.geminiWorking,
-    GEMINEKO_ASSETS.geminiSleep,
-    GEMINEKO_ASSETS.claudeWorking,
-    GEMINEKO_ASSETS.gptWorking,
-  ]) {
-    warmChibiImg(uri);
+  // 预热 5 个核心角色常规姿态
+  for (const r of ['neon', 'hydrogen', 'carbon', 'claude', 'gpt']) {
+    warmChibiImg(getChibiSpriteUrl(r, r === 'gpt' ? 'idle' : 'thinking'));
   }
 
   function getSpriteSrcForGifOrMsg(rawName, explicitState) {
     const ch = resolveMemberCharacter(rawName, explicitState);
     if (prefs.artStyle === 'pixel') {
       return getPixelSpriteDataUri({
-        kind: ch.kind,
+        kind: ch.pixelKind,
         memberName: ch.name,
         roleMode: prefs.roleMode,
+        action: ch.displayAction,
         state: ch.state,
         frame: 0,
       });
     }
-    const rawUri = getChibiKeyUri(ch.kind, ch.asleep);
-    const cacheKey = `${rawUri}|${ch.ringColor}|${ch.kind === 'queen' ? 'q' : 'w'}`;
+    const rawUrl = getChibiSpriteUrl(ch.kind, ch.action);
+    warmChibiImg(rawUrl);
+    const cacheKey = `${rawUrl}|${ch.ringColor}`;
     if (chibiAvatarCache.has(cacheKey)) {
       return chibiAvatarCache.get(cacheKey);
     }
-    const rec = chibiRawImgCache.get(rawUri);
+    const rec = chibiRawImgCache.get(rawUrl);
     if (rec && rec.loaded) {
-      const sz = 44;
-      const cv = document.createElement('canvas');
-      cv.width = sz;
-      cv.height = sz;
-      const ctx = cv.getContext('2d');
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(sz / 2, sz / 2, sz / 2 - 2, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(rec.img, 0, 0, sz, sz);
-      ctx.restore();
-      ctx.beginPath();
-      ctx.arc(sz / 2, sz / 2, sz / 2 - 1.5, 0, Math.PI * 2);
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = ch.ringColor;
-      ctx.stroke();
-      const outUri = cv.toDataURL('image/png');
-      chibiAvatarCache.set(cacheKey, outUri);
-      return outUri;
+      try {
+        const sz = 44;
+        const cv = document.createElement('canvas');
+        cv.width = sz;
+        cv.height = sz;
+        const ctx = cv.getContext('2d');
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(sz / 2, sz / 2, sz / 2 - 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(rec.img, 0, 0, sz, sz);
+        ctx.restore();
+        ctx.beginPath();
+        ctx.arc(sz / 2, sz / 2, sz / 2 - 1.5, 0, Math.PI * 2);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = ch.ringColor;
+        ctx.stroke();
+        const outUri = cv.toDataURL('image/png');
+        chibiAvatarCache.set(cacheKey, outUri);
+        return outUri;
+      } catch {
+        return rawUrl;
+      }
     }
-    return rawUri;
+    return rawUrl;
   }
 
-  // Web Audio 轻量喵呜/叮咚合成音效（默认静音，不依赖外部音频文件）
+  // Web Audio 轻量喵呜/叮咚合成音效
   let audioCtx = null;
   function playMeow(variant = 'pat') {
     if (!prefs.sound) return;
@@ -242,13 +305,13 @@ export function bootGeminekoHive() {
       '喵呜！谁戳了本喵的猫耳！',
       '快干活喵！不许摸鱼！',
       '哈基米能量溢出啦～',
-      '再戳一口本小姐要写 95 分严格审查了哼！',
-      '别晃蜂巢呀，星芒微粒要掉光啦～',
+      '再戳一口 95 分严审圣女要打回重写了哼！',
+      '别晃蜂巢呀，小龙娘的算力要掉出来啦～',
     ],
     zh: [
       '触发蜂巢振动！全体成员加速中',
       '协调者正在重新对齐全部任务！',
-      '成员状态全检刷新完成',
+      '成员动作与立绘全检刷新完成',
       '检测到互动点击，团队士气 +10%',
     ],
     en: [
@@ -292,7 +355,6 @@ export function bootGeminekoHive() {
     });
   }
 
-  // 三语文案映射表
   const LOCALE_TEXT = {
     'neko-zh': {
       overview: '猫窝总览',
@@ -306,12 +368,14 @@ export function bootGeminekoHive() {
       poke: '捅一捅',
       roleAi: 'AI娘宇宙',
       roleHachimi: '全员哈基米',
-      artChibi: 'Q版立绘',
+      artChibi: '25态Q版',
       artPixel: '32px像素',
       themeHive: '星空猫窝',
       themeMin: '仅换头像',
+      nickOn: '哈基米花名',
+      nickOff: '原名 @ID',
       locLabel: '萌系中文',
-      demoBtn: '🐾 一键体验模拟基米窝（Demo）',
+      demoBtn: '🐾 一键体验模拟基米窝（5角色25态Demo）',
       exitDemo: '退出 Demo',
     },
     zh: {
@@ -326,10 +390,12 @@ export function bootGeminekoHive() {
       poke: '互动晃动',
       roleAi: 'AI娘模式',
       roleHachimi: '全员哈基米',
-      artChibi: 'Q版立绘',
+      artChibi: '25态立绘',
       artPixel: '像素风',
       themeHive: '星空猫窝',
       themeMin: '仅换头像',
+      nickOn: '玩梗花名',
+      nickOff: '原始ID',
       locLabel: '正常中文',
       demoBtn: '🐾 一键体验模拟基米窝（Demo）',
       exitDemo: '退出 Demo',
@@ -346,10 +412,12 @@ export function bootGeminekoHive() {
       poke: 'Poke Hive',
       roleAi: 'AI Girls',
       roleHachimi: 'All Hachimi',
-      artChibi: 'Chibi',
+      artChibi: '25-Pose Chibi',
       artPixel: '32px Pixel',
       themeHive: 'Starry Hive',
       themeMin: 'Avatar Only',
+      nickOn: 'Meme Names',
+      nickOff: 'Raw @ID',
       locLabel: 'EN',
       demoBtn: '🐾 Try Demo Gemineko Hive',
       exitDemo: 'Exit Demo',
@@ -383,7 +451,54 @@ export function bootGeminekoHive() {
     if (gifLbl) gifLbl.textContent = L.exportGif;
   }
 
-  // 把页面上所有 .beebox 与消息头像同步为《基米窝》精灵
+  /**
+   * 仅更新可见成员标签文本（消息头/成员列表/关系图文字），并保存原始 ID 供一键还原或悬浮提示。
+   */
+  function applyMemeNicknamesToDom() {
+    if (typeof resolveMemeNickname !== 'function') return;
+    const used = new Set();
+    const resolveFor = (rawId) => {
+      const clean = String(rawId || '').replace(/^@/, '').trim();
+      if (!clean) return null;
+      const info = memberInfoMap.get(clean);
+      const ch = resolveMemberCharacter(clean);
+      return resolveMemeNickname(
+        {
+          id: clean,
+          agent: clean,
+          model: info?.model || '',
+          role: info?.role || '',
+          geminekoRole: ch.kind,
+          isCoordinator: ch.isCoordinator,
+          actionLabel: ch.actionLabel,
+        },
+        { enabled: prefs.memeNicknames, usedNames: used },
+      );
+    };
+
+    // 1. 成员列表名称 / 消息来源 / 关系图节点文字
+    const nameEls = document.querySelectorAll('.o2-mname, .msg-who, .bee-name, svg.graph text');
+    for (const el of nameEls) {
+      if (el.closest('#gemineko-toolbar')) continue;
+      if (!el.dataset.gnRawLabel) {
+        const txt = (el.textContent || '').trim();
+        if (!txt || txt.length > 42) continue;
+        el.dataset.gnRawLabel = txt;
+      }
+      const raw = el.dataset.gnRawLabel;
+      const clean = raw.replace(/^@/, '');
+      if (!memberInfoMap.has(clean) && !memberInfoMap.has(raw) && clean !== 'coordinator') continue;
+      const nick = resolveFor(clean);
+      if (!nick) continue;
+      const targetText = prefs.memeNicknames ? nick.displayName : raw;
+      if (el.textContent !== targetText) {
+        el.textContent = targetText;
+      }
+      el.setAttribute('title', nick.tooltip);
+    }
+  }
+
+  // 把页面上所有 .beebox 与消息头像同步为 25 态《基米窝》精灵
   function enhanceDomSprites() {
     const boxes = document.querySelectorAll('.beebox');
     for (const box of boxes) {
@@ -391,7 +506,7 @@ export function bootGeminekoHive() {
       const rawName = wrap?.dataset?.bee || 'worker';
       const state = box.dataset.state || wrap?.dataset?.state || 'working';
       const ch = resolveMemberCharacter(rawName, state);
-      const renderKey = `${ch.kind}|${ch.name}|${ch.asleep ? 1 : 0}|${prefs.artStyle}|${prefs.roleMode}`;
+      const renderKey = `${ch.kind}|${ch.action}|${ch.name}|${ch.asleep ? 1 : 0}|${prefs.artStyle}|${prefs.roleMode}`;
 
       if (wrap) wrap.style.display = 'none';
       const gsh = box.querySelector('.gsh');
@@ -401,21 +516,28 @@ export function bootGeminekoHive() {
       if (!host) {
         host = document.createElement('span');
         host.className = 'gn-sprite-host';
-        host.title = `点击摸摸 @${ch.name}`;
         host.addEventListener('click', (ev) => {
           ev.stopPropagation();
           playMeow('pat');
+          const cur = resolveMemberCharacter(rawName, box.dataset.state || wrap?.dataset?.state);
           const r = host.getBoundingClientRect();
           const msg =
-            ch.kind === 'claude'
-              ? '本小姐可不是特意帮你的！'
-              : ch.kind === 'gpt'
-                ? 'Sol 核心稳定运行中，交给我吧！'
-                : '喵呜～摸摸头干劲 +100%！';
+            cur.kind === 'claude'
+              ? '本小姐可不是特意帮你写的 95 分严格审查！'
+              : cur.kind === 'gpt'
+                ? '烧Token大龙娘正在后台高速运算中，交给我吧！'
+                : cur.action === 'idle'
+                  ? '呼喵…刚刚干完活正打盹呢，再摸就醒啦～'
+                  : `正在【${cur.actionLabel}】喵～干劲 +100%！`;
           spawnBubbleAt(r.left + r.width / 2, r.top, msg);
         });
         box.appendChild(host);
       }
+
+      const nick = typeof resolveMemeNickname === 'function'
+        ? resolveMemeNickname({ id: ch.name, agent: ch.name, model: ch.model, geminekoRole: ch.kind, isCoordinator: ch.isCoordinator, actionLabel: ch.actionLabel }, { enabled: prefs.memeNicknames })
+        : { displayName: `@${ch.name}`, tooltip: `@${ch.name}` };
+      host.title = `${nick.tooltip} · 点击摸摸头`;
 
       if (host.dataset.gnKey !== renderKey) {
         host.dataset.gnKey = renderKey;
@@ -424,6 +546,17 @@ export function bootGeminekoHive() {
           img = document.createElement('img');
           img.className = 'gn-sprite-img';
           img.alt = ch.name;
+          img.onerror = () => {
+            img.onerror = null;
+            img.src = getPixelSpriteDataUri({
+              kind: ch.pixelKind,
+              memberName: ch.name,
+              roleMode: prefs.roleMode,
+              action: ch.displayAction,
+              state: ch.state,
+              frame: 0,
+            });
+          };
           host.appendChild(img);
         }
         img.classList.toggle('is-pixel', prefs.artStyle === 'pixel');
@@ -431,14 +564,42 @@ export function bootGeminekoHive() {
 
         if (prefs.artStyle === 'pixel') {
           img.src = getPixelSpriteDataUri({
-            kind: ch.kind,
+            kind: ch.pixelKind,
             memberName: ch.name,
             roleMode: prefs.roleMode,
+            action: ch.displayAction,
             state: ch.state,
             frame: 0,
           });
         } else {
-          img.src = getChibiKeyUri(ch.kind, ch.asleep);
+          img.src = getChibiSpriteUrl(ch.kind, ch.action);
+        }
+
+        // 协调者小皇冠
+        let crown = host.querySelector('.gn-crown-dot');
+        if (ch.isCoordinator) {
+          if (!crown) {
+            crown = document.createElement('span');
+            crown.className = 'gn-crown-dot';
+            crown.textContent = '👑';
+            host.appendChild(crown);
+          }
+        } else if (crown) {
+          crown.remove();
+        }
+
+        // 动作角标徽章（thinking/reading/editing/running/asking）
+        let actDot = host.querySelector('.gn-action-dot');
+        if (!ch.asleep) {
+          if (!actDot) {
+            actDot = document.createElement('span');
+            actDot.className = 'gn-action-dot';
+            host.appendChild(actDot);
+          }
+          actDot.textContent = ACTION_EMOJI[ch.displayAction] || '✨';
+          actDot.title = ch.actionLabel;
+        } else if (actDot) {
+          actDot.remove();
         }
 
         let zzz = host.querySelector('.gn-zzz');
@@ -459,13 +620,16 @@ export function bootGeminekoHive() {
     const graphImgs = document.querySelectorAll('svg.graph image.node-bee');
     for (const nodeImg of graphImgs) {
       const g = nodeImg.closest('g');
-      const label = g?.querySelector('text')?.textContent?.trim();
+      const textEl = g?.querySelector('text');
+      const label = textEl?.dataset?.gnRawLabel || textEl?.textContent?.trim();
       if (!label) continue;
       const newHref = getSpriteSrcForGifOrMsg(label);
       if (nodeImg.getAttribute('href') !== newHref) {
         nodeImg.setAttribute('href', newHref);
       }
     }
+
+    applyMemeNicknamesToDom();
   }
 
   function refreshAllSprites() {
@@ -474,7 +638,6 @@ export function bootGeminekoHive() {
       delete h.dataset.gnKey;
     });
     enhanceDomSprites();
-    // 同步更新消息板头像
     document.querySelectorAll('.msg-av.bee img.gn-msg-avatar').forEach((img) => {
       const name = img.dataset.gnAgent;
       if (name) {
@@ -484,18 +647,65 @@ export function bootGeminekoHive() {
     });
   }
 
-  // 构建顶部控制栏 & 独立 Sidecar 原生换肤开关
-  async function fetchNativePatchStatus(barUpdateCb) {
+  async function fetchSidecarMeta(barUpdateCb) {
     if (!window.__GEMINEKO_SIDECAR_MODE__) return;
     try {
-      const resp = await originalFetch('/api/native-patch/status');
-      if (resp.ok) {
-        lastNativeStatus = await resp.json();
-        if (barUpdateCb) barUpdateCb();
+      const [nativeResp, liveResp, cdpResp] = await Promise.all([
+        originalFetch('/api/native-patch/status'),
+        originalFetch('/api/live-activity'),
+        originalFetch('/api/cdp/status'),
+      ]);
+      if (nativeResp.ok) lastNativeStatus = await nativeResp.json();
+      if (liveResp.ok) {
+        const d = await liveResp.json();
+        if (d?.activity) lastLiveActivity = d.activity;
       }
+      if (cdpResp.ok) {
+        const c = await cdpResp.json();
+        if (c?.cdp) lastCdpStatus = c.cdp;
+      }
+      if (barUpdateCb) barUpdateCb();
     } catch {
       /* ignore */
     }
+  }
+
+  function renderLiveBannerHtml() {
+    if (!window.__GEMINEKO_SIDECAR_MODE__) return '';
+    const act = lastLiveActivity || {
+      role: 'neon',
+      action: 'idle',
+      phase: 'idle',
+      phaseLabel: '待机中',
+      actionLabel: '打盹摸鱼',
+      model: 'gemini-4-neon',
+      lastTool: '',
+      spriteFile: 'neon-idle.png',
+    };
+    const spriteUrl = `${getSpriteBaseUrl()}/${act.spriteFile || `${act.role}-${act.action}.png`}`;
+    const phaseCls = act.phase === 'executor' ? 'is-executor' : act.phase === 'idle' ? 'is-idle' : '';
+
+    let cdpText = '主对话挂件: 待机';
+    if (lastCdpStatus) {
+      if (lastCdpStatus.state === 'attached') cdpText = '🟢 主对话挂件已挂载';
+      else if (lastCdpStatus.state === 'disabled-by-user') cdpText = '⚪ 主对话挂件已暂停';
+      else if (lastCdpStatus.state === 'debug-port-disabled') cdpText = '🟡 主对话需启动调试端口';
+    }
+
+    return `
+      <div class="gn-live-banner">
+        <img class="gn-live-avatar" src="${spriteUrl}" alt="" />
+        <div class="gn-live-info">
+          <div class="gn-live-row">
+            <span class="gn-phase-badge ${phaseCls}">${act.phaseLabel || '编排模式'}</span>
+            <span class="gn-action-chip">${ACTION_EMOJI[act.action] || '✨'} ${act.actionLabel || '思考中'}</span>
+            <strong>${act.model || 'gemini-4-neon'}</strong>
+          </div>
+          <div class="gn-live-sub">${act.lastTool ? `最新调用: ${act.lastTool}` : '实时监测当前主对话模型与编排/执行阶段'}</div>
+        </div>
+        <button type="button" class="gn-pill" data-gn-act="cdp-toggle" title="${lastCdpStatus?.hint || '切换主对话区右上角悬浮挂件'}">${cdpText}</button>
+      </div>
+    `;
   }
 
   function renderToolbar() {
@@ -529,7 +739,7 @@ export function bootGeminekoHive() {
           label = '🎨 原生 Swarm 换肤：点击启用';
         }
       }
-      nativeBtnHtml = `<button type="button" class="${cls}" data-gn-act="native-toggle" title="无损美化或还原 Antigravity 官方原生 Swarm 面板">${label}</button>`;
+      nativeBtnHtml = `<button type="button" class="${cls}" data-gn-act="native-toggle" title="无损美化或还原官方原生 Swarm 面板及小蜜蜂图标">${label}</button>`;
     }
 
     const exitDemoHtml = demoActive
@@ -539,11 +749,12 @@ export function bootGeminekoHive() {
     bar.innerHTML = `
       <span class="gn-brand" data-gn-act="collapse" title="展开/收起基米窝工具栏">
         <img class="gn-brand-dot" src="${GEMINEKO_ASSETS.logo}" alt="" />
-        <span>基米窝</span>
+        <span>基米窝 v0.2</span>
       </span>
       <div class="gn-controls">
         <button type="button" class="gn-pill" data-gn-act="role">${prefs.roleMode === 'ai-girls' ? `✨ ${L.roleAi}` : `🐱 ${L.roleHachimi}`}</button>
         <button type="button" class="gn-pill" data-gn-act="art">${prefs.artStyle === 'chibi' ? `🎨 ${L.artChibi}` : `👾 ${L.artPixel}`}</button>
+        <button type="button" class="gn-pill" data-gn-act="nickname">${prefs.memeNicknames ? `🏷️ ${L.nickOn}` : `🆔 ${L.nickOff}`}</button>
         <button type="button" class="gn-pill" data-gn-act="theme">${prefs.themeMode === 'starry-hive' ? `🌌 ${L.themeHive}` : `🫥 ${L.themeMin}`}</button>
         <button type="button" class="gn-pill" data-gn-act="locale">💬 ${L.locLabel}</button>
         <button type="button" class="gn-pill" data-gn-act="sound">${prefs.sound ? '🔊 喵音' : '🔇 静音'}</button>
@@ -552,6 +763,7 @@ export function bootGeminekoHive() {
         ${exitDemoHtml}
       </div>
       <button type="button" class="gn-pill gn-collapse-btn" data-gn-act="collapse" aria-label="折叠工具栏">${prefs.collapsed ? '展开 ▾' : '收起 ▴'}</button>
+      ${renderLiveBannerHtml()}
     `;
 
     bar.querySelectorAll('[data-gn-act]').forEach((btn) => {
@@ -563,6 +775,8 @@ export function bootGeminekoHive() {
           prefs.roleMode = prefs.roleMode === 'ai-girls' ? 'all-hachimi' : 'ai-girls';
         } else if (act === 'art') {
           prefs.artStyle = prefs.artStyle === 'chibi' ? 'pixel' : 'chibi';
+        } else if (act === 'nickname') {
+          prefs.memeNicknames = !prefs.memeNicknames;
         } else if (act === 'theme') {
           prefs.themeMode = prefs.themeMode === 'starry-hive' ? 'avatar-only' : 'starry-hive';
         } else if (act === 'locale') {
@@ -579,6 +793,29 @@ export function bootGeminekoHive() {
           renderToolbar();
           window.location.reload();
           return;
+        } else if (act === 'cdp-toggle') {
+          try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (window.__SIDECAR_TOKEN__) headers['x-sidecar-token'] = window.__SIDECAR_TOKEN__;
+            const r = await originalFetch('/api/cdp/toggle', {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ enabled: !lastCdpStatus?.enabled }),
+            });
+            if (r.ok) {
+              const resJson = await r.json();
+              lastCdpStatus = resJson.cdp;
+              spawnBubbleAt(
+                btn.getBoundingClientRect().left + 40,
+                btn.getBoundingClientRect().bottom + 24,
+                lastCdpStatus?.hint || '已切换 CDP 挂件状态',
+              );
+              renderToolbar();
+            }
+          } catch {
+            /* ignore */
+          }
+          return;
         } else if (act === 'native-toggle') {
           if (!lastNativeStatus?.swarmExists) return;
           const endpoint =
@@ -592,8 +829,8 @@ export function bootGeminekoHive() {
             if (r.ok) {
               lastNativeStatus = await r.json();
               const msg = lastNativeStatus.patched
-                ? '原生 Swarm 已换肤！重开原生 Swarm 面板即可生效～'
-                : '已无损还原为官方原版 Swarm！';
+                ? '原生 Swarm 与入口小蜜蜂已换装！重开 Swarm 面板即可生效～'
+                : '已字节级无损还原为官方原版 Swarm！';
               spawnBubbleAt(btn.getBoundingClientRect().left + 60, btn.getBoundingClientRect().bottom + 24, msg);
               renderToolbar();
             }
@@ -610,7 +847,6 @@ export function bootGeminekoHive() {
     });
   }
 
-  // 在空状态 #empty 中注入「一键体验模拟基米窝（Demo）」按钮（和独立侧边栏原生换肤提示）
   function ensureEmptyStateDemoButton() {
     const emptyCard = document.querySelector('#empty .empty-card');
     if (!emptyCard || emptyCard.querySelector('.gn-empty-demo-wrap')) return;
@@ -628,9 +864,8 @@ export function bootGeminekoHive() {
       playMeow('poke');
       const hint = document.createElement('div');
       hint.style.cssText = 'font-size:11px;opacity:.75;margin-top:4px;';
-      hint.textContent = '正在召唤 5 只 AI 娘进入基米窝…';
+      hint.textContent = '正在召唤 5 大模型 × 5 大动作哈基米进入猫窝…';
       wrap.appendChild(hint);
-      // 触发焦点事件促使 app.js 立即轮询一次（若无则最多等待原生 1.5s 轮询自动切换）
       window.dispatchEvent(new Event('focus'));
     });
     wrap.appendChild(btn);
@@ -669,7 +904,7 @@ export function bootGeminekoHive() {
     emptyCard.appendChild(wrap);
   }
 
-  // 劫持 fetch 捕获 /api/swarm 成员底层模型，并支持空状态 Demo 秒切
+  // 劫持 fetch 捕获 /api/swarm 成员底层模型与动作，并支持空状态 Demo 秒切
   const originalFetch = window.fetch.bind(window);
   window.fetch = async function patchedFetch(input, init) {
     const urlStr = typeof input === 'string' ? input : input?.url || '';
@@ -740,22 +975,40 @@ export function bootGeminekoHive() {
     return true;
   }
 
-  // 启动 DOM 观察与初始渲染
+  // 启动 DOM 观察、Sidecar 实时活动轮询与初始渲染
   const start = () => {
     installSwarmHiveHooks();
     applyThemeAndLocale();
     renderToolbar();
     ensureEmptyStateDemoButton();
     enhanceDomSprites();
-    fetchNativePatchStatus(() => {
-      renderToolbar();
-      const nbtn = document.querySelector('#gn-empty-native-row button');
-      if (nbtn && lastNativeStatus) {
-        nbtn.textContent = lastNativeStatus.patched
-          ? '✅ 原生 Swarm 已换肤（点此还原）'
-          : '🎨 给官方原生 Swarm 面板换上《基米窝》皮肤';
-      }
-    });
+
+    if (window.__GEMINEKO_SIDECAR_MODE__) {
+      const syncBanner = () => {
+        renderToolbar();
+        const nbtn = document.querySelector('#gn-empty-native-row button');
+        if (nbtn && lastNativeStatus) {
+          nbtn.textContent = lastNativeStatus.patched
+            ? '✅ 原生 Swarm 已换肤（点此还原）'
+            : '🎨 给官方原生 Swarm 面板换上《基米窝》皮肤';
+        }
+      };
+      fetchSidecarMeta(syncBanner);
+      setInterval(() => {
+        originalFetch('/api/live-activity')
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => {
+            if (d?.activity) {
+              lastLiveActivity = d.activity;
+              const liveImg = document.querySelector('.gn-live-avatar');
+              if (liveImg) {
+                liveImg.src = `${getSpriteBaseUrl()}/${d.activity.spriteFile || `${d.activity.role}-${d.activity.action}.png`}`;
+              }
+            }
+          })
+          .catch(() => {});
+      }, 4000);
+    }
 
     const mo = new MutationObserver(() => {
       installSwarmHiveHooks();

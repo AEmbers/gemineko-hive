@@ -2,30 +2,35 @@
   <img src="assets/logo.png" width="150" alt="Gemineko Hive Logo" />
 </p>
 
-<h1 align="center">Gemineko Hive · 基米窝</h1>
+<h1 align="center">Gemineko Hive · 基米窝 v0.2.0</h1>
 
 <p align="center">
   <strong>“坏了，捅了基米窝了！”</strong><br />
-  把 <strong>Google Antigravity</strong> 原生 Swarm 蜂巢面板变成一窝萌度爆表的哈基米 / AI 娘宇宙！
+  为 <strong>Google Antigravity</strong> 注入 25 态活体猫娘立绘、主对话编排/执行实时挂件与高浓度玩梗花名！
 </p>
 
 ---
 
-## ✨ 核心特性
+## ✨ v0.2.0 核心特性
 
-- **双模式合一（零侵入可逆 + 独立侧边栏）**：
-  - **原生 Swarm 一键换肤**：通过极轻标记块把皮肤注入官方 `swarm_board`，不改官方核心逻辑，升级后一键恢复、随时逐字节还原出厂小蜜蜂；
-  - **独立《基米窝》Sidecar 面板**：侧边栏随时打开，自带顶部「原生 Swarm 换肤」状态胶囊，点一下即可完成套用/还原。
-- **双角色映射可切换**：
-  - **AI 娘宇宙（默认）**：按成员角色与底层模型自动变身 —— **领队皇冠 Gemini 猫娘**、**Claude 橙发大小姐**、**GPT 银发翡翠小龙娘**、**Gemini 劳模猫娘**（同模型多 Worker 通过差异化色环区分）；
-  - **全员彩色哈基米**：不按模型区分，整窝全是各具发色光环的小哈基米猫娘。
-- **双美术包随心换**：
-  - **高清 Q 版立绘（Chibi）**：精绘角色立绘 + 工作中 Q 弹发光、等待轻呼吸、休眠打盹飘动态 `Zzz`；
-  - **32×32 复古像素风**：纯 Canvas 高精像素 AI 娘精灵，帧动画抖耳挥爪。
-- **轻盈「星空猫窝」主题 & 整活彩蛋**：
-  - 柔光星空六边形猫窝、星芒连线微粒，支持一键切回「仅换头像」极简模式与 **萌系中文 / 正常中文 / EN** 实时翻译；
-  - 点击 **「捅一捅」** 触发全窝集体炸毛 + 吐槽弹幕，支持单独点击猫娘摸头互动、Web Audio 合成轻音效（默认静音）与 **GIF 导出同步猫娘**；
-  - 没开 `/swarm` 时也能点击空状态 **「一键体验模拟基米窝（Demo）」** 预览 5 只 AI 娘同框干活！
+- **看立绘就知道谁在干活、在干什么（5 模型 × 5 动作 = 全套 25 张 Q 版立绘 + 32×32 像素手搓版）**：
+  - **5 大差异化人设**：
+    - **Gemini Neon / Pro（`neon`）**：蓝紫粉渐变异瞳猫娘（星光编排主力）
+    - **Gemini Hydrogen / Flash（`hydrogen`）**：冰青闪电呆毛猫娘（白青运动外套，极速执行）
+    - **Gemini Carbon / Ultra（`carbon`）**：暗夜流金黑金星冠猫娘（重型推理）
+    - **Claude Sonnet / Opus（`claude`）**：暖杏橙向日葵水手服大小姐（95 分严格审查，无猫耳）
+    - **GPT / Codex / Sol（`gpt`）**：银白发翡翠双龙角科技龙娘（算法与架构攻坚，无猫耳）
+  - **5 大工具动作具象化**：**思考中**（托腮星光）、**读代码**（金边眼镜 + 放大镜看卷轴）、**改文件**（敲发光机械键盘）、**跑终端**（戴耳机盯绿屏终端）、**打盹**（抱枕眯眼休息）——**图内纯洁无字，清晰一眼辨别！**
+- **Antigravity 主对话区实时挂载（免改 `app.asar`）**：
+  - 实时读取会话 `transcript.jsonl` 尾部日志，精准区分当前是 **编排模式（Planner）** 还是 **执行模式（Executor）**；
+  - 通过本地 CDP 自动在主对话右上角挂载 **可拖拽猫娘悬浮胶囊**（摸头会冒爱心 💖），并在聊天中 `Worked for` / `Inspecting` / `Analyzed` / `Ran` 等步骤条前自动贴上当前模型小立绘！
+  - 注：主对话挂件需要 Antigravity 以 `--remote-debugging-port=19222` 启动（Windows 开始菜单快捷方式默认已带此参数；未开启时插件会自动静默待机，不影响独立面板）。
+- **Swarm 全链路无损美化 & 入口小蜜蜂替换**：
+  - 支持对官方 `swarm_board` 无损换肤并同步备份替换 `swarm/assets/logo.svg`，连聊天气泡里的 `[Open the Swarm UI]` 按钮也会变成可爱的基米窝图标！随时一键字节级还原官方原版。
+- **高浓度哈基米玩梗花名**：
+  - 默认把成员昵称变成 **哈基米大统领**、**95分严审圣女**、**烧Token大龙娘**、**哈气修锅王**、**白米饭精**、**雷达嗅探猫** 等梗名（悬停看真实 `@id`），工具栏支持一键切换还原 `@ID`。
+- **捅一捅炸毛彩蛋 & 空状态 5 角色 Demo**：
+  - 点击顶部 **「捅一捅」** 全窝炸毛吐槽，没有跑 `/swarm` 时也能一键预览 **5 大模型 × 5 大动作** 同框协作 Demo！
 
 ---
 
@@ -55,19 +60,19 @@ git clone https://github.com/AEmbers/gemineko-hive.git ~/.gemini/config/plugins/
 ## 🚀 使用方法
 
 1. **打开《基米窝》侧边栏**：在对话中点开 `[Gemineko Hive · 基米窝](sidecar://gemineko-hive/hive_board/)`；
-   - 如果想直接美化官方原生 Swarm，在《基米窝》顶部点一下 **「原生 Swarm 换肤：点击启用」**，然后重开一次官方 Swarm 面板即可（或直接用下面 CLI 命令）。
+   - 顶部横幅实时显示当前主对话处于 **编排模式** 还是 **执行模式**，支持一键开关 **主对话区 CDP 悬浮挂件** 与 **原生 Swarm 一键换肤**。
 2. **CLI 命令行控制（可选）**：
    ```bash
-   node bin/gemineko-hive.mjs status   # 检查当前原生 Swarm 换肤状态
-   node bin/gemineko-hive.mjs apply    # 套用/升级后重新应用《基米窝》皮肤
-   node bin/gemineko-hive.mjs restore  # 无损还原官方原版小蜜蜂
+   node bin/gemineko-hive.mjs status   # 检查原生 Swarm 换肤状态、精灵数与 logo 替换状态
+   node bin/gemineko-hive.mjs apply    # 套用/升级后重新应用《基米窝》皮肤与入口图标
+   node bin/gemineko-hive.mjs restore  # 字节级无损还原官方原版 Swarm 与小蜜蜂图标
    ```
 
 ---
 
 ## 🎨 致敬与社区礼仪
 
-角色灵感与视觉锚点致敬 B 站创作者 **@ZipZipPipe**《大AI和小AI们》企划及社区二创生态（Gemini 蓝紫异瞳猫娘、Claude 橙发向日葵大小姐、GPT 银发翡翠小龙娘）。仅供个人桌面美化与技术交流分享，请勿用于商业用途。
+角色灵感与视觉锚点致敬 B 站创作者 **@ZipZipPipe**《大AI和小AI们》企划及社区二创生态。仅供个人桌面美化与技术交流分享，请勿用于商业用途。
 
 ---
 
