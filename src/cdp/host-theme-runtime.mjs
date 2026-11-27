@@ -1402,9 +1402,20 @@ html[data-gk-scheme="dark"] #\${NIGHT_LAYER_ID} {
 .gk-speech-bubble {
   position: fixed; z-index: 2147483642; max-width: min(calc(280px * var(--gk-host-font-scale, 1)), calc(100vw - 24px)); padding: 8px 12px; border-radius: 14px;
   font-size: calc(12px * var(--gk-host-font-scale, 1)) !important; line-height: 1.45; color: var(--foreground, #1e1b4b);
-  background: var(--gk-popover-bg, var(--glass)); border: 1.5px solid var(--gk-role-primary, #8b5cf6);
+  background: var(--gk-popover-bg, var(--glass)); border: 1.5px solid var(--gk-bubble-accent, var(--gk-role-primary, #8b5cf6));
   box-shadow: 0 12px 28px -8px var(--gk-role-glow), var(--glass-shadow); backdrop-filter: blur(12px); pointer-events: auto;
   animation: gkBubblePop 0.22s var(--gk-ease-spring);
+}
+.gk-speech-bubble::after {
+  content: ""; position: absolute; left: var(--gk-tail-x, 28px); bottom: -6px; width: 9px; height: 9px;
+  transform: translateX(-50%) rotate(45deg); background: var(--gk-popover-bg, var(--glass));
+  border-right: 1.5px solid var(--gk-bubble-accent, var(--gk-role-primary, #8b5cf6));
+  border-bottom: 1.5px solid var(--gk-bubble-accent, var(--gk-role-primary, #8b5cf6));
+}
+.gk-speech-bubble.is-below::after {
+  bottom: auto; top: -6px; border-right: none; border-bottom: none;
+  border-left: 1.5px solid var(--gk-bubble-accent, var(--gk-role-primary, #8b5cf6));
+  border-top: 1.5px solid var(--gk-bubble-accent, var(--gk-role-primary, #8b5cf6));
 }
 @keyframes gkBubblePop { from { opacity: 0; transform: translateY(6px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .gk-stardust-particle {
@@ -2489,7 +2500,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           emblem.classList.add('is-sparkling');
           setTimeout(() => emblem.classList.remove('is-sparkling'), 520);
           spawnStardust(e.clientX, e.clientY, 18, 'confetti');
-          onDockPoke(resolveActiveRoleId(ctx.getActivity()), e.clientX, e.clientY);
+          onDockPoke(resolveActiveRoleId(ctx.getActivity()), e.clientX, e.clientY, emblem);
         });
       }
       if (emblem.parentElement !== host || host.firstElementChild !== emblem) {
@@ -2911,7 +2922,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           const btn = e.target.closest('[data-home-role]');
           if (!btn) return;
           const rId = btn.getAttribute('data-home-role') || 'neon';
-          onDockPoke(rId, e.clientX, e.clientY);
+          onDockPoke(rId, e.clientX, e.clientY, btn);
         });
         parentWrap.insertBefore(stage, inputBox);
       } else if (stage.nextElementSibling !== inputBox) {
@@ -3219,24 +3230,73 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       sweep.classList.add('is-sweeping');
     }
 
-    function showSpeechBubble(text, duration = 2600) {
-      const dock = document.getElementById(ctx.dockId);
-      const rect = dock ? dock.getBoundingClientRect() : { left: 24, top: window.innerHeight - 130, width: 120 };
+    function showSpeechBubble(text, duration = 2600, anchor = null) {
       document.querySelectorAll('.gk-speech-bubble').forEach((n) => n.remove());
+      const el = anchor && typeof anchor.getBoundingClientRect === 'function' ? anchor : anchor?.el;
+      const roleKey = anchor && typeof anchor === 'object' && anchor.role ? anchor.role : '';
+      let anchorX = null;
+      let anchorTop = null;
+      let anchorBottom = null;
+
+      if (el && typeof el.getBoundingClientRect === 'function') {
+        const er = el.getBoundingClientRect();
+        if (er.width > 0 || er.height > 0) {
+          anchorX = er.left + er.width / 2;
+          anchorTop = er.top;
+          anchorBottom = er.bottom;
+        }
+      }
+      if (anchorX === null && anchor && typeof anchor.x === 'number' && typeof anchor.y === 'number' && (anchor.x > 0 || anchor.y > 0)) {
+        anchorX = anchor.x;
+        anchorTop = anchor.y - 16;
+        anchorBottom = anchor.y + 16;
+      }
+      if (anchorX === null) {
+        const dock = document.getElementById(ctx.dockId);
+        const dr = dock && !dock.classList.contains('is-hidden') ? dock.getBoundingClientRect() : null;
+        if (dr && dr.width > 0) {
+          anchorX = dr.left + Math.min(dr.width / 2, 110);
+          anchorTop = dr.top;
+          anchorBottom = dr.bottom;
+        } else {
+          anchorX = window.innerWidth / 2;
+          anchorTop = window.innerHeight - 120;
+          anchorBottom = anchorTop + 32;
+        }
+      }
+
       const b = document.createElement('div');
       b.className = 'gk-speech-bubble';
       b.textContent = text;
-      b.style.left = Math.max(12, Math.min(window.innerWidth - 280, Math.round(rect.left + 8))) + 'px';
-      b.style.top = Math.max(18, Math.round(rect.top - 52)) + 'px';
+      if (roleKey && ROLE_PALETTES[roleKey]) {
+        b.style.setProperty('--gk-bubble-accent', ROLE_PALETTES[roleKey].primary);
+      }
+      b.style.visibility = 'hidden';
+      b.style.left = '0px';
+      b.style.top = '0px';
       b.addEventListener('click', () => b.remove());
       document.body?.appendChild(b);
+
+      const bw = b.offsetWidth || 200;
+      const bh = b.offsetHeight || 42;
+      const left = Math.max(12, Math.min(window.innerWidth - bw - 12, Math.round(anchorX - bw / 2)));
+      let top = Math.round(anchorTop - bh - 12);
+      if (top < 14) {
+        top = Math.min(window.innerHeight - bh - 14, Math.round(anchorBottom + 12));
+        b.classList.add('is-below');
+      }
+      const tailX = Math.max(16, Math.min(bw - 16, Math.round(anchorX - left)));
+      b.style.left = left + 'px';
+      b.style.top = top + 'px';
+      b.style.setProperty('--gk-tail-x', tailX + 'px');
+      b.style.visibility = '';
       setTimeout(() => { if (b.isConnected) b.remove(); }, duration);
     }
 
     /** 释放高可见度彩色发光 SVG 爪印/星芒/晶棱星尘雨 */
-    function spawnStardust(originX, originY, count = 32, mode = 'confetti') {
+    function spawnStardust(originX, originY, count = 32, mode = 'confetti', roleOverride = '') {
       if (cfg.focusMode && mode !== 'force') return;
-      const pal = ROLE_PALETTES[resolveActiveRoleId(ctx.getActivity())] || ROLE_PALETTES.neon;
+      const pal = ROLE_PALETTES[roleOverride] || ROLE_PALETTES[resolveActiveRoleId(ctx.getActivity())] || ROLE_PALETTES.neon;
       const colors = [pal.primary, pal.accent2, pal.accent3, '#a855f7', '#ec4899'];
       const kinds = mode === 'paw' ? ['paw', 'paw', 'star', 'prism'] : ['star', 'paw', 'prism'];
       const actualCount = mode === 'paw' ? Math.max(32, count) : Math.max(16, count);
@@ -3332,12 +3392,12 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         .catch(() => {});
     }
 
-    function onDockPoke(role, clientX, clientY) {
+    function onDockPoke(role, clientX, clientY, anchorEl = null) {
       const r = ROLE_PALETTES[role] ? role : 'neon';
       const pts = addIntimacy(r);
       const lines = ROLE_POKE_LINES[r] || ROLE_POKE_LINES.neon;
       const line = lines[pts % lines.length];
-      showSpeechBubble(\`\${line}（亲密值 \${pts}）\`, 2600);
+      showSpeechBubble(\`\${line}（亲密值 \${pts}）\`, 2600, { el: anchorEl, x: clientX, y: clientY, role: r });
 
       const now = Date.now();
       pokeTimestamps = pokeTimestamps.filter((t) => now - t <= 3000);
@@ -3346,7 +3406,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         pokeTimestamps = [];
         triggerHiveParadeBurst(r, 'host');
       } else {
-        spawnStardust(clientX, clientY, 12, 'confetti');
+        spawnStardust(clientX, clientY, 12, 'confetti', r);
       }
     }
 

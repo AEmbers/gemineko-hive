@@ -753,6 +753,9 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
       const srcTxt = fs.readFileSync(path.join(REPO_ROOT, relSrc), 'utf8');
       assert.match(srcTxt, /var\(--gk-host-font-scale,\s*1\)/, `${relSrc} 应接入 --gk-host-font-scale 动态缩放`);
     }
+    const themeRuntimeTxt = fs.readFileSync(path.join(REPO_ROOT, 'src/cdp/host-theme-runtime.mjs'), 'utf8');
+    assert.match(themeRuntimeTxt, /--gk-tail-x/, '气泡应支持动态指向尾巴 --gk-tail-x');
+    assert.match(themeRuntimeTxt, /function onDockPoke\(role,\s*clientX,\s*clientY,\s*anchorEl\s*=\s*null\)/);
     assert.match(bundleContent, /gemineko-sidecar-shell/);
     assert.match(bundleContent, /guardLoadingSkeleton/);
     assert.match(bundleContent, /offsetWidth/);
