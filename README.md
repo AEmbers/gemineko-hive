@@ -71,7 +71,8 @@ git clone https://github.com/AEmbers/gemineko-hive.git ~/.gemini/config/plugins/
 ## 🚀 使用方法
 
 1. **打开《基米窝》侧边栏**：在对话中点开 `[Gemineko Hive · 基米窝](sidecar://gemineko-hive/hive_board/)`；
-   - 顶部横幅实时显示当前主对话处于 **编排模式** 还是 **执行模式**，支持一键开关 **主对话区 CDP 悬浮挂件** 与 **原生 Swarm 一键换肤**。
+   - 顶部横幅实时显示当前主对话处于 **编排模式** 还是 **执行模式**，支持一键开关 **主对话区 CDP 悬浮挂件**、**原生 Swarm 一键换肤** 与 **🎨 主题及全量汉化工坊**；
+   - 主窗口支持 **5 角色二次元视觉母题全量皮肤**（`vivid` 浓郁 / `balanced` 均衡 / `minimal` 极简）、`Overview` 悬浮卡猫耳重绘、角落透明立绘+旋转纹章水印、彩色发光 SVG 爪印雨，以及 **面向中文与国际用户的可选 Antigravity 全量汉化**（`跟随系统自动` / `哈基米萌系中文` / `标准专业中文` / `原版英文 Off`）。
 2. **CLI 命令行控制（可选）**：
    ```bash
    node bin/gemineko-hive.mjs status   # 检查原生 Swarm 换肤状态、精灵数与 logo 替换状态

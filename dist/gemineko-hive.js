@@ -924,6 +924,22 @@ function createThemeWorkshopController(deps) {
     }
   }
 
+  async function pickLocalWatermark() {
+    showWorkshopToast('正在选择角落透明二次元立绘...');
+    try {
+      const res = await deps.hostApi('/api/watermark/pick', { method: 'POST', body: '{}' });
+      if (res?.ok && !res.canceled && res.path) {
+        await savePatch({ watermark: { ...(state.config?.watermark || {}), enabled: true, role: 'custom', customFilePath: res.path } });
+      } else if (res?.error) {
+        showWorkshopToast(res.error, true);
+      } else {
+        showWorkshopToast('已取消选择立绘');
+      }
+    } catch {
+      showWorkshopToast('选择失败，请检查图片格式', true);
+    }
+  }
+
   function render() {
     const root = getRoot();
     root.classList.toggle('hidden', !state.open);
@@ -946,8 +962,8 @@ function createThemeWorkshopController(deps) {
     root.innerHTML = `
       <div class="gn-ws-head">
         <div>
-          <div class="gn-ws-title">🎨 基米窝 · 光学玻璃与星空猫窝工坊</div>
-          <div class="gn-ws-sub">5级表面层次 × SVG肉垫星芒暗纹 × 底部角色极光 × 首页5角色彩蛋舞台</div>
+          <div class="gn-ws-title">🎨 基米窝 · 5 角色二次元皮肤与全量汉化工坊</div>
+          <div class="gn-ws-sub">角色专属母题纹样 × Overview 浮卡猫耳重绘 × 角落立绘纹章 × 可选 Antigravity 全量汉化</div>
         </div>
         <div class="gn-ws-actions">
           <button type="button" class="gn-pill" data-ws-act="toggle-enabled">${c.enabled ? '✅ 宿主主题已开启' : '⚪ 宿主主题已停用'}</button>
@@ -957,11 +973,11 @@ function createThemeWorkshopController(deps) {
         </div>
       </div>
 
-      <div class="gn-ws-status ${state.warning ? 'is-warn' : ''}">${state.warning || '调整任意选项后 50ms 内实时作用于主对话窗口'}</div>
+      <div class="gn-ws-status ${state.warning ? 'is-warn' : ''}">${state.warning || '调整任意选项后 50ms 内实时作用于 Antigravity 主窗口'}</div>
 
       <div class="gn-ws-grid">
         <div class="gn-ws-card">
-          <div class="gn-ws-card-title">1. 四套耐看基底配色</div>
+          <div class="gn-ws-card-title">1. 基底配色、角色母题与视觉浓度</div>
           <div class="gn-ws-presets">
             ${presetItems.map((p) => `
               <button type="button" class="gn-ws-preset-btn ${c.preset === p.id ? 'is-active' : ''}" data-ws-preset="${p.id}">
@@ -972,7 +988,15 @@ function createThemeWorkshopController(deps) {
             `).join('')}
           </div>
           <div class="gn-ws-row" style="margin-top:10px;">
-            <span>动态角色强调色：</span>
+            <span>视觉浓度：</span>
+            <select data-ws-field="themeIntensity">
+              <option value="vivid" ${(c.themeIntensity || 'vivid') === 'vivid' ? 'selected' : ''}>浓郁二次元（猫耳/立绘/纹样全开）</option>
+              <option value="balanced" ${c.themeIntensity === 'balanced' ? 'selected' : ''}>均衡日常（清透耐看）</option>
+              <option value="minimal" ${c.themeIntensity === 'minimal' ? 'selected' : ''}>极简专注（仅保留配色层次）</option>
+            </select>
+          </div>
+          <div class="gn-ws-row">
+            <span>动态角色母题：</span>
             <select data-ws-field="accentMode">
               ${roles.map((r) => `<option value="${r.id}" ${c.accentMode === r.id ? 'selected' : ''}>${r.label}</option>`).join('')}
             </select>
@@ -993,24 +1017,40 @@ function createThemeWorkshopController(deps) {
         </div>
 
         <div class="gn-ws-card">
-          <div class="gn-ws-card-title">2. 原生 5 角色联动与彩蛋</div>
+          <div class="gn-ws-card-title">2. 角落立绘水印与 5 角色联动彩蛋</div>
           <div class="gn-ws-checks">
+            <label><input type="checkbox" data-ws-wm-bool="enabled" ${c.watermark?.enabled !== false ? 'checked' : ''} /> 角落二次元角色立绘 + 旋转矢量纹章</label>
             <label><input type="checkbox" data-ws-link="roleSwitchAurora" ${c.linkages?.roleSwitchAurora ? 'checked' : ''} /> 切模型极光扫屏</label>
             <label><input type="checkbox" data-ws-link="composerBreathGlow" ${c.linkages?.composerBreathGlow ? 'checked' : ''} /> 思考/运行呼吸流光边框</label>
             <label><input type="checkbox" data-ws-link="errorHissShake" ${c.linkages?.errorHissShake ? 'checked' : ''} /> 工具报错「哈气」微抖提醒</label>
             <label><input type="checkbox" data-ws-link="taskFinishConfetti" ${c.linkages?.taskFinishConfetti ? 'checked' : ''} /> 长任务完成星尘礼花</label>
             <label><input type="checkbox" data-ws-link="pokeBurst" ${c.linkages?.pokeBurst ? 'checked' : ''} /> 连击5次「捅了基米窝」全员巡游</label>
             <label><input type="checkbox" data-ws-link="nightLamp" ${c.linkages?.nightLamp ? 'checked' : ''} /> 深夜猫窝小夜灯（23:00-05:00）</label>
-            <label><input type="checkbox" data-ws-link="nightLampPreview" ${c.linkages?.nightLampPreview ? 'checked' : ''} /> 立即预览小夜灯氛围</label>
           </div>
-          <div class="gn-ws-row" style="margin-top:8px;">
+          <div class="gn-ws-row" style="margin-top:6px;">
+            <span>水印形象：</span>
+            <select data-ws-wm="role">
+              <option value="follow-role" ${(c.watermark?.role || 'follow-role') === 'follow-role' ? 'selected' : ''}>跟随当前模型角色</option>
+              <option value="neon" ${c.watermark?.role === 'neon' ? 'selected' : ''}>Neon · 炫彩哈基米</option>
+              <option value="hydrogen" ${c.watermark?.role === 'hydrogen' ? 'selected' : ''}>Hydrogen · 本体</option>
+              <option value="carbon" ${c.watermark?.role === 'carbon' ? 'selected' : ''}>Carbon · 五彩黑</option>
+              <option value="claude" ${c.watermark?.role === 'claude' ? 'selected' : ''}>Claude · 大小姐</option>
+              <option value="gpt" ${c.watermark?.role === 'gpt' ? 'selected' : ''}>GPT · 白紫小龙娘</option>
+              ${c.watermark?.customFilePath ? `<option value="custom" ${c.watermark?.role === 'custom' ? 'selected' : ''}>自定义透明立绘</option>` : ''}
+            </select>
+            <button type="button" class="gn-pill" data-ws-act="pick-wm">🖼️ 换透明立绘</button>
+          </div>
+          <div class="gn-ws-row">
+            <label>水印显眼度 ${Math.round((c.watermark?.opacity ?? 0.14) * 100)}% <input type="range" min="4" max="38" value="${Math.round((c.watermark?.opacity ?? 0.14) * 100)}" data-ws-wm-range="opacity" /></label>
+          </div>
+          <div class="gn-ws-row" style="margin-top:4px;">
             <button type="button" class="gn-pill is-primary" data-ws-egg="hive-poke-burst">💥 立即捅了基米窝</button>
-            <button type="button" class="gn-pill" data-ws-egg="stardust-rain">🐾 释放爪印星尘雨 (Ctrl+Shift+M)</button>
+            <button type="button" class="gn-pill" data-ws-egg="stardust-rain">🐾 炫彩 SVG 爪印雨 (Ctrl+Shift+M)</button>
           </div>
         </div>
 
         <div class="gn-ws-card">
-          <div class="gn-ws-card-title">3. 工作台高频增强与自定义壁纸</div>
+          <div class="gn-ws-card-title">3. 工作台增强与自定义壁纸</div>
           <div class="gn-ws-checks">
             <label><input type="checkbox" data-ws-wb="pawOutline" ${c.workbench?.pawOutline ? 'checked' : ''} /> 悬浮猫爪对话大纲</label>
             <label><input type="checkbox" data-ws-wb="codeBlockFold" ${c.workbench?.codeBlockFold ? 'checked' : ''} /> 超长代码块吸顶+折叠（≥32行）</label>
@@ -1025,7 +1065,7 @@ function createThemeWorkshopController(deps) {
               <option value="builtin-aurora" ${c.wallpaper?.mode === 'builtin-aurora' ? 'selected' : ''}>内置极光雾幕</option>
               <option value="custom" ${c.wallpaper?.mode === 'custom' ? 'selected' : ''}>本机图片 / MP4-WebM</option>
             </select>
-            <button type="button" class="gn-pill" data-ws-act="pick-wp">📁 选择本地文件</button>
+            <button type="button" class="gn-pill" data-ws-act="pick-wp">📁 选择壁纸</button>
           </div>
           <div class="gn-ws-row">
             <input type="text" data-ws-wp-path="1" placeholder="粘贴本地图片/视频绝对路径 (png/webp/mp4/webm)..." value="${String(c.wallpaper?.filePath || '').replace(/"/g, '&quot;')}" />
@@ -1034,8 +1074,29 @@ function createThemeWorkshopController(deps) {
           <div class="gn-ws-row">
             <label>透明度 ${Math.round((c.wallpaper?.opacity ?? 0.22) * 100)}% <input type="range" min="5" max="65" value="${Math.round((c.wallpaper?.opacity ?? 0.22) * 100)}" data-ws-wp-range="opacity" /></label>
             <label>模糊 ${c.wallpaper?.blur ?? 4}px <input type="range" min="0" max="24" value="${c.wallpaper?.blur ?? 4}" data-ws-wp-range="blur" /></label>
-            <label>护眼遮罩 ${Math.round((c.wallpaper?.scrim ?? 0.35) * 100)}% <input type="range" min="0" max="85" value="${Math.round((c.wallpaper?.scrim ?? 0.35) * 100)}" data-ws-wp-range="scrim" /></label>
+            <label>遮罩 ${Math.round((c.wallpaper?.scrim ?? 0.35) * 100)}% <input type="range" min="0" max="85" value="${Math.round((c.wallpaper?.scrim ?? 0.35) * 100)}" data-ws-wp-range="scrim" /></label>
           </div>
+        </div>
+
+        <div class="gn-ws-card">
+          <div class="gn-ws-card-title">4. 内置 Antigravity 全量汉化（面向国际用户可选）</div>
+          <div class="gn-ws-row">
+            <span>汉化模式：</span>
+            <select data-ws-i18n="mode">
+              <option value="auto" ${(c.i18n?.mode || 'auto') === 'auto' ? 'selected' : ''}>跟随系统语言（中文自动开启 / 海外自动保持英文）</option>
+              <option value="neko-zh" ${c.i18n?.mode === 'neko-zh' ? 'selected' : ''}>哈基米萌系中文（猫窝风全量汉化）</option>
+              <option value="zh" ${c.i18n?.mode === 'zh' ? 'selected' : ''}>标准专业中文（规范准确术语）</option>
+              <option value="off" ${c.i18n?.mode === 'off' ? 'selected' : ''}>关闭 · 保留原版英文（零开销）</option>
+            </select>
+          </div>
+          <div class="gn-ws-row">
+            <span>自动汉化默认词库：</span>
+            <select data-ws-i18n="autoChineseStyle">
+              <option value="neko-zh" ${(c.i18n?.autoChineseStyle || 'neko-zh') === 'neko-zh' ? 'selected' : ''}>哈基米萌系中文（推荐）</option>
+              <option value="zh" ${c.i18n?.autoChineseStyle === 'zh' ? 'selected' : ''}>标准专业中文</option>
+            </select>
+          </div>
+          <div class="gn-ws-sub" style="margin-top:6px;">保留 Antigravity / Gemini 品牌与代码正文原样，切回「关闭」立即无损还原英文。</div>
         </div>
       </div>
     `;
@@ -1049,6 +1110,7 @@ function createThemeWorkshopController(deps) {
         else if (act === 'toggle-enabled') void savePatch({ enabled: !c.enabled });
         else if (act === 'toggle-focus') void savePatch({ focusMode: !c.focusMode });
         else if (act === 'pick-wp') void pickLocalWallpaper();
+        else if (act === 'pick-wm') void pickLocalWatermark();
         else if (act === 'apply-wp-path') {
           const inp = root.querySelector('[data-ws-wp-path="1"]');
           const fp = String(inp?.value || '').trim();
@@ -1073,6 +1135,26 @@ function createThemeWorkshopController(deps) {
       const field = target.getAttribute('data-ws-field');
       if (field) {
         void savePatch({ [field]: target.value });
+        return;
+      }
+      const i18nKey = target.getAttribute('data-ws-i18n');
+      if (i18nKey) {
+        void savePatch({ i18n: { ...(c.i18n || {}), [i18nKey]: target.value } });
+        return;
+      }
+      const wmBool = target.getAttribute('data-ws-wm-bool');
+      if (wmBool) {
+        void savePatch({ watermark: { ...(c.watermark || {}), [wmBool]: Boolean(target.checked) } });
+        return;
+      }
+      const wmKey = target.getAttribute('data-ws-wm');
+      if (wmKey) {
+        void savePatch({ watermark: { ...(c.watermark || {}), [wmKey]: target.value } });
+        return;
+      }
+      const wmRange = target.getAttribute('data-ws-wm-range');
+      if (wmRange) {
+        void savePatch({ watermark: { ...(c.watermark || {}), [wmRange]: Number((Number(target.value) / 100).toFixed(2)) } });
         return;
       }
       const linkKey = target.getAttribute('data-ws-link');

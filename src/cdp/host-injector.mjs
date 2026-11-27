@@ -9,6 +9,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { buildHostI18nRuntimeSnippet } from './host-i18n-runtime.mjs';
 import { buildHostThemeRuntimeSnippet } from './host-theme-runtime.mjs';
 
 const DEFAULT_DEBUG_PORT = 19222;
@@ -108,6 +109,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   const tokenJson = JSON.stringify(String(options?.sideToken || ''));
   const themeCfgJson = JSON.stringify(options?.themeConfig || null);
   const themeSnippet = buildHostThemeRuntimeSnippet();
+  const i18nSnippet = buildHostI18nRuntimeSnippet();
   return `(() => {
   const SERVER = ${baseJson};
   const LOGO_URI = ${logoJson};
@@ -656,7 +658,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
 
   function syncActiveStatusSprite() {
     if (stopped) return;
-    const activePattern = /^(Thinking(?:\\s+for\\s+\\d|\\s*\\d|$)|Working(?:\\b|\\s*$)|Running\\b|Planning\\b|Reading\\b|Editing\\b|Analyzing\\b)/i;
+    const activePattern = /^(?:Thinking(?:\\s+for\\s+\\d|\\s*\\d|$)|Working(?:\\b|\\s*$)|Running\\b|Planning\\b|Reading\\b|Editing\\b|Analyzing\\b|思考中|猫脑运转|猫脑高速运转|处理中|认真干活|运行中|飞速狂奔|规划中|军师规划|读取中|凑近仔细看|编辑中|爪子狂敲|分析中|深潜洞察)/i;
     const anchor = findComposerAnchor();
     const maxY = anchor ? anchor.getBoundingClientRect().top - 4 : window.innerHeight - 60;
     let bestCandidate = null;
@@ -672,9 +674,9 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         if (!p) continue;
         if (p.closest('#' + DOCK_ID) || p.closest('.' + INLINE_CLASS)) continue;
         if (p.closest('code, pre, textarea, [contenteditable="true"], .monaco-editor')) continue;
-        // 排除已折叠的历史 Worked for 块内部文本
+        // 排除已折叠的历史 Worked for 块内部文本（含中英文与萌系译文）
         const btn = p.closest('button, summary');
-        if (btn && /^Worked for\\b/i.test((btn.textContent || '').trim())) continue;
+        if (btn && /^(?:Worked for|已工作|猫猫打工)\\b/i.test((btn.textContent || '').trim())) continue;
 
         const r = p.getBoundingClientRect();
         if (r.width <= 0 || r.height <= 0 || r.height > 64) continue;
@@ -730,7 +732,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     const links = document.querySelectorAll('a, button');
     for (const node of links) {
       if (node.getAttribute('data-gemineko-pill') === '1') continue;
-      if (!/Open the Swarm UI/i.test(node.textContent || '')) continue;
+      if (!/(?:Open the Swarm UI|打开基米窝面板)/i.test(node.textContent || '')) continue;
       const svg = node.querySelector('svg');
       if (svg) {
         const img = document.createElement('img');
@@ -789,14 +791,17 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     scheduleSync();
   };
 
+  ${i18nSnippet}
   ${themeSnippet}
 
+  const i18nEngine = initHostI18nEngine(INITIAL_THEME_CONFIG);
   const themeSuite = initHostThemeSuite({
     server: SERVER,
     token: SIDE_TOKEN,
     dockId: DOCK_ID,
     getActivity: () => latestState,
     initialConfig: INITIAL_THEME_CONFIG,
+    onConfigApplied: (nextCfg) => i18nEngine?.applyConfig?.(nextCfg),
   });
   fetch(\`\${SERVER}/api/theme/config\`)
     .then((r) => (r.ok ? r.json() : null))
@@ -823,6 +828,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   window.__GEMINEKO_CDP_OVERLAY_V2__ = true;
   window.__GEMINEKO_CDP_OVERLAY_V3__ = true;
   window.__GEMINEKO_CDP_OVERLAY_V5__ = true;
+  window.__GEMINEKO_CDP_OVERLAY_V6__ = true;
   window.__GEMINEKO_CDP_UNMOUNT__ = () => {
     stopped = true;
     if (pollTimer) clearTimeout(pollTimer);
@@ -832,6 +838,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     window.removeEventListener('resize', onViewportChange);
     window.removeEventListener('scroll', onViewportChange, true);
     window.removeEventListener('popstate', onUrlCheck);
+    i18nEngine?.unmount?.();
     themeSuite?.unmount?.();
     cleanupLegacyNodes();
     const dock = document.getElementById(DOCK_ID);
@@ -841,6 +848,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     window.__GEMINEKO_CDP_OVERLAY_V2__ = false;
     window.__GEMINEKO_CDP_OVERLAY_V3__ = false;
     window.__GEMINEKO_CDP_OVERLAY_V5__ = false;
+    window.__GEMINEKO_CDP_OVERLAY_V6__ = false;
   };
 })();`;
 }
@@ -1026,7 +1034,7 @@ export class CdpHostInjector {
    */
   async verifyAndReinject() {
     if (!this.enabled || !this.ws || this.ws.readyState !== 1) return;
-    const alive = await this.evaluateOnTarget('Boolean(window.__GEMINEKO_CDP_OVERLAY_V5__)', true);
+    const alive = await this.evaluateOnTarget('Boolean(window.__GEMINEKO_CDP_OVERLAY_V6__)', true);
     if (alive === false) {
       const script = buildCdpOverlayScript(this.serverBaseUrl, this.logoDataUri, {
         sideToken: this.sideToken,

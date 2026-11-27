@@ -31,6 +31,18 @@ export const ALLOWED_ACCENT_MODES = new Set([
 
 export const ALLOWED_MOTION_LEVELS = new Set(['standard', 'subtle', 'off']);
 export const ALLOWED_CORNER_RADIUS = new Set(['compact', 'soft', 'round']);
+export const ALLOWED_THEME_INTENSITIES = new Set(['vivid', 'balanced', 'minimal']);
+export const ALLOWED_WATERMARK_ROLES = new Set([
+  'follow-role',
+  'neon',
+  'hydrogen',
+  'carbon',
+  'claude',
+  'gpt',
+  'custom',
+]);
+export const ALLOWED_I18N_MODES = new Set(['auto', 'neko-zh', 'zh', 'off']);
+export const ALLOWED_I18N_AUTO_STYLES = new Set(['neko-zh', 'zh']);
 export const ALLOWED_WALLPAPER_MODES = new Set([
   'off',
   'builtin-starry',
@@ -49,71 +61,106 @@ export const WALLPAPER_MIME_MAP = {
   '.webm': 'video/webm',
 };
 
-/** 严格对应 5 位角色三视图配色的动态强调色与星云极光光带 */
+/** 严格对应 5 位角色三视图配色的动态强调色、星云极光光带与二次元视觉母题 */
 export const ROLE_PALETTES = {
   neon: {
     id: 'neon',
     label: 'Neon · 炫彩哈基米',
+    motif: 'prism-star',
+    crestTitle: 'NEON · GEMINEKO',
     primary: '#3B82F6',
     accent2: '#EC4899',
     accent3: '#22D3EE',
-    aurora1: 'rgba(59, 130, 246, 0.20)',
-    aurora2: 'rgba(236, 72, 153, 0.16)',
-    aurora3: 'rgba(34, 211, 238, 0.14)',
+    aurora1: 'rgba(59, 130, 246, 0.28)',
+    aurora2: 'rgba(236, 72, 153, 0.22)',
+    aurora3: 'rgba(34, 211, 238, 0.18)',
+    tintLight: 'rgba(59, 130, 246, 0.09)',
+    tintDark: 'rgba(59, 130, 246, 0.16)',
+    patternInkLight: 'rgba(59, 130, 246, 0.145)',
+    patternInkDark: 'rgba(96, 165, 250, 0.185)',
+    earGlow: 'rgba(236, 72, 153, 0.44)',
     sparkColor: '#60A5FA',
-    glow: 'rgba(59,130,246,0.32)',
+    glow: 'rgba(59,130,246,0.38)',
     gradient: 'linear-gradient(120deg,#3b82f6,#a855f7,#ec4899,#22d3ee)',
   },
   hydrogen: {
     id: 'hydrogen',
     label: 'Hydrogen · 原教旨 Gemini 本体',
+    motif: 'lavender-nebula',
+    crestTitle: 'HYDROGEN · GEMINI',
     primary: '#8B5CF6',
     accent2: '#F472B6',
     accent3: '#FBBF24',
-    aurora1: 'rgba(139, 92, 246, 0.20)',
-    aurora2: 'rgba(244, 114, 182, 0.16)',
-    aurora3: 'rgba(251, 191, 36, 0.12)',
+    aurora1: 'rgba(139, 92, 246, 0.28)',
+    aurora2: 'rgba(244, 114, 182, 0.22)',
+    aurora3: 'rgba(251, 191, 36, 0.16)',
+    tintLight: 'rgba(139, 92, 246, 0.09)',
+    tintDark: 'rgba(139, 92, 246, 0.16)',
+    patternInkLight: 'rgba(139, 92, 246, 0.145)',
+    patternInkDark: 'rgba(196, 181, 253, 0.185)',
+    earGlow: 'rgba(244, 114, 182, 0.42)',
     sparkColor: '#A78BFA',
-    glow: 'rgba(139,92,246,0.30)',
+    glow: 'rgba(139,92,246,0.36)',
     gradient: 'linear-gradient(120deg,#60a5fa,#a78bfa,#f472b6,#fbbf24)',
   },
   carbon: {
     id: 'carbon',
     label: 'Carbon · 五彩斑斓的黑',
+    motif: 'graphene-hex',
+    crestTitle: 'CARBON · GRAPHENE',
     primary: '#6366F1',
     accent2: '#F43F5E',
     accent3: '#F59E0B',
-    aurora1: 'rgba(99, 102, 241, 0.22)',
-    aurora2: 'rgba(244, 63, 94, 0.15)',
-    aurora3: 'rgba(245, 158, 11, 0.13)',
+    aurora1: 'rgba(99, 102, 241, 0.30)',
+    aurora2: 'rgba(244, 63, 94, 0.21)',
+    aurora3: 'rgba(245, 158, 11, 0.17)',
+    tintLight: 'rgba(99, 102, 241, 0.095)',
+    tintDark: 'rgba(99, 102, 241, 0.18)',
+    patternInkLight: 'rgba(79, 70, 229, 0.145)',
+    patternInkDark: 'rgba(129, 140, 248, 0.195)',
+    earGlow: 'rgba(244, 63, 94, 0.42)',
     sparkColor: '#818CF8',
-    glow: 'rgba(99,102,241,0.32)',
+    glow: 'rgba(99,102,241,0.38)',
     gradient: 'linear-gradient(120deg,#1e1b4b,#6366f1,#ec4899,#f59e0b)',
   },
   claude: {
     id: 'claude',
     label: 'Claude · 橘发大小姐',
+    motif: 'cream-lace',
+    crestTitle: 'CLAUDE · MAID',
     primary: '#F97316',
     accent2: '#FBBF24',
     accent3: '#FB7185',
-    aurora1: 'rgba(249, 115, 22, 0.19)',
-    aurora2: 'rgba(251, 191, 36, 0.15)',
-    aurora3: 'rgba(251, 113, 133, 0.12)',
+    aurora1: 'rgba(249, 115, 22, 0.26)',
+    aurora2: 'rgba(251, 191, 36, 0.20)',
+    aurora3: 'rgba(251, 113, 133, 0.16)',
+    tintLight: 'rgba(249, 115, 22, 0.085)',
+    tintDark: 'rgba(249, 115, 22, 0.155)',
+    patternInkLight: 'rgba(217, 95, 32, 0.145)',
+    patternInkDark: 'rgba(251, 146, 60, 0.18)',
+    earGlow: 'rgba(251, 191, 36, 0.42)',
     sparkColor: '#FB923C',
-    glow: 'rgba(249,115,22,0.30)',
+    glow: 'rgba(249,115,22,0.36)',
     gradient: 'linear-gradient(120deg,#ea580c,#f97316,#fbbf24,#fde68a)',
   },
   gpt: {
     id: 'gpt',
     label: 'GPT · 白紫小龙娘',
+    motif: 'dragon-scale',
+    crestTitle: 'GPT · SOL DRAGON',
     primary: '#A855F7',
     accent2: '#C4B5FD',
     accent3: '#818CF8',
-    aurora1: 'rgba(168, 85, 247, 0.20)',
-    aurora2: 'rgba(196, 181, 253, 0.16)',
-    aurora3: 'rgba(129, 140, 248, 0.13)',
+    aurora1: 'rgba(168, 85, 247, 0.27)',
+    aurora2: 'rgba(196, 181, 253, 0.21)',
+    aurora3: 'rgba(129, 140, 248, 0.17)',
+    tintLight: 'rgba(168, 85, 247, 0.09)',
+    tintDark: 'rgba(168, 85, 247, 0.16)',
+    patternInkLight: 'rgba(147, 51, 234, 0.145)',
+    patternInkDark: 'rgba(216, 180, 254, 0.185)',
+    earGlow: 'rgba(196, 181, 253, 0.46)',
     sparkColor: '#C084FC',
-    glow: 'rgba(168,85,247,0.30)',
+    glow: 'rgba(168,85,247,0.36)',
     gradient: 'linear-gradient(120deg,#c4b5fd,#a855f7,#818cf8)',
   },
 };
@@ -125,63 +172,63 @@ export const THEME_PRESETS = {
     name: '星云冷白',
     scheme: 'light',
     badge: '冷调星云光学浅色',
-    swatches: ['#E2E7F5', '#EFF2FA', '#FFFFFF', '#6366F1'],
+    swatches: ['#D7E0F6', '#EBF0FC', '#FFFFFF', '#6366F1'],
     vars: {
-      '--background': '#EFF2FA',
-      '--body-background': '#EFF2FA',
+      '--background': '#EBF0FC',
+      '--body-background': '#EBF0FC',
       '--foreground': '#131628',
-      '--sidebar': '#E2E7F5',
-      '--sidebar-secondary': 'rgba(79, 70, 229, 0.11)',
-      '--sidebar-muted': 'rgba(30, 41, 82, 0.062)',
-      '--content': '#EFF2FA',
-      '--card': '#FFFFFF',
-      '--card-border': 'rgba(79, 70, 229, 0.16)',
-      '--card-edge': 'rgba(79, 70, 229, 0.14)',
-      '--border': 'rgba(30, 41, 82, 0.12)',
-      '--shell': '#EFF2FA',
-      '--shell-canvas': '#E2E7F5',
-      '--glass': 'rgba(255, 255, 255, 0.94)',
-      '--glass-border': 'rgba(99, 102, 241, 0.22)',
+      '--sidebar': '#D7E0F6',
+      '--sidebar-secondary': 'rgba(79, 70, 229, 0.14)',
+      '--sidebar-muted': 'rgba(59, 74, 148, 0.085)',
+      '--content': '#EBF0FC',
+      '--card': '#FCFDFF',
+      '--card-border': 'rgba(79, 70, 229, 0.22)',
+      '--card-edge': 'rgba(79, 70, 229, 0.18)',
+      '--border': 'rgba(49, 64, 130, 0.16)',
+      '--shell': '#EBF0FC',
+      '--shell-canvas': '#D7E0F6',
+      '--glass': 'rgba(248, 250, 255, 0.90)',
+      '--glass-border': 'rgba(99, 102, 241, 0.28)',
       '--glass-highlight': 'rgba(255, 255, 255, 0.98)',
-      '--glass-shadow': '0 14px 36px -10px rgba(30, 41, 90, 0.16), 0 2px 8px -2px rgba(79, 70, 229, 0.08)',
-      '--nux-chip-shadow': '0 4px 12px -4px rgba(30, 41, 90, 0.14), 0 1px 2px rgba(30, 41, 90, 0.06)',
-      '--onyx-frame': '#E2E7F5',
-      '--onyx-well': '#E7ECF8',
+      '--glass-shadow': '0 16px 38px -10px rgba(30, 41, 95, 0.20), 0 3px 10px -2px rgba(79, 70, 229, 0.12)',
+      '--nux-chip-shadow': '0 4px 14px -4px rgba(30, 41, 90, 0.16), 0 1px 2px rgba(30, 41, 90, 0.08)',
+      '--onyx-frame': '#D7E0F6',
+      '--onyx-well': '#DFE7F9',
       '--onyx-raised': '#FFFFFF',
-      '--onyx-selected': '#FFFFFF',
-      '--onyx-key': '#F5F7FD',
-      '--secondary': '#E5EAF7',
-      '--secondary-foreground': '#313957',
-      '--muted': '#E8EDF9',
-      '--muted-foreground': '#56607E',
-      '--placeholder': '#737D9C',
+      '--onyx-selected': '#F7F9FF',
+      '--onyx-key': '#F2F5FE',
+      '--secondary': '#DFE6F8',
+      '--secondary-foreground': '#2D3656',
+      '--muted': '#E4EAF9',
+      '--muted-foreground': '#4D587B',
+      '--placeholder': '#6A7599',
       '--primary-foreground': '#FFFFFF',
       '--link': '#4338CA',
-      '--home-glow': 'rgba(99, 102, 241, 0.16)',
+      '--home-glow': 'rgba(99, 102, 241, 0.22)',
       '--scrim': 'rgba(19, 22, 40, 0.34)',
-      '--editor-selection-background': 'rgba(99, 102, 241, 0.24)',
-      '--editor-comment-selection-background': 'rgba(99, 102, 241, 0.15)',
-      '--editor-code-block-background': '#E7ECF8',
-      '--gk-tonal-0': '#DCE2F2',
-      '--gk-tonal-1': '#EFF2FA',
-      '--gk-tonal-2': '#FFFFFF',
-      '--gk-tonal-3': '#E9EEF9',
+      '--editor-selection-background': 'rgba(99, 102, 241, 0.26)',
+      '--editor-comment-selection-background': 'rgba(99, 102, 241, 0.16)',
+      '--editor-code-block-background': '#E2E9FA',
+      '--gk-tonal-0': '#CFD9F2',
+      '--gk-tonal-1': '#EBF0FC',
+      '--gk-tonal-2': '#FCFDFF',
+      '--gk-tonal-3': '#E2E9FA',
       '--gk-tonal-4': '#FFFFFF',
-      '--gk-specular': 'rgba(255, 255, 255, 0.96)',
-      '--gk-surface-sheen': 'linear-gradient(175deg, rgba(255,255,255,0.96), rgba(235,241,255,0.58))',
-      '--gk-composer-bg': 'rgba(255, 255, 255, 0.96)',
-      '--gk-composer-shadow': '0 14px 34px -10px rgba(30, 41, 95, 0.16), 0 2px 8px -2px rgba(79, 70, 229, 0.10), inset 0 1px 0 rgba(255,255,255,0.98)',
-      '--gk-bubble-bg': 'rgba(232, 238, 252, 0.92)',
-      '--gk-popover-bg': 'rgba(252, 253, 255, 0.96)',
-      '--gk-pattern-ink': 'rgba(79, 70, 229, 0.048)',
-      '--gk-scroll-thumb': 'rgba(79, 70, 229, 0.24)',
-      '--gk-scroll-thumb-hover': 'rgba(79, 70, 229, 0.44)',
-      '--vscode-editor-background': '#EFF2FA',
-      '--vscode-sideBar-background': '#E2E7F5',
-      '--vscode-panel-background': '#EFF2FA',
-      '--sdk-color-surface': '#FFFFFF',
-      '--sdk-color-canvas': '#DCE2F2',
-      '--sdk-sidebar-bg': '#E2E7F5',
+      '--gk-specular': 'rgba(255, 255, 255, 0.98)',
+      '--gk-surface-sheen': 'linear-gradient(175deg, rgba(255,255,255,0.96), rgba(226,234,255,0.68))',
+      '--gk-composer-bg': 'rgba(250, 252, 255, 0.93)',
+      '--gk-composer-shadow': '0 16px 36px -10px rgba(30, 41, 95, 0.19), 0 3px 10px -2px rgba(79, 70, 229, 0.12), inset 0 1px 0 rgba(255,255,255,0.98)',
+      '--gk-bubble-bg': 'rgba(222, 232, 255, 0.92)',
+      '--gk-popover-bg': 'rgba(247, 249, 255, 0.93)',
+      '--gk-pattern-ink': 'rgba(79, 70, 229, 0.145)',
+      '--gk-scroll-thumb': 'rgba(79, 70, 229, 0.28)',
+      '--gk-scroll-thumb-hover': 'rgba(79, 70, 229, 0.50)',
+      '--vscode-editor-background': '#EBF0FC',
+      '--vscode-sideBar-background': '#D7E0F6',
+      '--vscode-panel-background': '#EBF0FC',
+      '--sdk-color-surface': '#FCFDFF',
+      '--sdk-color-canvas': '#CFD9F2',
+      '--sdk-sidebar-bg': '#D7E0F6',
     },
   },
   'cream-paper': {
@@ -189,63 +236,63 @@ export const THEME_PRESETS = {
     name: '奶油暖纸',
     scheme: 'light',
     badge: '暖奶油光学纸感',
-    swatches: ['#E7DFD2', '#F4EFE6', '#FFFDF9', '#EA580C'],
+    swatches: ['#E2D6C3', '#F5EDE1', '#FFFDF8', '#EA580C'],
     vars: {
-      '--background': '#F4EFE6',
-      '--body-background': '#F4EFE6',
+      '--background': '#F5EDE1',
+      '--body-background': '#F5EDE1',
       '--foreground': '#231C16',
-      '--sidebar': '#E7DFD2',
-      '--sidebar-secondary': 'rgba(194, 89, 52, 0.12)',
-      '--sidebar-muted': 'rgba(42, 32, 20, 0.062)',
-      '--content': '#F4EFE6',
-      '--card': '#FFFDF9',
-      '--card-border': 'rgba(154, 102, 54, 0.18)',
-      '--card-edge': 'rgba(154, 102, 54, 0.15)',
-      '--border': 'rgba(42, 32, 20, 0.12)',
-      '--shell': '#F4EFE6',
-      '--shell-canvas': '#E7DFD2',
-      '--glass': 'rgba(255, 253, 249, 0.94)',
-      '--glass-border': 'rgba(194, 89, 52, 0.22)',
-      '--glass-highlight': 'rgba(255, 255, 255, 0.96)',
-      '--glass-shadow': '0 14px 36px -10px rgba(68, 52, 32, 0.15), 0 2px 8px -2px rgba(194, 89, 52, 0.08)',
-      '--nux-chip-shadow': '0 4px 12px -4px rgba(68, 52, 32, 0.14), 0 1px 2px rgba(68, 52, 32, 0.06)',
-      '--onyx-frame': '#E7DFD2',
-      '--onyx-well': '#ECE5D8',
-      '--onyx-raised': '#FFFDF9',
-      '--onyx-selected': '#FFFDF9',
-      '--onyx-key': '#FAF6EE',
-      '--secondary': '#ECE5D9',
-      '--secondary-foreground': '#45392F',
-      '--muted': '#EEE8DD',
-      '--muted-foreground': '#6A5D50',
-      '--placeholder': '#8A7B6C',
+      '--sidebar': '#E2D6C3',
+      '--sidebar-secondary': 'rgba(217, 95, 32, 0.14)',
+      '--sidebar-muted': 'rgba(138, 75, 28, 0.08)',
+      '--content': '#F5EDE1',
+      '--card': '#FFFDF8',
+      '--card-border': 'rgba(180, 108, 52, 0.24)',
+      '--card-edge': 'rgba(180, 108, 52, 0.19)',
+      '--border': 'rgba(68, 46, 26, 0.15)',
+      '--shell': '#F5EDE1',
+      '--shell-canvas': '#E2D6C3',
+      '--glass': 'rgba(255, 251, 244, 0.91)',
+      '--glass-border': 'rgba(217, 95, 32, 0.28)',
+      '--glass-highlight': 'rgba(255, 255, 255, 0.98)',
+      '--glass-shadow': '0 16px 38px -10px rgba(68, 52, 32, 0.18), 0 3px 10px -2px rgba(194, 89, 52, 0.10)',
+      '--nux-chip-shadow': '0 4px 12px -4px rgba(68, 52, 32, 0.16), 0 1px 2px rgba(68, 52, 32, 0.07)',
+      '--onyx-frame': '#E2D6C3',
+      '--onyx-well': '#EAE0D0',
+      '--onyx-raised': '#FFFDF8',
+      '--onyx-selected': '#FFF9F0',
+      '--onyx-key': '#FAF4E8',
+      '--secondary': '#EAE0CF',
+      '--secondary-foreground': '#45362A',
+      '--muted': '#EFE6D7',
+      '--muted-foreground': '#6A5848',
+      '--placeholder': '#8A7665',
       '--primary-foreground': '#FFFFFF',
       '--link': '#B54D28',
-      '--home-glow': 'rgba(234, 88, 12, 0.14)',
+      '--home-glow': 'rgba(234, 88, 12, 0.18)',
       '--scrim': 'rgba(32, 24, 16, 0.34)',
-      '--editor-selection-background': 'rgba(217, 119, 6, 0.22)',
-      '--editor-comment-selection-background': 'rgba(217, 119, 6, 0.14)',
-      '--editor-code-block-background': '#EDE6D9',
-      '--gk-tonal-0': '#E3DACB',
-      '--gk-tonal-1': '#F4EFE6',
-      '--gk-tonal-2': '#FFFDF9',
-      '--gk-tonal-3': '#EFE9DD',
-      '--gk-tonal-4': '#FFFDF9',
+      '--editor-selection-background': 'rgba(217, 119, 6, 0.24)',
+      '--editor-comment-selection-background': 'rgba(217, 119, 6, 0.15)',
+      '--editor-code-block-background': '#ECE3D3',
+      '--gk-tonal-0': '#DACCB7',
+      '--gk-tonal-1': '#F5EDE1',
+      '--gk-tonal-2': '#FFFDF8',
+      '--gk-tonal-3': '#EFE6D7',
+      '--gk-tonal-4': '#FFFDF8',
       '--gk-specular': 'rgba(255, 255, 255, 0.96)',
-      '--gk-surface-sheen': 'linear-gradient(175deg, rgba(255,255,255,0.96), rgba(248,242,232,0.58))',
-      '--gk-composer-bg': 'rgba(255, 253, 249, 0.96)',
-      '--gk-composer-shadow': '0 14px 34px -10px rgba(68, 52, 32, 0.16), 0 2px 8px -2px rgba(194, 89, 52, 0.09), inset 0 1px 0 rgba(255,255,255,0.96)',
-      '--gk-bubble-bg': 'rgba(239, 231, 218, 0.92)',
-      '--gk-popover-bg': 'rgba(254, 252, 247, 0.96)',
-      '--gk-pattern-ink': 'rgba(168, 92, 42, 0.048)',
-      '--gk-scroll-thumb': 'rgba(168, 92, 42, 0.24)',
-      '--gk-scroll-thumb-hover': 'rgba(168, 92, 42, 0.44)',
-      '--vscode-editor-background': '#F4EFE6',
-      '--vscode-sideBar-background': '#E7DFD2',
-      '--vscode-panel-background': '#F4EFE6',
-      '--sdk-color-surface': '#FFFDF9',
-      '--sdk-color-canvas': '#E3DACB',
-      '--sdk-sidebar-bg': '#E7DFD2',
+      '--gk-surface-sheen': 'linear-gradient(175deg, rgba(255,255,255,0.96), rgba(249,238,222,0.68))',
+      '--gk-composer-bg': 'rgba(255, 252, 246, 0.94)',
+      '--gk-composer-shadow': '0 16px 36px -10px rgba(68, 52, 32, 0.18), 0 3px 10px -2px rgba(194, 89, 52, 0.11), inset 0 1px 0 rgba(255,255,255,0.96)',
+      '--gk-bubble-bg': 'rgba(242, 230, 212, 0.93)',
+      '--gk-popover-bg': 'rgba(254, 249, 241, 0.94)',
+      '--gk-pattern-ink': 'rgba(186, 92, 36, 0.145)',
+      '--gk-scroll-thumb': 'rgba(186, 92, 36, 0.28)',
+      '--gk-scroll-thumb-hover': 'rgba(186, 92, 36, 0.48)',
+      '--vscode-editor-background': '#F5EDE1',
+      '--vscode-sideBar-background': '#E2D6C3',
+      '--vscode-panel-background': '#F5EDE1',
+      '--sdk-color-surface': '#FFFDF8',
+      '--sdk-color-canvas': '#DACCB7',
+      '--sdk-sidebar-bg': '#E2D6C3',
     },
   },
   'starry-nest': {
@@ -382,10 +429,21 @@ export const DEFAULT_HOST_THEME_CONFIG = {
   enabled: true,
   preset: 'auto',
   accentMode: 'follow-role',
+  themeIntensity: 'vivid',
   focusMode: false,
   motionLevel: 'standard',
   cornerRadius: 'soft',
-  ambientIntensity: 75,
+  ambientIntensity: 85,
+  watermark: {
+    enabled: true,
+    role: 'follow-role',
+    opacity: 0.14,
+    customFilePath: '',
+  },
+  i18n: {
+    mode: 'auto',
+    autoChineseStyle: 'neko-zh',
+  },
   linkages: {
     roleSwitchAurora: true,
     composerBreathGlow: true,
@@ -497,6 +555,19 @@ export function validateWallpaperFilePath(rawPath) {
 }
 
 /**
+ * 校验本地自定义角色水印图片路径（仅放行静态/动图，拒绝视频、UNC 及目录穿越）。
+ * @param {string} rawPath
+ */
+export function validateWatermarkImagePath(rawPath) {
+  const check = validateWallpaperFilePath(rawPath);
+  if (!check.ok) return check;
+  if (check.isVideo) {
+    return { ok: false, path: '', error: '角落水印仅支持透明/静态图片格式（PNG/WebP/GIF/AVIF/JPG）' };
+  }
+  return check;
+}
+
+/**
  * 清洗并合并宿主主题配置，严格校验全部枚举、布尔与数值范围。
  * @param {any} raw
  * @param {any} [base]
@@ -510,12 +581,40 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
   const accentMode = ALLOWED_ACCENT_MODES.has(src.accentMode)
     ? src.accentMode
     : (ALLOWED_ACCENT_MODES.has(b.accentMode) ? b.accentMode : 'follow-role');
+  const themeIntensity = ALLOWED_THEME_INTENSITIES.has(src.themeIntensity)
+    ? src.themeIntensity
+    : (ALLOWED_THEME_INTENSITIES.has(b.themeIntensity) ? b.themeIntensity : 'vivid');
   const motionLevel = ALLOWED_MOTION_LEVELS.has(src.motionLevel)
     ? src.motionLevel
     : (ALLOWED_MOTION_LEVELS.has(b.motionLevel) ? b.motionLevel : 'standard');
   const cornerRadius = ALLOWED_CORNER_RADIUS.has(src.cornerRadius)
     ? src.cornerRadius
     : (ALLOWED_CORNER_RADIUS.has(b.cornerRadius) ? b.cornerRadius : 'soft');
+
+  const srcWm = src.watermark && typeof src.watermark === 'object' ? src.watermark : {};
+  const bWm = b.watermark || DEFAULT_HOST_THEME_CONFIG.watermark;
+  let wmRole = ALLOWED_WATERMARK_ROLES.has(srcWm.role)
+    ? srcWm.role
+    : (ALLOWED_WATERMARK_ROLES.has(bWm.role) ? bWm.role : 'follow-role');
+  let wmCustomPath = typeof srcWm.customFilePath === 'string'
+    ? srcWm.customFilePath.trim()
+    : (typeof bWm.customFilePath === 'string' ? bWm.customFilePath.trim() : '');
+  if (wmCustomPath) {
+    const wmCheck = validateWatermarkImagePath(wmCustomPath);
+    wmCustomPath = wmCheck.ok ? wmCheck.path : '';
+  }
+  if (wmRole === 'custom' && !wmCustomPath) {
+    wmRole = 'follow-role';
+  }
+
+  const srcI18n = src.i18n && typeof src.i18n === 'object' ? src.i18n : {};
+  const bI18n = b.i18n || DEFAULT_HOST_THEME_CONFIG.i18n;
+  const i18nMode = ALLOWED_I18N_MODES.has(srcI18n.mode)
+    ? srcI18n.mode
+    : (ALLOWED_I18N_MODES.has(bI18n.mode) ? bI18n.mode : 'auto');
+  const autoChineseStyle = ALLOWED_I18N_AUTO_STYLES.has(srcI18n.autoChineseStyle)
+    ? srcI18n.autoChineseStyle
+    : (ALLOWED_I18N_AUTO_STYLES.has(bI18n.autoChineseStyle) ? bI18n.autoChineseStyle : 'neko-zh');
 
   const srcLink = src.linkages && typeof src.linkages === 'object' ? src.linkages : {};
   const bLink = b.linkages || DEFAULT_HOST_THEME_CONFIG.linkages;
@@ -545,10 +644,21 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
     enabled: asBool(src.enabled, asBool(b.enabled, true)),
     preset,
     accentMode,
+    themeIntensity,
     focusMode: asBool(src.focusMode, asBool(b.focusMode, false)),
     motionLevel,
     cornerRadius,
-    ambientIntensity: Math.round(clampNumber(src.ambientIntensity, 0, 100, b.ambientIntensity ?? 75)),
+    ambientIntensity: Math.round(clampNumber(src.ambientIntensity, 0, 100, b.ambientIntensity ?? 85)),
+    watermark: {
+      enabled: asBool(srcWm.enabled, asBool(bWm.enabled, true)),
+      role: wmRole,
+      opacity: Number(clampNumber(srcWm.opacity, 0.04, 0.38, bWm.opacity ?? 0.14).toFixed(2)),
+      customFilePath: wmCustomPath,
+    },
+    i18n: {
+      mode: i18nMode,
+      autoChineseStyle,
+    },
     linkages: {
       roleSwitchAurora: asBool(srcLink.roleSwitchAurora, asBool(bLink.roleSwitchAurora, true)),
       composerBreathGlow: asBool(srcLink.composerBreathGlow, asBool(bLink.composerBreathGlow, true)),

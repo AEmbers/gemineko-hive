@@ -14,6 +14,7 @@ import {
   resolveSpriteFile,
 } from '../src/activity-tracker.mjs';
 import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../src/native-patcher.mjs';
+import { translateHostText } from '../src/cdp/host-i18n-runtime.mjs';
 import { buildCdpOverlayScript } from '../src/cdp/host-injector.mjs';
 import { createHiveSidecarServer } from '../src/sidecar/server.mjs';
 import { resolveMemeNickname } from '../src/theme/nicknames.js';
@@ -29,6 +30,7 @@ import {
   createThemeConfigStore,
   sanitizeHostThemeConfig,
   validateWallpaperFilePath,
+  validateWatermarkImagePath,
 } from '../src/theme/host-theme-config.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -457,6 +459,28 @@ test('host-theme-config 预设、角色调色板、壁纸路径安全门禁与�
   assert.equal(okCheck.ok, true);
   assert.equal(okCheck.mime, 'image/png');
   assert.equal(okCheck.isVideo, false);
+  assert.equal(validateWatermarkImagePath(samplePng).ok, true);
+  assert.equal(validateWatermarkImagePath('\\\\evil-server\\share\\wm.png').ok, false);
+
+  // 验证 v0.5.1 开箱默认值：浓郁二次元 + 角落立绘水印 + 自动跟随系统语言(中文萌系)
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.themeIntensity, 'vivid');
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.watermark.enabled, true);
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.watermark.role, 'follow-role');
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.i18n.mode, 'auto');
+  assert.equal(DEFAULT_HOST_THEME_CONFIG.i18n.autoChineseStyle, 'neko-zh');
+  assert.equal(ROLE_PALETTES.carbon.crestTitle, 'CARBON · GRAPHENE');
+  assert.equal(ROLE_PALETTES.neon.crestTitle, 'NEON · GEMINEKO');
+
+  // 验证内置宿主全量汉化双语模式并保留 Antigravity 品牌词
+  assert.equal(translateHostText('Antigravity', 'neko-zh'), null);
+  assert.equal(translateHostText('Overview', 'neko-zh'), '猫窝总览');
+  assert.equal(translateHostText('Overview', 'zh'), '总览');
+  assert.equal(translateHostText('Subagents', 'neko-zh'), '蜂巢小猫');
+  assert.equal(translateHostText('Subagents', 'zh'), '子智能体');
+  assert.equal(translateHostText('New Conversation', 'zh'), '新建对话');
+  assert.equal(translateHostText('Worked for 6m', 'neko-zh'), '猫猫打工 6m');
+  assert.equal(translateHostText('5 files changed', 'zh'), '5 个文件已变更');
+  assert.equal(translateHostText('Ask anything, @ to mention, / for actions', 'zh'), '随便问点什么，@ 提及文件，/ 呼出指令');
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gemineko-theme-cfg-'));
   try {
@@ -560,13 +584,19 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.equal(evGet.json().latest.type, 'hive-poke-burst');
     assert.equal(evGet.json().latest.role, 'claude');
 
-    // 验证构建包包含主题工坊且宿主脚本包含 v5 光学玻璃×星空猫窝引擎
+    // 验证构建包包含主题工坊且宿主脚本包含 v5/v6 全量二次元皮肤、Overview 重绘、水印与内置汉化引擎
     const cdpScript = buildCdpOverlayScript('http://127.0.0.1:19876', '', { sideToken: 'tk' });
     assert.match(cdpScript, /gemineko-host-theme-v5/);
-    assert.match(cdpScript, /__GEMINEKO_CDP_OVERLAY_V5__/);
+    assert.match(cdpScript, /__GEMINEKO_CDP_OVERLAY_V6__/);
     assert.match(cdpScript, /--gk-catnest-pattern/);
     assert.match(cdpScript, /gemineko-conv-aurora/);
+    assert.match(cdpScript, /gemineko-corner-watermark/);
     assert.match(cdpScript, /gemineko-home-stage/);
+    assert.match(cdpScript, /overview-panel/);
+    assert.match(cdpScript, /title-menu-bar/);
+    assert.match(cdpScript, /NEON · GEMINEKO/);
+    assert.match(cdpScript, /CARBON · GRAPHENE/);
+    assert.match(cdpScript, /initHostI18nEngine/);
     assert.match(cdpScript, /thinking-collapsible-trigger/);
     assert.match(cdpScript, /conversation-row-sidebar/);
     assert.match(cdpScript, /user-message-bubble/);
@@ -574,10 +604,26 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /overlay-scrollbar-thumb/);
     assert.match(cdpScript, /捅了基米窝/);
 
+    // 验证自定义角落水印流式安全门禁（未配置返回 404，配置后返回 200 PNG）
+    const noWm = await srv.inject({ url: '/api/watermark/file' });
+    assert.equal(noWm.statusCode, 404);
+    const setWmRes = await srv.inject({
+      method: 'POST',
+      url: '/api/theme/config',
+      headers: { 'x-sidecar-token': 'test-v5-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ watermark: { enabled: true, role: 'custom', customFilePath: sampleWp, opacity: 0.16 } }),
+    });
+    assert.equal(setWmRes.statusCode, 200);
+    assert.equal(setWmRes.json().config.watermark.role, 'custom');
+    const wmFileRes = await srv.inject({ url: '/api/watermark/file' });
+    assert.equal(wmFileRes.statusCode, 200);
+    assert.equal(wmFileRes.headers['content-type'], 'image/png');
+
     const bundleRes = buildGeminekoBundle();
+    assert.ok(bundleRes.bytes < 420_000, `主包体过大: ${bundleRes.bytes}`);
     const bundleContent = fs.readFileSync(bundleRes.outPath, 'utf8');
     assert.match(bundleContent, /createThemeWorkshopController/);
-    assert.match(bundleContent, /主题工坊/);
+    assert.match(bundleContent, /主题工坊|全量汉化工坊/);
     assert.match(bundleContent, /gemineko-sidecar-shell/);
     assert.match(bundleContent, /guardLoadingSkeleton/);
 

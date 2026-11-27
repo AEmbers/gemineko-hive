@@ -23,6 +23,7 @@ import {
   THEME_PRESETS,
   createThemeConfigStore,
   validateWallpaperFilePath,
+  validateWatermarkImagePath,
 } from '../theme/host-theme-config.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -334,17 +335,17 @@ export async function createHiveSidecarServer(options = {}) {
   const themeEvents = { seq: 0, latest: null };
 
   /**
-   * 弹出本机系统文件选择对话框挑选壁纸图片或 MP4/WebM 视频（仅 Windows 支持，超时保护）。
+   * 弹出本机系统文件选择对话框挑选壁纸或角色水印图片（仅 Windows 支持，超时保护）。
    */
-  function openNativeWallpaperDialog() {
+  function openNativeMediaDialog(title, filter, validator) {
     if (process.platform !== 'win32') {
-      return Promise.resolve({ ok: false, canceled: true, error: '当前系统请直接填写本地壁纸绝对路径' });
+      return Promise.resolve({ ok: false, canceled: true, error: '当前系统请直接填写本机文件绝对路径' });
     }
     const psScript = [
       'Add-Type -AssemblyName System.Windows.Forms',
       '$d = New-Object System.Windows.Forms.OpenFileDialog',
-      "$d.Title = '选择基米窝宿主壁纸（图片或 MP4/WebM 视频）'",
-      "$d.Filter = '媒体文件 (*.png;*.jpg;*.jpeg;*.webp;*.gif;*.avif;*.mp4;*.webm)|*.png;*.jpg;*.jpeg;*.webp;*.gif;*.avif;*.mp4;*.webm'",
+      `$d.Title = '${title}'`,
+      `$d.Filter = '${filter}'`,
       '$r = $d.ShowDialog()',
       "if ($r -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $d.FileName }",
     ].join('; ');
@@ -363,11 +364,33 @@ export async function createHiveSidecarServer(options = {}) {
             resolve({ ok: true, canceled: true, filePath: '' });
             return;
           }
-          const check = validateWallpaperFilePath(chosen);
+          const check = validator(chosen);
           resolve(check.ok ? { ok: true, canceled: false, ...check } : { ok: false, canceled: false, error: check.error });
         },
       );
     });
+  }
+
+  function handleWatermarkImageStream(res) {
+    const cfg = themeStore.get();
+    if (!cfg?.watermark?.customFilePath) {
+      res.writeHead(404, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('No custom watermark configured');
+      return;
+    }
+    const check = validateWatermarkImagePath(cfg.watermark.customFilePath);
+    if (!check.ok) {
+      res.writeHead(403, { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end(check.error || 'Watermark path rejected');
+      return;
+    }
+    res.writeHead(200, {
+      ...CORS_HEADERS,
+      'Content-Type': check.mime,
+      'Content-Length': check.size || 0,
+      'Cache-Control': 'no-cache',
+    });
+    fs.createReadStream(check.path).pipe(res);
   }
 
   /**
@@ -530,10 +553,14 @@ export async function createHiveSidecarServer(options = {}) {
         return;
       }
       const body = await readJsonBody(req);
-      let wallpaperError = '';
+      let warningMsg = '';
       if (body?.wallpaper && typeof body.wallpaper.filePath === 'string' && body.wallpaper.filePath.trim()) {
         const check = validateWallpaperFilePath(body.wallpaper.filePath);
-        if (!check.ok) wallpaperError = check.error || '壁纸路径无效';
+        if (!check.ok) warningMsg = check.error || '壁纸路径无效';
+      }
+      if (body?.watermark && typeof body.watermark.customFilePath === 'string' && body.watermark.customFilePath.trim()) {
+        const wmCheck = validateWatermarkImagePath(body.watermark.customFilePath);
+        if (!wmCheck.ok) warningMsg = wmCheck.error || '水印图片路径无效';
       }
       const next = themeStore.update(body);
       if (cdpInjector) {
@@ -542,7 +569,7 @@ export async function createHiveSidecarServer(options = {}) {
       sendJson(res, 200, {
         ok: true,
         config: next,
-        ...(wallpaperError ? { warning: wallpaperError } : {}),
+        ...(warningMsg ? { warning: warningMsg } : {}),
       });
       return;
     }
@@ -610,13 +637,36 @@ export async function createHiveSidecarServer(options = {}) {
         sendJson(res, check.ok ? 200 : 400, check.ok ? { ok: true, ...check } : { ok: false, error: check.error });
         return;
       }
-      const picked = await openNativeWallpaperDialog();
+      const picked = await openNativeMediaDialog(
+        '选择基米窝宿主壁纸（图片或 MP4/WebM 视频）',
+        '媒体文件 (*.png;*.jpg;*.jpeg;*.webp;*.gif;*.avif;*.mp4;*.webm)|*.png;*.jpg;*.jpeg;*.webp;*.gif;*.avif;*.mp4;*.webm',
+        validateWallpaperFilePath,
+      );
       sendJson(res, 200, picked);
       return;
     }
 
     if (req.method === 'GET' && pathname === '/api/wallpaper/file') {
       handleWallpaperStream(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/watermark/pick') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      const picked = await openNativeMediaDialog(
+        '选择角落透明二次元立绘水印（PNG/WebP/GIF）',
+        '透明立绘图片 (*.png;*.webp;*.gif;*.avif;*.jpg)|*.png;*.webp;*.gif;*.avif;*.jpg',
+        validateWatermarkImagePath,
+      );
+      sendJson(res, 200, picked);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/watermark/file') {
+      handleWatermarkImageStream(res);
       return;
     }
 

@@ -1,66 +1,147 @@
 /**
- * @file Antigravity 主窗口「光学玻璃质感 × 哈基米星空猫窝」原生主题、全组件精修与联动彩蛋引擎
- * 参考真实宿主 CSS Token 与 data-testid 选择器深度适配，零修改 app.asar。
+ * @file Antigravity 主窗口「5 角色二次元视觉母题 × 光学玻璃质感 × 哈基米星空猫窝」全量皮肤与联动彩蛋引擎
+ * 参考真实宿主 CSS Token 与 data-testid 选择器深度适配全界面，零修改 app.asar。
  */
 
 import { DEFAULT_HOST_THEME_CONFIG, ROLE_PALETTES, THEME_PRESETS } from '../theme/host-theme-config.mjs';
 
-function buildCatnestSvgPattern(strokeColor = 'rgba(99, 102, 241, 0.05)') {
-  const svg = [
-    '<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144" fill="none">',
-    `<g fill="${strokeColor}">`,
-    // 软萌猫肉垫（左斜）
-    '<g transform="translate(36 42) rotate(-14)">',
-    '<ellipse cx="0" cy="4" rx="7.5" ry="5.4"/>',
-    '<circle cx="-7.2" cy="-3.6" r="2.5"/>',
-    '<circle cx="-2.4" cy="-6.2" r="2.6"/>',
-    '<circle cx="2.7" cy="-6.1" r="2.6"/>',
-    '<circle cx="7.4" cy="-3.4" r="2.5"/>',
+function pawGroupSvg(x, y, rot, scale = 1) {
+  return [
+    `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${scale})">`,
+    '<ellipse cx="0" cy="4.2" rx="7.8" ry="5.6"/>',
+    '<circle cx="-7.4" cy="-3.6" r="2.6"/>',
+    '<circle cx="-2.4" cy="-6.4" r="2.7"/>',
+    '<circle cx="2.7" cy="-6.3" r="2.7"/>',
+    '<circle cx="7.5" cy="-3.4" r="2.6"/>',
     '</g>',
-    // 大凹四角星芒（右上）
-    '<path d="M108 26 Q110 38 122 40 Q110 42 108 54 Q106 42 94 40 Q106 38 108 26 Z"/>',
-    // 小凹四角星芒（左下）
-    '<path d="M32 104 Q33.2 111 40 112.2 Q33.2 113.4 32 120.4 Q30.8 113.4 24 112.2 Q30.8 111 32 104 Z"/>',
-    // 第二枚小肉垫（右下反斜）
-    '<g transform="translate(108 108) rotate(16) scale(0.84)">',
-    '<ellipse cx="0" cy="4" rx="7.5" ry="5.4"/>',
-    '<circle cx="-7.2" cy="-3.6" r="2.5"/>',
-    '<circle cx="-2.4" cy="-6.2" r="2.6"/>',
-    '<circle cx="2.7" cy="-6.1" r="2.6"/>',
-    '<circle cx="7.4" cy="-3.4" r="2.5"/>',
-    '</g>',
-    '</g>',
-    '</svg>',
   ].join('');
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function star4Path(cx, cy, outerR, innerR = outerR * 0.22) {
+  return `M${cx} ${cy - outerR} Q${cx + innerR} ${cy - innerR} ${cx + outerR} ${cy} Q${cx + innerR} ${cy + innerR} ${cx} ${cy + outerR} Q${cx - innerR} ${cy + innerR} ${cx - outerR} ${cy} Q${cx - innerR} ${cy - innerR} ${cx} ${cy - outerR} Z`;
 }
 
 /**
- * 构造在宿主 Renderer 浏览器上下文执行的主题与联动代码片段（定义 initHostThemeSuite）。
+ * 为 5 位社区角色构建独有的二次元几何+猫窝平铺 SVG 底纹。
+ * @param {'neon'|'hydrogen'|'carbon'|'claude'|'gpt'} roleId
+ * @param {string} ink
+ * @param {string} accent
+ * @param {string} accent2
+ */
+function buildRoleMotifPattern(roleId, ink, accent, accent2) {
+  const shapes = [];
+  if (roleId === 'neon') {
+    // 炫彩虹光双飘带 + 双色凹四角星芒 + 肉垫
+    shapes.push(`<path d="M-12 36 Q36 8 84 36 T180 36" stroke="${accent}" stroke-width="2.2" fill="none"/>`);
+    shapes.push(`<path d="M-12 114 Q36 142 84 114 T180 114" stroke="${accent2}" stroke-width="1.8" fill="none"/>`);
+    shapes.push(`<g fill="${ink}">${pawGroupSvg(36, 44, -14, 0.96)}${pawGroupSvg(118, 122, 16, 0.88)}</g>`);
+    shapes.push(`<path d="${star4Path(112, 38, 15, 3.2)}" fill="${accent}"/>`);
+    shapes.push(`<path d="${star4Path(34, 118, 10, 2.2)}" fill="${accent2}"/>`);
+  } else if (roleId === 'hydrogen') {
+    // 薰衣草粉金星云环 + 星辰碎芒 + 软萌肉垫
+    shapes.push(`<circle cx="80" cy="80" r="46" stroke="${ink}" stroke-width="1.4" stroke-dasharray="6 8" fill="none"/>`);
+    shapes.push(`<circle cx="30" cy="24" r="3" fill="${accent}"/><circle cx="130" cy="126" r="2.6" fill="${accent2}"/>`);
+    shapes.push(`<g fill="${ink}">${pawGroupSvg(40, 44, -12, 0.92)}${pawGroupSvg(120, 118, 15, 0.85)}</g>`);
+    shapes.push(`<path d="${star4Path(116, 40, 14, 3)}" fill="${accent}"/>`);
+    shapes.push(`<path d="${star4Path(34, 122, 11, 2.4)}" fill="${accent2}"/>`);
+  } else if (roleId === 'carbon') {
+    // 石墨烯正六边形晶格 + 五彩黑棱形晶钻 + 四角星
+    shapes.push(`<polygon points="80,18 118,40 118,84 80,106 42,84 42,40" stroke="${ink}" stroke-width="1.8" fill="none"/>`);
+    shapes.push(`<polygon points="80,32 104,46 104,78 80,92 56,78 56,46" stroke="${accent}" stroke-width="1.1" fill="none"/>`);
+    shapes.push(`<polygon points="24,114 34,126 24,138 14,126" fill="${accent2}"/>`);
+    shapes.push(`<path d="${star4Path(128, 118, 12, 2.6)}" fill="${accent}"/>`);
+    shapes.push(`<g fill="${ink}">${pawGroupSvg(80, 62, -8, 0.88)}</g>`);
+  } else if (roleId === 'claude') {
+    // 暖奶油四叶菊瓣 + 菱格蕾丝圆点 + 肉垫
+    shapes.push(`<circle cx="24" cy="24" r="2.2" fill="${accent}"/><circle cx="136" cy="24" r="2.2" fill="${accent}"/><circle cx="24" cy="136" r="2.2" fill="${accent}"/><circle cx="136" cy="136" r="2.2" fill="${accent}"/>`);
+    shapes.push(`<path d="M112 24 C119 24 119 37 112 37 C105 37 105 24 112 24 M112 37 C119 37 119 50 112 50 C105 50 105 37 112 37 M99 37 C99 30 112 30 112 37 C112 44 99 44 99 37 M112 37 C112 30 125 30 125 37 C125 44 112 44 112 37" stroke="${accent}" stroke-width="1.4" fill="none"/>`);
+    shapes.push(`<g fill="${ink}">${pawGroupSvg(42, 46, -15, 0.94)}${pawGroupSvg(114, 118, 16, 0.86)}</g>`);
+    shapes.push(`<path d="${star4Path(38, 116, 10, 2.2)}" fill="${accent2}"/>`);
+  } else {
+    // gpt: 白紫弧形龙鳞纹 + 空心菱星
+    shapes.push(`<path d="M0 44 Q40 80 80 44 Q120 80 160 44" stroke="${ink}" stroke-width="1.6" fill="none"/>`);
+    shapes.push(`<path d="M0 118 Q40 154 80 118 Q120 154 160 118" stroke="${accent}" stroke-width="1.5" fill="none"/>`);
+    shapes.push(`<polygon points="118,22 128,36 118,50 108,36" stroke="${accent2}" stroke-width="1.6" fill="none"/>`);
+    shapes.push(`<g fill="${ink}">${pawGroupSvg(40, 44, -10, 0.90)}${pawGroupSvg(118, 116, 14, 0.85)}</g>`);
+    shapes.push(`<path d="${star4Path(36, 112, 11, 2.4)}" fill="${accent}"/>`);
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none">${shapes.join('')}</svg>`;
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+}
+
+function buildRolePatternMap() {
+  const out = {};
+  for (const [id, pal] of Object.entries(ROLE_PALETTES)) {
+    out[id] = {
+      vividLight: buildRoleMotifPattern(id, pal.patternInkLight, pal.primary + '2e', pal.accent2 + '2a'),
+      vividDark: buildRoleMotifPattern(id, pal.patternInkDark, pal.primary + '38', pal.accent2 + '33'),
+      balancedLight: buildRoleMotifPattern(id, pal.primary + '14', pal.primary + '16', pal.accent2 + '14'),
+      balancedDark: buildRoleMotifPattern(id, pal.accent2 + '18', pal.primary + '1d', pal.accent2 + '18'),
+    };
+  }
+  return out;
+}
+
+/** 生成 5 位角色专属大型 SVG 矢量旋转纹章源码 */
+function buildRoleCrestSvgMap() {
+  const out = {};
+  for (const [id, pal] of Object.entries(ROLE_PALETTES)) {
+    let inner = '';
+    if (id === 'carbon') {
+      inner = [
+        `<polygon points="130,22 223,76 223,184 130,238 37,184 37,76" stroke="${pal.primary}" stroke-width="2" fill="none" opacity="0.72"/>`,
+        `<polygon points="130,38 209,84 209,176 130,222 51,176 51,84" stroke="${pal.accent2}" stroke-width="1.3" stroke-dasharray="6 6" fill="none" opacity="0.68"/>`,
+      ].join('');
+    } else if (id === 'claude') {
+      inner = [
+        `<circle cx="130" cy="130" r="102" stroke="${pal.primary}" stroke-width="1.8" stroke-dasharray="10 6" fill="none" opacity="0.7"/>`,
+        `<circle cx="130" cy="130" r="88" stroke="${pal.accent2}" stroke-width="1.4" stroke-dasharray="3 9" fill="none" opacity="0.72"/>`,
+      ].join('');
+    } else if (id === 'gpt') {
+      inner = [
+        `<circle cx="130" cy="130" r="100" stroke="${pal.primary}" stroke-width="2" stroke-dasharray="18 8 4 8" fill="none" opacity="0.74"/>`,
+        `<polygon points="130,16 244,130 130,244 16,130" stroke="${pal.accent2}" stroke-width="1.4" fill="none" opacity="0.6"/>`,
+      ].join('');
+    } else {
+      inner = [
+        `<circle cx="130" cy="130" r="102" stroke="${pal.primary}" stroke-width="2" stroke-dasharray="22 8 6 8" fill="none" opacity="0.74"/>`,
+        `<circle cx="130" cy="130" r="86" stroke="${pal.accent2}" stroke-width="1.4" stroke-dasharray="4 10" fill="none" opacity="0.66"/>`,
+      ].join('');
+    }
+    const stars = [
+      `<path d="${star4Path(130, 14, 10, 2.3)}" fill="${pal.primary}"/>`,
+      `<path d="${star4Path(246, 130, 10, 2.3)}" fill="${pal.accent2}"/>`,
+      `<path d="${star4Path(130, 246, 10, 2.3)}" fill="${pal.accent3}"/>`,
+      `<path d="${star4Path(14, 130, 10, 2.3)}" fill="${pal.primary}"/>`,
+    ].join('');
+    out[id] = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 260" fill="none">${inner}${stars}</svg>`;
+  }
+  return out;
+}
+
+/**
+ * 构造在宿主 Renderer 浏览器上下文执行的主题、全组件重绘与联动彩蛋代码片段（定义 initHostThemeSuite）。
  * @returns {string}
  */
 export function buildHostThemeRuntimeSnippet() {
   const presetsJson = JSON.stringify(THEME_PRESETS);
   const palettesJson = JSON.stringify(ROLE_PALETTES);
   const defaultCfgJson = JSON.stringify(DEFAULT_HOST_THEME_CONFIG);
-  const lightPatternUrl = JSON.stringify(`url("${buildCatnestSvgPattern('rgba(99, 102, 241, 0.044)')}")`);
-  const warmPatternUrl = JSON.stringify(`url("${buildCatnestSvgPattern('rgba(168, 92, 42, 0.045)')}")`);
-  const darkPatternUrl = JSON.stringify(`url("${buildCatnestSvgPattern('rgba(196, 181, 253, 0.052)')}")`);
+  const rolePatternsJson = JSON.stringify(buildRolePatternMap());
+  const roleCrestsJson = JSON.stringify(buildRoleCrestSvgMap());
 
   return `
   function initHostThemeSuite(ctx) {
     const THEME_PRESETS = ${presetsJson};
     const ROLE_PALETTES = ${palettesJson};
     const DEFAULT_CFG = ${defaultCfgJson};
-    const PATTERNS = {
-      'nebula-day': ${lightPatternUrl},
-      'cream-paper': ${warmPatternUrl},
-      'starry-nest': ${darkPatternUrl},
-      'carbon-obsidian': ${darkPatternUrl},
-    };
+    const ROLE_PATTERNS = ${rolePatternsJson};
+    const ROLE_CREST_SVGS = ${roleCrestsJson};
     const THEME_STYLE_ID = 'gemineko-host-theme-v5';
     const WP_LAYER_ID = 'gemineko-wallpaper-layer';
     const AURORA_HOST_ID = 'gemineko-conv-aurora';
+    const WATERMARK_ID = 'gemineko-corner-watermark';
     const HOME_STAGE_ID = 'gemineko-home-stage';
     const NIGHT_LAYER_ID = 'gemineko-night-lamp-layer';
     const AURORA_SWEEP_ID = 'gemineko-aurora-sweep';
@@ -139,6 +220,8 @@ export function buildHostThemeRuntimeSnippet() {
       return {
         ...DEFAULT_CFG,
         ...c,
+        watermark: { ...DEFAULT_CFG.watermark, ...(c.watermark || {}) },
+        i18n: { ...DEFAULT_CFG.i18n, ...(c.i18n || {}) },
         linkages: { ...DEFAULT_CFG.linkages, ...(c.linkages || {}) },
         workbench: { ...DEFAULT_CFG.workbench, ...(c.workbench || {}) },
         wallpaper: { ...DEFAULT_CFG.wallpaper, ...(c.wallpaper || {}) },
@@ -188,8 +271,6 @@ export function buildHostThemeRuntimeSnippet() {
       const chunks = [];
       for (const [id, preset] of Object.entries(THEME_PRESETS)) {
         const lines = Object.entries(preset.vars).map(([k, v]) => \`  \${k}: \${v} !important;\`);
-        const pat = PATTERNS[id] || PATTERNS['nebula-day'];
-        lines.push(\`  --gk-catnest-pattern: \${pat};\`);
         chunks.push(\`html[data-gk-theme="\${id}"] {\n  color-scheme: \${preset.scheme} !important;\n\${lines.join('\\n')}\n}\`);
       }
       return chunks.join('\\n');
@@ -224,11 +305,11 @@ html[data-gk-theme][data-gk-radius="round"] {
 html[data-gk-theme][data-gk-accent-on="1"] {
   --primary: var(--gk-role-primary) !important;
   --home-glow: var(--gk-role-glow) !important;
-  --focus-ring-color: color-mix(in srgb, var(--gk-role-primary) 46%, transparent) !important;
-  --nux-focus-ring: color-mix(in srgb, var(--gk-role-primary) 54%, transparent) !important;
+  --focus-ring-color: color-mix(in srgb, var(--gk-role-primary) 50%, transparent) !important;
+  --nux-focus-ring: color-mix(in srgb, var(--gk-role-primary) 56%, transparent) !important;
 }
 
-/* === 1. 五级表面光学层次 & 星空猫窝底纹 === */
+/* === 1. 全局表面与角色母题底纹（修复内层 bg-sidebar 覆盖、保留 Browser Hole 透明） === */
 html[data-gk-theme] > body:not([data-has-browser-hole="true"]) {
   background-color: var(--body-background, var(--background)) !important;
   color: var(--foreground) !important;
@@ -236,20 +317,24 @@ html[data-gk-theme] > body:not([data-has-browser-hole="true"]) {
 html[data-gk-theme] :is(.agy-shell, .agy-sheet, [data-testid="sidecar-iframe-slot"], iframe[data-testid="sidecar-iframe"]):not([data-has-browser-hole="true"]) {
   background-color: var(--content, var(--background)) !important;
 }
-html[data-gk-theme] .agy-shell :is(div, aside).bg-sidebar:not([data-has-browser-hole="true"]),
-html[data-gk-theme] .bg-sidebar:not([data-has-browser-hole="true"]) {
-  background-color: var(--sidebar) !important;
-  background-image: var(--gk-catnest-pattern) !important;
-  background-size: 144px 144px !important;
-  background-repeat: repeat !important;
+html[data-gk-theme] :is(.bg-sidebar, aside.bg-sidebar, div.bg-sidebar, [class*="bg-sidebar"]):not([data-has-browser-hole="true"]) {
+  background-color: color-mix(in srgb, var(--sidebar) 90%, var(--gk-role-primary, #8b5cf6) 10%) !important;
 }
-html[data-gk-theme]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) [data-testid="conversation-view"]:not([data-has-browser-hole="true"]),
-html[data-gk-theme]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) .agy-home:not([data-has-browser-hole="true"]) {
+html[data-gk-theme]:not([data-gk-intensity="minimal"]):not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]) :is(aside.bg-sidebar, div.h-full.bg-sidebar):not([data-has-browser-hole="true"]) {
+  background-image: var(--gk-catnest-pattern), linear-gradient(180deg, var(--gk-role-tint, rgba(99,102,241,0.08)) 0%, transparent 45%, var(--gk-role-tint, rgba(99,102,241,0.06)) 100%) !important;
+  background-size: 160px 160px, 100% 100% !important;
+  background-repeat: repeat, no-repeat !important;
+}
+html[data-gk-theme] .bg-sidebar :is([class*="bg-sidebar"], [data-testid="section-header"]) {
+  background-image: none !important;
+}
+html[data-gk-theme]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]):not([data-gk-intensity="minimal"]) [data-testid="conversation-view"]:not([data-has-browser-hole="true"]),
+html[data-gk-theme]:not([data-gk-focus="1"]):not([data-gk-wallpaper="on"]):not([data-gk-intensity="minimal"]) .agy-home:not([data-has-browser-hole="true"]) {
   position: relative !important;
   isolation: isolate !important;
   background-color: var(--content, var(--background)) !important;
   background-image: var(--gk-catnest-pattern) !important;
-  background-size: 144px 144px !important;
+  background-size: 160px 160px !important;
   background-repeat: repeat !important;
 }
 html[data-gk-theme][data-gk-wallpaper="on"] body,
@@ -270,34 +355,274 @@ html[data-gk-theme] > body[data-has-drawer-browser-hole="true"] :is(.browser-hol
   background-image: none !important;
 }
 html[data-gk-theme] [data-testid="sidebar-split"] > div:nth-child(2):not([data-sash-handle]) {
-  background-color: var(--border) !important;
+  background: linear-gradient(180deg, var(--gk-role-primary), var(--gk-role-accent2), transparent) !important;
+  opacity: 0.35;
 }
 
-/* === 对话区底部随角色变色的星云极光晕染 === */
+/* === 2. 顶部菜单栏 & 工具栏 === */
+html[data-gk-theme] [data-testid="title-menu-bar"] {
+  position: relative !important;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--sidebar) 88%, var(--gk-role-primary) 12%), color-mix(in srgb, var(--sidebar) 92%, var(--gk-role-accent2) 8%)) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--gk-role-primary) 24%, var(--border)) !important;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="title-menu-bar"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2.5px;
+  pointer-events: none;
+  background: var(--gk-role-gradient);
+  opacity: 0.92;
+}
+html[data-gk-theme] [data-testid="title-menu-bar-item"] {
+  border-radius: 7px !important;
+  transition: background-color 0.14s ease, color 0.14s ease, transform 0.14s var(--gk-ease-spring) !important;
+}
+html[data-gk-theme] [data-testid="title-menu-bar-item"]:hover {
+  background: color-mix(in srgb, var(--gk-role-primary) 15%, var(--card)) !important;
+  color: var(--gk-role-primary) !important;
+}
+html[data-gk-theme] [data-testid="pane-titlebar-toolbar"] {
+  background: color-mix(in srgb, var(--content) 82%, var(--gk-role-primary) 6%) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--gk-role-primary) 18%, var(--border)) !important;
+}
+
+/* === 3. 左侧边栏按钮、项目头与选中项 === */
+html[data-gk-theme] [data-testid="new-conversation-button"] {
+  background: var(--gk-role-gradient) !important;
+  color: #ffffff !important;
+  border: 1px solid color-mix(in srgb, #ffffff 36%, transparent) !important;
+  border-radius: var(--gk-r-md, 10px) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 6px 16px -6px var(--gk-role-glow), inset 0 1px 0 rgba(255,255,255,0.45) !important;
+  transition: transform 0.18s var(--gk-ease-spring), box-shadow 0.2s ease, filter 0.18s ease !important;
+}
+html[data-gk-theme] [data-testid="new-conversation-button"]:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow: 0 10px 22px -6px var(--gk-role-glow), inset 0 1px 0 rgba(255,255,255,0.6) !important;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="new-conversation-button"]::before {
+  content: "✦";
+  margin-right: 5px;
+  font-size: 11px;
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.85));
+}
+html[data-gk-theme] [data-testid="project-header"] {
+  position: relative !important;
+  border-radius: var(--gk-r-md, 8px) !important;
+  background: color-mix(in srgb, var(--card) 56%, var(--gk-role-tint, transparent)) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 20%, transparent) !important;
+  padding-left: 10px !important;
+}
+html[data-gk-theme] [data-testid="project-header"]::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--gk-role-gradient);
+}
+html[data-gk-theme] :is([data-testid="automations-button"], [data-testid="settings-button"]) {
+  border-radius: var(--gk-r-md, 9px) !important;
+  transition: background-color 0.16s ease, border-color 0.16s ease !important;
+}
+html[data-gk-theme] :is([data-testid="automations-button"], [data-testid="settings-button"]):hover {
+  background: color-mix(in srgb, var(--gk-role-primary) 13%, var(--card)) !important;
+}
+html[data-gk-theme] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row) {
+  position: relative !important;
+  border-radius: var(--gk-r-md, 9px) !important;
+  transition: background-color 0.14s ease, transform 0.16s var(--gk-ease-spring), box-shadow 0.18s ease !important;
+}
+html[data-gk-theme] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row):hover:not([data-selected="true"]) {
+  background-color: color-mix(in srgb, var(--gk-role-primary) 11%, var(--card)) !important;
+  transform: translateX(2px);
+}
+html[data-gk-theme] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row)[data-selected="true"] {
+  background-color: var(--onyx-selected) !important;
+  background-image: linear-gradient(115deg, color-mix(in srgb, var(--gk-role-primary) 15%, transparent), color-mix(in srgb, var(--gk-role-accent2) 9%, transparent) 60%, transparent), var(--gk-surface-sheen) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary, var(--primary)) 46%, var(--card-border)) !important;
+  box-shadow: inset 0 1px 0 var(--gk-specular), 0 6px 16px -8px var(--gk-role-glow) !important;
+}
+html[data-gk-theme] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row)[data-selected="true"]::before {
+  content: "✦";
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--gk-role-primary, var(--primary));
+  text-shadow: 0 0 8px var(--gk-role-glow);
+  pointer-events: none;
+}
+
+/* === 4. 截图 2 红圈：悬浮 Overview 卡片全量二次元猫窝重绘 === */
+html[data-gk-theme] div:has(> [data-testid="overview-panel"]) {
+  position: relative !important;
+  background: color-mix(in srgb, var(--glass) 92%, var(--gk-role-primary) 8%) !important;
+  background-image: var(--gk-surface-sheen) !important;
+  backdrop-filter: blur(18px) saturate(145%) !important;
+  border: 1.5px solid color-mix(in srgb, var(--gk-role-primary) 42%, var(--glass-border)) !important;
+  border-radius: var(--nux-radius-xl, 18px) !important;
+  box-shadow: 0 18px 44px -14px var(--gk-role-glow), var(--glass-shadow), inset 0 1px 0 var(--gk-specular) !important;
+  overflow: visible !important;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) div:has(> [data-testid="overview-panel"])::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 0;
+  height: 2.5px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 3;
+  background: var(--gk-role-gradient);
+  box-shadow: 0 0 10px var(--gk-role-glow);
+}
+/* Vivid 档下 Overview 顶部双猫耳尖装饰（跟随角色主渐变着色） */
+html[data-gk-theme][data-gk-intensity="vivid"]:not([data-gk-focus="1"]) div:has(> [data-testid="overview-panel"])::after {
+  content: "";
+  position: absolute;
+  top: -11px;
+  left: 18px;
+  right: 18px;
+  height: 12px;
+  pointer-events: none;
+  z-index: 2;
+  background: var(--gk-role-gradient);
+  filter: drop-shadow(0 -2px 6px var(--gk-role-glow));
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: left bottom, right bottom;
+  -webkit-mask-size: 26px 12px, 26px 12px;
+  -webkit-mask-image:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 12'%3E%3Cpath d='M1 12 L8.5 1.2 Q10.5 -0.4 13.5 2.2 L25 12 Z' fill='black'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 12'%3E%3Cpath d='M25 12 L17.5 1.2 Q15.5 -0.4 12.5 2.2 L1 12 Z' fill='black'/%3E%3C/svg%3E");
+}
+html[data-gk-theme] [data-testid="overview-panel"] {
+  background: transparent !important;
+  color: var(--foreground) !important;
+}
+html[data-gk-theme] [data-testid="overview-panel"] > div:first-child {
+  border-bottom: 1px solid color-mix(in srgb, var(--gk-role-primary) 22%, var(--border)) !important;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--gk-role-primary) 10%, transparent), color-mix(in srgb, var(--gk-role-accent2) 8%, transparent)) !important;
+  border-radius: var(--nux-radius-xl, 18px) var(--nux-radius-xl, 18px) 0 0 !important;
+}
+html[data-gk-theme] [data-testid="overview-panel"] .divide-y > * + * {
+  border-top-color: color-mix(in srgb, var(--gk-role-primary) 16%, var(--border)) !important;
+}
+html[data-gk-theme] [data-testid="overview-panel"] :is([data-testid^="overview-panel-row-"], [data-testid="side-question-row"], [data-testid="artifact-row"], [data-testid="subagent-node"]) {
+  position: relative !important;
+  border-radius: 10px !important;
+  transition: background-color 0.16s ease, transform 0.16s var(--gk-ease-spring), box-shadow 0.18s ease !important;
+}
+html[data-gk-theme] [data-testid="overview-panel"] :is([data-testid^="overview-panel-row-"], [data-testid="side-question-row"], [data-testid="artifact-row"], [data-testid="subagent-node"]):hover {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--gk-role-primary) 15%, transparent), color-mix(in srgb, var(--gk-role-accent2) 9%, transparent)) !important;
+  transform: translateX(2px);
+  box-shadow: inset 3px 0 0 var(--gk-role-primary) !important;
+}
+html[data-gk-theme] [data-testid="overview-panel"] svg {
+  color: var(--gk-role-primary) !important;
+}
+html[data-gk-theme] [data-testid="overview-panel"] span[class*="rounded"] {
+  background: color-mix(in srgb, var(--gk-role-primary) 16%, var(--secondary)) !important;
+  color: var(--gk-role-primary) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 28%, transparent) !important;
+  font-weight: 700 !important;
+}
+
+/* === 5. 对话区底部角色极光 + 角落透明角色立绘纹章水印 === */
 #\${AURORA_HOST_ID} {
   position: absolute;
   inset: auto 0 0 0;
-  height: 28%;
+  height: 34%;
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(64% 90% at 24% 100%, var(--gk-aurora-1, rgba(59,130,246,0.18)), transparent 72%),
-    radial-gradient(58% 84% at 76% 100%, var(--gk-aurora-2, rgba(236,72,153,0.14)), transparent 74%),
-    radial-gradient(45% 65% at 50% 98%, var(--gk-aurora-3, rgba(34,211,238,0.10)), transparent 70%);
+    radial-gradient(66% 92% at 20% 100%, var(--gk-aurora-1, rgba(59,130,246,0.26)), transparent 72%),
+    radial-gradient(60% 88% at 78% 100%, var(--gk-aurora-2, rgba(236,72,153,0.20)), transparent 74%),
+    radial-gradient(48% 68% at 50% 98%, var(--gk-aurora-3, rgba(34,211,238,0.14)), transparent 70%);
   transition: background 0.9s ease, opacity 0.45s ease;
-  opacity: calc(var(--gk-ambient-alpha, 0.75) * 0.92);
+  opacity: calc(var(--gk-ambient-alpha, 0.85) * 0.96);
 }
 html[data-gk-focus="1"] #\${AURORA_HOST_ID},
-html[data-gk-wallpaper="on"] #\${AURORA_HOST_ID} {
+html[data-gk-wallpaper="on"] #\${AURORA_HOST_ID},
+html[data-gk-intensity="minimal"] #\${AURORA_HOST_ID} {
   opacity: 0 !important;
 }
-html[data-gk-theme] [data-testid="conversation-view"] > :not(#\${AURORA_HOST_ID}) {
+html[data-gk-theme] [data-testid="conversation-view"] > :not(#\${AURORA_HOST_ID}):not(#\${WATERMARK_ID}) {
   position: relative;
   z-index: 1;
 }
 
-/* === 2. 组件级哈基米光学精修 === */
-/* (a) 输入栏猫窝玻璃底座 + 顶边 1px 角色星虹折射光条 */
+#\${WATERMARK_ID} {
+  position: absolute;
+  right: 18px;
+  bottom: 112px;
+  width: 240px;
+  height: 240px;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: var(--gk-watermark-opacity, 0.14);
+  transition: opacity 0.4s ease, transform 0.5s var(--gk-ease-out);
+}
+html[data-gk-intensity="balanced"] #\${WATERMARK_ID} {
+  opacity: calc(var(--gk-watermark-opacity, 0.14) * 0.72);
+}
+html[data-gk-focus="1"] #\${WATERMARK_ID},
+html[data-gk-intensity="minimal"] #\${WATERMARK_ID} {
+  display: none !important;
+}
+#\${WATERMARK_ID} .gk-wm-crest {
+  position: absolute;
+  inset: 0;
+  width: 240px;
+  height: 240px;
+  opacity: 0.92;
+  animation: gkWmSpin 44s linear infinite;
+}
+html[data-gk-motion="off"] #\${WATERMARK_ID} .gk-wm-crest {
+  animation: none !important;
+}
+@keyframes gkWmSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+#\${WATERMARK_ID} img.gk-wm-sprite {
+  position: relative;
+  width: 152px;
+  height: 152px;
+  object-fit: contain;
+  background: transparent !important;
+  filter: drop-shadow(0 8px 20px var(--gk-role-glow, rgba(139,92,246,0.35)));
+}
+#\${WATERMARK_ID} .gk-wm-tag {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 9.5px !important;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  white-space: nowrap;
+  color: var(--gk-role-primary, #8b5cf6);
+  background: color-mix(in srgb, var(--card) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 35%, transparent);
+}
+
+/* === 6. 组件级二次元精修：输入栏、气泡、AI富文本、代码块、弹窗 === */
 html[data-gk-theme] #antigravity\\.agentSidePanelInputBox {
   position: relative !important;
   background: transparent !important;
@@ -308,10 +633,10 @@ html[data-gk-theme] #antigravity\\.agentSidePanelInputBox > .surface-composer-ca
 html[data-gk-theme] .surface-composer-card {
   position: relative !important;
   border-radius: var(--nux-radius-xl, 18px) !important;
-  background: var(--gk-composer-bg) !important;
+  background: color-mix(in srgb, var(--gk-composer-bg) 94%, var(--gk-role-primary) 6%) !important;
   background-image: var(--gk-surface-sheen) !important;
-  border: 1px solid var(--glass-border) !important;
-  box-shadow: var(--gk-composer-shadow) !important;
+  border: 1.5px solid color-mix(in srgb, var(--gk-role-primary) 34%, var(--glass-border)) !important;
+  box-shadow: 0 14px 36px -12px var(--gk-role-glow), var(--gk-composer-shadow) !important;
   transition: border-color 0.24s ease, box-shadow 0.26s var(--gk-ease-spring), transform 0.22s var(--gk-ease-spring) !important;
 }
 html[data-gk-theme] .surface-composer-card::before {
@@ -320,38 +645,56 @@ html[data-gk-theme] .surface-composer-card::before {
   left: 14px;
   right: 14px;
   top: 0;
-  height: 1.5px;
+  height: 2.5px;
   border-radius: 999px;
   pointer-events: none;
   z-index: 2;
   background: var(--gk-role-gradient, linear-gradient(90deg, #3b82f6, #a855f7, #ec4899));
-  opacity: 0.72;
+  opacity: 0.88;
   transition: opacity 0.25s ease, filter 0.25s ease;
+}
+html[data-gk-theme]:not([data-gk-intensity="minimal"]) .surface-composer-card::after {
+  content: "✦";
+  position: absolute;
+  top: 7px;
+  right: 12px;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--gk-role-primary);
+  opacity: 0.72;
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px var(--gk-role-glow));
 }
 html[data-gk-theme] #antigravity\\.agentSidePanelInputBox:focus-within > .surface-composer-card,
 html[data-gk-theme] .surface-composer-card:focus-within {
-  border-color: color-mix(in srgb, var(--gk-role-primary) 54%, var(--glass-border)) !important;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gk-role-primary) 16%, transparent), var(--gk-composer-shadow) !important;
+  border-color: color-mix(in srgb, var(--gk-role-primary) 64%, var(--glass-border)) !important;
+  box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--gk-role-primary) 20%, transparent), var(--gk-composer-shadow) !important;
 }
-html[data-gk-theme] .surface-composer-card:focus-within::before {
-  opacity: 1;
-  filter: drop-shadow(0 0 5px var(--gk-role-glow));
+html[data-gk-theme] :is([data-testid="model-selector-trigger"], [data-testid="permissions-selector-trigger"]) {
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--gk-role-primary) 11%, var(--secondary)) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 26%, var(--border)) !important;
+}
+html[data-gk-theme] [data-testid="send-button"]:not(:disabled) {
+  background: var(--gk-role-gradient) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px var(--gk-role-glow) !important;
 }
 @keyframes gkComposerBreath {
   0%, 100% {
-    box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--gk-role-primary) 42%, transparent), 0 0 18px var(--gk-role-glow), var(--gk-composer-shadow);
+    box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--gk-role-primary) 46%, transparent), 0 0 20px var(--gk-role-glow), var(--gk-composer-shadow);
   }
   50% {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--gk-role-accent2, var(--gk-role-primary)) 60%, transparent), 0 0 28px var(--gk-role-glow), var(--gk-composer-shadow);
+    box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--gk-role-accent2, var(--gk-role-primary)) 65%, transparent), 0 0 32px var(--gk-role-glow), var(--gk-composer-shadow);
   }
 }
 .gk-composer-glow-active > .surface-composer-card,
 .gk-composer-glow-active.surface-composer-card {
   animation: gkComposerBreath 2.6s ease-in-out infinite !important;
-  border-color: color-mix(in srgb, var(--gk-role-primary) 62%, transparent) !important;
+  border-color: color-mix(in srgb, var(--gk-role-primary) 68%, transparent) !important;
 }
 
-/* (b) 用户消息气泡：玻璃切面 + 顶边镜面高光 + 角色描边 + 右上角 ✦ 星芒点缀 */
+/* 用户消息气泡 */
 html[data-gk-theme] .agy-user-bubble-frame {
   background: transparent !important;
   border: 0 !important;
@@ -361,49 +704,58 @@ html[data-gk-theme] .agy-user-bubble-frame {
 html[data-gk-theme] :is([data-testid="user-message-bubble"], .agy-user-bubble) {
   position: relative !important;
   border-radius: var(--nux-radius-lg, 15px) !important;
-  padding: 10px 15px !important;
-  background-color: var(--gk-bubble-bg, var(--card)) !important;
-  background-image: var(--gk-surface-sheen) !important;
-  border: 1px solid color-mix(in srgb, var(--gk-role-primary, var(--primary)) 28%, var(--card-border)) !important;
-  box-shadow: inset 0 1px 0 var(--gk-specular), 0 8px 22px -12px rgba(15, 23, 42, 0.28) !important;
+  padding: 11px 16px !important;
+  background-color: color-mix(in srgb, var(--gk-bubble-bg, var(--card)) 88%, var(--gk-role-primary) 12%) !important;
+  background-image: linear-gradient(125deg, color-mix(in srgb, var(--gk-role-primary) 14%, transparent), color-mix(in srgb, var(--gk-role-accent2) 9%, transparent) 60%, transparent), var(--gk-surface-sheen) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary, var(--primary)) 40%, var(--card-border)) !important;
+  box-shadow: inset 3px 0 0 var(--gk-role-primary), inset 0 1px 0 var(--gk-specular), 0 10px 24px -12px var(--gk-role-glow) !important;
   transition: transform 0.22s var(--gk-ease-spring), box-shadow 0.24s ease, border-color 0.22s ease !important;
 }
 html[data-gk-theme] :is([data-testid="user-message-bubble"], .agy-user-bubble)::after {
-  content: "✦";
+  content: "✦✧";
   position: absolute;
   top: 5px;
-  right: 8px;
+  right: 9px;
   font-size: 9.5px;
   line-height: 1;
   color: var(--gk-role-primary, var(--primary));
-  opacity: 0.55;
+  opacity: 0.72;
   pointer-events: none;
-  transition: transform 0.25s var(--gk-ease-spring), opacity 0.2s ease;
-}
-html[data-gk-theme] :is([data-testid="user-message-bubble"], .agy-user-bubble):hover {
-  border-color: color-mix(in srgb, var(--gk-role-primary, var(--primary)) 48%, var(--card-border)) !important;
-}
-html[data-gk-theme] :is([data-testid="user-message-bubble"], .agy-user-bubble):hover::after {
-  opacity: 0.95;
-  transform: rotate(22deg) scale(1.18);
+  filter: drop-shadow(0 0 5px var(--gk-role-glow));
 }
 
-/* (c) 思考过程与工具折叠块：胶囊触发器 + 展开左侧星轨渐变竖线 + 呼吸星芒 */
+/* AI 回答区域内引用块、表格、行内代码与思考折叠 */
+html[data-gk-theme] :is([data-testid="planner-response-text"], [data-testid="agent-response"]) blockquote {
+  border-left: 3px solid var(--gk-role-primary) !important;
+  background: color-mix(in srgb, var(--gk-role-primary) 8%, var(--card)) !important;
+  border-radius: 0 10px 10px 0 !important;
+  padding: 8px 12px !important;
+}
+html[data-gk-theme] :is([data-testid="planner-response-text"], [data-testid="agent-response"]) :not(pre) > code {
+  background: color-mix(in srgb, var(--gk-role-primary) 12%, var(--secondary)) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 24%, transparent) !important;
+  border-radius: 6px !important;
+  padding: 1px 5px !important;
+}
+html[data-gk-theme] :is([data-testid="planner-response-text"], [data-testid="agent-response"]) table {
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 24%, var(--border)) !important;
+}
+html[data-gk-theme] :is([data-testid="planner-response-text"], [data-testid="agent-response"]) th {
+  background: color-mix(in srgb, var(--gk-role-primary) 14%, var(--secondary)) !important;
+}
 html[data-gk-theme] :is([data-testid="worked-for-collapsible"], [data-testid="thinking-collapsible-trigger"], [data-testid="tool-group-collapsible"]) {
-  border-radius: var(--gk-r-sm, 6px) !important;
-  padding: 3px 9px !important;
-  background: color-mix(in srgb, var(--card) 58%, transparent) !important;
-  border: 1px solid transparent !important;
-  color: var(--muted-foreground) !important;
-  transition: background-color 0.14s ease, border-color 0.16s ease, color 0.14s ease, transform 0.14s var(--gk-ease-spring) !important;
+  border-radius: var(--gk-r-sm, 7px) !important;
+  padding: 3px 10px !important;
+  background: color-mix(in srgb, var(--card) 72%, var(--gk-role-primary) 8%) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 20%, transparent) !important;
+  color: var(--foreground) !important;
+  transition: background-color 0.14s ease, border-color 0.16s ease, transform 0.14s var(--gk-ease-spring) !important;
 }
 html[data-gk-theme] :is([data-testid="worked-for-collapsible"], [data-testid="thinking-collapsible-trigger"], [data-testid="tool-group-collapsible"]):hover {
-  background: var(--gk-tonal-3, var(--secondary)) !important;
-  border-color: color-mix(in srgb, var(--gk-role-primary) 26%, var(--border)) !important;
-  color: var(--foreground) !important;
-}
-html[data-gk-theme] :is([data-testid="worked-for-collapsible"], [data-testid="thinking-collapsible-trigger"], [data-testid="tool-group-collapsible"]):active {
-  transform: scale(0.97) !important;
+  background: color-mix(in srgb, var(--gk-role-primary) 16%, var(--secondary)) !important;
+  border-color: color-mix(in srgb, var(--gk-role-primary) 40%, var(--border)) !important;
 }
 html[data-gk-theme] [data-testid="thinking-collapsible-trigger"][aria-expanded="true"]::before {
   content: "✦";
@@ -419,115 +771,78 @@ html[data-gk-theme] [data-testid="thinking-collapsible-trigger"][aria-expanded="
   margin: 4px 0 8px 8px !important;
 }
 
-/* (d) 侧栏选中项：左缘发光 ✦/肉垫指示点 + 光学玻璃高亮胶囊 */
-html[data-gk-theme] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row) {
-  position: relative !important;
-  border-radius: var(--gk-r-md, 9px) !important;
-  transition: background-color 0.14s ease, transform 0.16s var(--gk-ease-spring), box-shadow 0.18s ease !important;
-}
-html[data-gk-theme] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row):hover:not([data-selected="true"]) {
-  background-color: var(--sidebar-muted) !important;
-  transform: translateX(2px);
-}
-html[data-gk-theme] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row)[data-selected="true"] {
-  background-color: var(--onyx-selected) !important;
-  background-image: var(--gk-surface-sheen) !important;
-  border: 1px solid color-mix(in srgb, var(--gk-role-primary, var(--primary)) 28%, var(--card-border)) !important;
-  box-shadow: inset 0 1px 0 var(--gk-specular), 0 4px 12px -6px rgba(15, 23, 42, 0.25) !important;
-}
-html[data-gk-theme] :is([data-testid="conversation-row-sidebar"], .agy-sidebar-row)[data-selected="true"]::before {
-  content: "✦";
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 11px;
-  line-height: 1;
-  color: var(--gk-role-primary, var(--primary));
-  text-shadow: 0 0 8px var(--gk-role-glow);
-  pointer-events: none;
-}
-
-/* (e) 文件变更卡 / Artifact 卡 / 代码块 / 表格 / 弹窗浮层 / 细滚动条统一精修 */
-html[data-gk-theme] :is([data-testid="changed-files-card"] + div > div, [data-testid="artifact-card"], [data-testid="bubble-artifact-card"], .artifact-card, [data-testid="running-items-panel"]) {
+/* 文件变更卡 / Artifact 卡 / 代码块 / 弹窗 / 细滚动条 */
+html[data-gk-theme] :is([data-testid="changed-files-card"], [data-testid="changed-files-card"] + div > div, [data-testid="artifact-card"], [data-testid="bubble-artifact-card"], .artifact-card, [data-testid="running-items-panel"]) {
   border-radius: var(--gk-r-lg, 14px) !important;
-  background-color: var(--card) !important;
+  background-color: color-mix(in srgb, var(--card) 92%, var(--gk-role-primary) 8%) !important;
   background-image: var(--gk-surface-sheen) !important;
-  border: 1px solid var(--card-border) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 26%, var(--card-border)) !important;
   box-shadow: inset 0 1px 0 var(--gk-specular), var(--nux-chip-shadow) !important;
-  transition: border-color 0.16s ease, box-shadow 0.2s ease !important;
-}
-html[data-gk-theme] :is([data-testid="artifact-card"], [data-testid="bubble-artifact-card"], .artifact-card):hover {
-  border-color: color-mix(in srgb, var(--gk-role-primary) 34%, var(--card-border)) !important;
 }
 html[data-gk-theme] :is([data-testid="planner-response-text"], [data-testid="agent-response"], [data-testid="artifact-view"]) pre {
+  position: relative !important;
   border-radius: var(--gk-r-md, 10px) !important;
-  border: 1px solid var(--card-border) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 24%, var(--card-border)) !important;
   background-color: var(--editor-code-block-background, var(--onyx-well)) !important;
-  box-shadow: inset 0 1px 0 var(--gk-specular) !important;
+  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--gk-role-primary) 35%, transparent), inset 0 1px 0 var(--gk-specular) !important;
 }
-html[data-gk-theme] :is([data-testid="entity-pill"], .inline-pill) {
-  border-radius: 6px !important;
-  background-color: var(--gk-tonal-3, var(--secondary)) !important;
-  border: 1px solid var(--card-border) !important;
-  box-shadow: inset 0 1px 0 var(--gk-specular) !important;
+html[data-gk-theme] :is([data-testid="entity-pill"], .inline-pill, [data-testid="step-plan-chip"]) {
+  border-radius: 8px !important;
+  background-color: color-mix(in srgb, var(--gk-tonal-3, var(--secondary)) 88%, var(--gk-role-primary) 12%) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 26%, var(--card-border)) !important;
 }
-html[data-gk-theme] :is(.agy-overlay, .surface-glass, div[role="dialog"]:not(.agy-overlay), [role="menu"]:not([data-testid="model-selector-panel"])) {
+html[data-gk-theme] :is(.agy-overlay, .surface-glass, div[role="dialog"]:not(.agy-overlay), [role="menu"]) {
   background-color: var(--gk-popover-bg, var(--glass)) !important;
-  border-color: var(--glass-border) !important;
-  box-shadow: var(--glass-shadow) !important;
-}
-html[data-gk-theme]:not([data-gk-motion="off"]):not([data-gk-focus="1"]) :is(.agy-overlay:not([data-hover-card-popup]), div[role="dialog"]) {
-  animation: gkGlassPop 0.18s var(--gk-ease-spring) backwards;
-}
-@keyframes gkGlassPop {
-  from { opacity: 0; transform: scale(0.965) translateY(-4px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 34%, var(--glass-border)) !important;
+  box-shadow: 0 16px 40px -12px var(--gk-role-glow), var(--glass-shadow) !important;
 }
 html[data-gk-theme] :is([data-testid="overlay-scrollbar-thumb"], [data-testid="vertical-scrollbar-thumb"], [data-testid="horizontal-scrollbar-thumb"]) {
   background-color: var(--gk-scroll-thumb) !important;
   border-radius: 999px !important;
-  transition: background-color 0.14s ease !important;
-}
-html[data-gk-theme] :is([data-testid="overlay-scrollbar"]:hover [data-testid="overlay-scrollbar-thumb"], [data-testid="vertical-scrollbar-thumb"]:hover) {
-  background-color: var(--gk-scroll-thumb-hover) !important;
 }
 html[data-gk-theme] ::-webkit-scrollbar { width: 6px; height: 6px; }
 html[data-gk-theme] ::-webkit-scrollbar-track { background: transparent; }
 html[data-gk-theme] ::-webkit-scrollbar-thumb { background: var(--gk-scroll-thumb); border-radius: 999px; }
 html[data-gk-theme] ::-webkit-scrollbar-thumb:hover { background: var(--gk-scroll-thumb-hover); }
-
 html[data-gk-motion="off"] *, html[data-gk-focus="1"] * { scroll-behavior: auto !important; }
 html[data-gk-smooth="1"] * { scroll-behavior: smooth; }
 
-/* === 3. 空白首页 5 角色迎宾彩蛋舞台 === */
+/* === 7. 空白首页 5 角色迎宾彩蛋舞台 === */
 #\${HOME_STAGE_ID} {
+  position: relative;
   width: 100%;
   max-width: min(720px, 100%);
-  margin: 0 auto 10px;
-  padding: 10px 14px 8px;
+  margin: 0 auto 12px;
+  padding: 12px 16px 10px;
   border-radius: var(--nux-radius-xl, 18px);
-  background: color-mix(in srgb, var(--glass, rgba(255,255,255,0.85)) 78%, transparent);
+  background: color-mix(in srgb, var(--glass, rgba(255,255,255,0.88)) 86%, var(--gk-role-primary) 14%);
   background-image: var(--gk-surface-sheen);
-  border: 1px solid var(--glass-border, rgba(139,92,246,0.22));
-  box-shadow: inset 0 1px 0 var(--gk-specular), 0 10px 28px -12px rgba(15, 23, 42, 0.16);
-  backdrop-filter: blur(10px);
+  border: 1.5px solid color-mix(in srgb, var(--gk-role-primary) 36%, var(--glass-border));
+  box-shadow: inset 0 1px 0 var(--gk-specular), 0 14px 34px -12px var(--gk-role-glow);
+  backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   z-index: 4;
   user-select: none;
 }
-html[data-gk-focus="1"] #\${HOME_STAGE_ID} {
-  padding: 6px 12px;
+#\${HOME_STAGE_ID}::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 2.5px;
+  border-radius: 999px;
+  background: var(--gk-role-gradient);
 }
 #\${HOME_STAGE_ID} .gk-home-stage-sub {
-  font-size: 11px !important;
-  font-weight: 700;
+  font-size: 11.5px !important;
+  font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--gk-role-primary, #8b5cf6);
-  opacity: 0.92;
 }
 #\${HOME_STAGE_ID} .gk-home-cast {
   display: flex;
@@ -550,25 +865,25 @@ html[data-gk-focus="1"] #\${HOME_STAGE_ID} {
 }
 #\${HOME_STAGE_ID} .gk-home-actor:hover {
   transform: translateY(-4px) scale(1.06);
-  background: color-mix(in srgb, var(--gk-role-primary, #8b5cf6) 10%, transparent);
+  background: color-mix(in srgb, var(--gk-role-primary, #8b5cf6) 14%, transparent);
 }
 #\${HOME_STAGE_ID} .gk-home-actor img {
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   object-fit: contain;
-  filter: drop-shadow(0 4px 10px rgba(99, 102, 241, 0.26));
+  filter: drop-shadow(0 5px 12px var(--gk-role-glow));
 }
 #\${HOME_STAGE_ID} .gk-home-actor span {
   font-size: 10px !important;
   font-weight: 700;
-  color: var(--secondary-foreground, #475569);
-  padding: 1px 6px;
+  color: var(--foreground);
+  padding: 1px 7px;
   border-radius: 999px;
-  background: var(--gk-tonal-3, rgba(99,102,241,0.08));
-  border: 1px solid var(--card-border, rgba(99,102,241,0.16));
+  background: color-mix(in srgb, var(--gk-role-primary) 12%, var(--secondary));
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 26%, transparent);
 }
 
-/* === 壁纸 / 极光扫屏 / 气泡 / 大纲 / 右键菜单 === */
+/* === 8. 壁纸 / 极光 / 发光彩色 SVG 爪印星尘雨 / 气泡 / 大纲 / 右键菜单 === */
 #\${WP_LAYER_ID} { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; display: none; }
 #\${WP_LAYER_ID}.is-visible { display: block; }
 #\${WP_LAYER_ID} img, #\${WP_LAYER_ID} video { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -581,12 +896,10 @@ html[data-gk-focus="1"] #\${HOME_STAGE_ID} {
 #\${WP_LAYER_ID} .gk-wp-builtin-starry {
   position: absolute; inset: 0; opacity: 0.9;
   background-image:
-    radial-gradient(circle at 22% 28%, color-mix(in srgb, var(--gk-role-primary, #8b5cf6) 22%, transparent), transparent 44%),
-    radial-gradient(circle at 78% 68%, color-mix(in srgb, var(--gk-role-accent3, #22d3ee) 18%, transparent), transparent 46%),
-    radial-gradient(1.5px 1.5px at 14% 22%, rgba(167,139,250,0.45) 50%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 66% 18%, rgba(236,72,153,0.4) 50%, transparent 100%),
-    radial-gradient(2px 2px at 84% 48%, rgba(96,165,250,0.4) 50%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 32% 74%, rgba(167,139,250,0.38) 50%, transparent 100%);
+    radial-gradient(circle at 22% 28%, color-mix(in srgb, var(--gk-role-primary, #8b5cf6) 24%, transparent), transparent 44%),
+    radial-gradient(circle at 78% 68%, color-mix(in srgb, var(--gk-role-accent3, #22d3ee) 20%, transparent), transparent 46%),
+    radial-gradient(1.5px 1.5px at 14% 22%, rgba(167,139,250,0.48) 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 66% 18%, rgba(236,72,153,0.44) 50%, transparent 100%);
 }
 #\${NIGHT_LAYER_ID} {
   position: fixed; inset: 0; z-index: 2147483000; pointer-events: none;
@@ -599,10 +912,10 @@ html[data-gk-scheme="dark"] #\${NIGHT_LAYER_ID} {
 }
 #\${NIGHT_LAYER_ID}.is-visible { display: block; }
 #\${AURORA_SWEEP_ID} {
-  position: fixed; top: 0; left: 0; width: 100%; height: 3px; z-index: 2147483640; pointer-events: none;
+  position: fixed; top: 0; left: 0; width: 100%; height: 3.5px; z-index: 2147483640; pointer-events: none;
   opacity: 0; transform: translateX(-100%);
   background: var(--gk-role-gradient, linear-gradient(90deg, #3b82f6, #a855f7, #ec4899));
-  box-shadow: 0 2px 14px var(--gk-role-glow, rgba(139,92,246,0.45));
+  box-shadow: 0 2px 16px var(--gk-role-glow, rgba(139,92,246,0.55));
 }
 #\${AURORA_SWEEP_ID}.is-sweeping { animation: gkAuroraSweep 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 @keyframes gkAuroraSweep {
@@ -618,30 +931,39 @@ html[data-gk-scheme="dark"] #\${NIGHT_LAYER_ID} {
 }
 .gk-hiss-shake { animation: gkHissShake 0.45s ease-in-out; }
 .gk-speech-bubble {
-  position: fixed; z-index: 2147483642; max-width: 260px; padding: 7px 11px; border-radius: 12px;
-  font-size: 11.5px !important; line-height: 1.45; color: var(--foreground, #1e1b4b);
-  background: var(--gk-popover-bg, var(--glass)); border: 1px solid var(--gk-role-primary, #8b5cf6);
-  box-shadow: var(--glass-shadow); backdrop-filter: blur(12px); pointer-events: auto;
+  position: fixed; z-index: 2147483642; max-width: 268px; padding: 8px 12px; border-radius: 14px;
+  font-size: 12px !important; line-height: 1.45; color: var(--foreground, #1e1b4b);
+  background: var(--gk-popover-bg, var(--glass)); border: 1.5px solid var(--gk-role-primary, #8b5cf6);
+  box-shadow: 0 12px 28px -8px var(--gk-role-glow), var(--glass-shadow); backdrop-filter: blur(12px); pointer-events: auto;
   animation: gkBubblePop 0.22s var(--gk-ease-spring);
 }
 @keyframes gkBubblePop { from { opacity: 0; transform: translateY(6px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .gk-stardust-particle {
-  position: fixed; z-index: 2147483635; pointer-events: none; font-size: 14px !important;
-  animation: gkStardustFall var(--dur, 1.3s) var(--gk-ease-out) forwards;
+  position: fixed;
+  z-index: 2147483635;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: gkStardustFall var(--dur, 3.2s) cubic-bezier(0.22, 0.72, 0.36, 1) forwards;
 }
 @keyframes gkStardustFall {
-  0% { opacity: 1; transform: translate(0, 0) scale(0.75) rotate(0deg); }
-  100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, 90px)) scale(1.2) rotate(var(--rot, 140deg)); }
+  0% { opacity: 0; transform: translate(0, 0) scale(0.55) rotate(0deg); }
+  14% { opacity: 0.98; }
+  80% { opacity: 0.90; }
+  100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, 420px)) scale(1.18) rotate(var(--rot, 160deg)); }
 }
 .gk-send-spark {
-  position: fixed; z-index: 2147483639; pointer-events: none; font-size: 13px !important;
-  color: var(--gk-role-spark, var(--gk-role-primary, #8b5cf6));
-  filter: drop-shadow(0 0 6px var(--gk-role-glow));
-  animation: gkSendSparkRise 0.85s var(--gk-ease-out) forwards;
+  position: fixed;
+  z-index: 2147483639;
+  pointer-events: none;
+  display: inline-flex;
+  filter: drop-shadow(0 0 8px var(--gk-role-glow));
+  animation: gkSendSparkRise 0.95s var(--gk-ease-out) forwards;
 }
 @keyframes gkSendSparkRise {
-  0% { opacity: 0.95; transform: translate(0, 0) scale(0.8); }
-  100% { opacity: 0; transform: translate(var(--sx, 12px), -36px) scale(1.18) rotate(24deg); }
+  0% { opacity: 1; transform: translate(0, 0) scale(0.75); }
+  100% { opacity: 0; transform: translate(var(--sx, 14px), -44px) scale(1.22) rotate(28deg); }
 }
 .gk-parade-overlay { position: fixed; left: 0; right: 0; bottom: 84px; height: 76px; z-index: 2147483638; pointer-events: none; overflow: hidden; }
 .gk-parade-track { display: inline-flex; align-items: flex-end; gap: 18px; position: absolute; left: -380px; animation: gkParadeMarch 3.5s linear forwards; }
@@ -654,29 +976,31 @@ html[data-gk-scheme="dark"] #\${NIGHT_LAYER_ID} {
   box-shadow: 0 10px 30px rgba(139, 92, 246, 0.42); pointer-events: none; animation: gkBubblePop 0.25s ease-out;
 }
 .gk-dock-theme-btn {
-  border: none; background: rgba(139, 92, 246, 0.14); color: inherit; width: 19px; height: 19px;
+  border: none; background: rgba(139, 92, 246, 0.16); color: inherit; width: 19px; height: 19px;
   border-radius: 999px; cursor: pointer; font-size: 11px !important; line-height: 1; padding: 0;
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.gk-dock-theme-btn:hover { background: rgba(139, 92, 246, 0.28); }
+.gk-dock-theme-btn:hover { background: rgba(139, 92, 246, 0.30); }
 #\${MINI_BAR_ID} {
-  position: fixed; z-index: 2147483644; display: none; flex-direction: column; gap: 8px; width: 256px; padding: 11px 12px;
-  border-radius: 14px; background: var(--gk-popover-bg, var(--glass)); color: var(--foreground);
-  border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); backdrop-filter: blur(14px); font-size: 11.5px !important;
+  position: fixed; z-index: 2147483644; display: none; flex-direction: column; gap: 7px; width: 292px; padding: 11px 12px;
+  border-radius: 15px; background: var(--gk-popover-bg, var(--glass)); color: var(--foreground);
+  border: 1.5px solid color-mix(in srgb, var(--gk-role-primary) 34%, var(--glass-border));
+  box-shadow: 0 16px 40px -12px var(--gk-role-glow), var(--glass-shadow); backdrop-filter: blur(16px); font-size: 11.5px !important;
 }
 #\${MINI_BAR_ID}.is-open { display: flex; }
-#\${MINI_BAR_ID} .gk-mini-row { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+#\${MINI_BAR_ID} .gk-mini-label { font-size: 10.5px !important; opacity: 0.72; font-weight: 700; }
+#\${MINI_BAR_ID} .gk-mini-row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
 #\${MINI_BAR_ID} button.gk-mini-chip {
-  padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border);
-  background: var(--secondary); color: var(--foreground); font-size: 11px !important; cursor: pointer;
+  padding: 3.5px 8px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--secondary); color: var(--foreground); font-size: 10.5px !important; cursor: pointer;
 }
 #\${MINI_BAR_ID} button.gk-mini-chip.is-active { background: var(--gk-role-primary, #8b5cf6); color: #fff; border-color: transparent; }
 #\${OUTLINE_FAB_ID} {
   position: fixed; right: 18px; top: 96px; z-index: 2147483620; width: 32px; height: 32px; border-radius: 999px;
-  border: 1px solid var(--glass-border); background: var(--gk-popover-bg, var(--glass));
+  border: 1px solid color-mix(in srgb, var(--gk-role-primary) 34%, var(--glass-border)); background: var(--gk-popover-bg, var(--glass));
   background-image: var(--gk-surface-sheen); color: var(--gk-role-primary, #8b5cf6);
   box-shadow: var(--nux-chip-shadow); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-  font-size: 15px !important; opacity: 0.78; transition: opacity 0.18s ease, transform 0.18s var(--gk-ease-spring);
+  font-size: 15px !important; opacity: 0.82; transition: opacity 0.18s ease, transform 0.18s var(--gk-ease-spring);
 }
 #\${OUTLINE_FAB_ID}:hover { opacity: 1; transform: scale(1.1); }
 #\${OUTLINE_POP_ID} {
@@ -712,10 +1036,10 @@ pre.gk-code-collapsed {
   -webkit-mask-image: linear-gradient(180deg, #000 74%, transparent 100%);
 }
 #\${CTX_MENU_ID} {
-  position: fixed; z-index: 2147483646; min-width: 204px; padding: 6px; border-radius: 12px;
+  position: fixed; z-index: 2147483646; min-width: 214px; padding: 6px; border-radius: 13px;
   background: var(--gk-popover-bg, var(--glass)); background-image: var(--gk-surface-sheen);
-  color: var(--foreground); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(14px); display: none; flex-direction: column; gap: 2px;
+  color: var(--foreground); border: 1.5px solid color-mix(in srgb, var(--gk-role-primary) 32%, var(--glass-border));
+  box-shadow: var(--glass-shadow); backdrop-filter: blur(14px); display: none; flex-direction: column; gap: 2px;
 }
 #\${CTX_MENU_ID}.is-open { display: flex; }
 #\${CTX_MENU_ID} button {
@@ -728,24 +1052,26 @@ pre.gk-code-collapsed {
       return st;
     }
 
+    function resolvePatternUrl(roleId, scheme, intensity) {
+      if (intensity === 'minimal' || cfg.focusMode) return 'none';
+      const patPack = ROLE_PATTERNS[roleId] || ROLE_PATTERNS.neon;
+      if (intensity === 'balanced') {
+        return scheme === 'dark' ? patPack.balancedDark : patPack.balancedLight;
+      }
+      return scheme === 'dark' ? patPack.vividDark : patPack.vividLight;
+    }
+
     function applyThemeDom(activity) {
       const root = document.documentElement;
       if (!root) return;
       if (!cfg.enabled) {
-        root.removeAttribute('data-gk-theme');
-        root.removeAttribute('data-gk-scheme');
-        root.removeAttribute('data-gk-radius');
-        root.removeAttribute('data-gk-motion');
-        root.removeAttribute('data-gk-focus');
-        root.removeAttribute('data-gk-smooth');
-        root.removeAttribute('data-gk-accent-on');
-        root.removeAttribute('data-gk-wallpaper');
-        const st = document.getElementById(THEME_STYLE_ID);
-        if (st) st.remove();
-        const au = document.getElementById(AURORA_HOST_ID);
-        if (au) au.remove();
-        const hs = document.getElementById(HOME_STAGE_ID);
-        if (hs) hs.remove();
+        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
+          root.removeAttribute(attr);
+        }
+        for (const id of [THEME_STYLE_ID, AURORA_HOST_ID, HOME_STAGE_ID, WATERMARK_ID]) {
+          const n = document.getElementById(id);
+          if (n) n.remove();
+        }
         syncWallpaperLayer();
         syncNightLamp();
         return;
@@ -756,9 +1082,12 @@ pre.gk-code-collapsed {
       const presetObj = THEME_PRESETS[presetId] || THEME_PRESETS['nebula-day'];
       const roleId = resolveActiveRoleId(activity);
       const pal = ROLE_PALETTES[roleId] || ROLE_PALETTES.neon;
+      const intensity = cfg.themeIntensity || 'vivid';
 
       root.setAttribute('data-gk-theme', presetId);
       root.setAttribute('data-gk-scheme', presetObj.scheme);
+      root.setAttribute('data-gk-role', roleId);
+      root.setAttribute('data-gk-intensity', intensity);
       root.setAttribute('data-gk-radius', cfg.cornerRadius || 'soft');
       root.setAttribute('data-gk-motion', cfg.motionLevel || 'standard');
       root.setAttribute('data-gk-focus', cfg.focusMode ? '1' : '0');
@@ -766,19 +1095,23 @@ pre.gk-code-collapsed {
       root.setAttribute('data-gk-accent-on', cfg.accentMode === 'off' ? '0' : '1');
       root.setAttribute('data-gk-wallpaper', cfg.wallpaper?.mode && cfg.wallpaper.mode !== 'off' ? 'on' : 'off');
 
-      const amp = Math.max(0.15, Math.min(1.2, (Number(cfg.ambientIntensity) || 75) / 100));
+      const amp = Math.max(0.2, Math.min(1.25, (Number(cfg.ambientIntensity) || 85) / 100));
       root.style.setProperty('--gk-role-primary', pal.primary);
       root.style.setProperty('--gk-role-accent2', pal.accent2);
       root.style.setProperty('--gk-role-accent3', pal.accent3);
       root.style.setProperty('--gk-role-glow', pal.glow);
       root.style.setProperty('--gk-role-gradient', pal.gradient);
       root.style.setProperty('--gk-role-spark', pal.sparkColor || pal.primary);
+      root.style.setProperty('--gk-role-tint', presetObj.scheme === 'dark' ? (pal.tintDark || 'rgba(99,102,241,0.16)') : (pal.tintLight || 'rgba(99,102,241,0.09)'));
+      root.style.setProperty('--gk-catnest-pattern', resolvePatternUrl(roleId, presetObj.scheme, intensity));
       root.style.setProperty('--gk-aurora-1', pal.aurora1);
       root.style.setProperty('--gk-aurora-2', pal.aurora2);
       root.style.setProperty('--gk-aurora-3', pal.aurora3);
       root.style.setProperty('--gk-ambient-alpha', String(amp.toFixed(2)));
+      root.style.setProperty('--gk-watermark-opacity', String(cfg.watermark?.opacity ?? 0.14));
 
       syncConvAurora();
+      syncCornerWatermark(activity, roleId);
       syncHomeStage();
       syncWallpaperLayer();
       syncNightLamp();
@@ -787,7 +1120,7 @@ pre.gk-code-collapsed {
     }
 
     function syncConvAurora() {
-      if (!cfg.enabled || cfg.focusMode || (cfg.wallpaper?.mode && cfg.wallpaper.mode !== 'off')) {
+      if (!cfg.enabled || cfg.focusMode || cfg.themeIntensity === 'minimal' || (cfg.wallpaper?.mode && cfg.wallpaper.mode !== 'off')) {
         const old = document.getElementById(AURORA_HOST_ID);
         if (old) old.remove();
         return;
@@ -805,6 +1138,79 @@ pre.gk-code-collapsed {
         convView.prepend(au);
       } else if (au.parentElement !== convView) {
         convView.prepend(au);
+      }
+    }
+
+    function syncCornerWatermark(activity, activeRoleId) {
+      const wmCfg = cfg.watermark || {};
+      const shouldShow = Boolean(
+        cfg.enabled &&
+        !cfg.focusMode &&
+        cfg.themeIntensity !== 'minimal' &&
+        wmCfg.enabled !== false
+      );
+      if (!shouldShow) {
+        const old = document.getElementById(WATERMARK_ID);
+        if (old) old.remove();
+        return;
+      }
+      const host = document.querySelector('[data-testid="conversation-view"]:not([data-has-browser-hole="true"])')
+        || document.querySelector('.agy-home:not([data-has-browser-hole="true"])');
+      if (!host) {
+        const old = document.getElementById(WATERMARK_ID);
+        if (old) old.remove();
+        return;
+      }
+
+      const wmRole = (wmCfg.role && wmCfg.role !== 'follow-role' && ROLE_PALETTES[wmCfg.role])
+        ? wmCfg.role
+        : (activeRoleId || resolveActiveRoleId(activity));
+      const pal = ROLE_PALETTES[wmRole] || ROLE_PALETTES.neon;
+      const isCustom = wmCfg.role === 'custom' && wmCfg.customFilePath;
+      const actName = activity?.active && /^(thinking|reading|editing|running|asking|idle)$/i.test(String(activity.action || ''))
+        ? String(activity.action).toLowerCase()
+        : 'thinking';
+      const spriteUrl = isCustom
+        ? \`\${ctx.server}/api/watermark/file?v=\${encodeURIComponent(String(cfg.updatedAt || 1))}\`
+        : \`\${ctx.server}/gemineko-sprites/\${wmRole}-\${actName}.png?v=0.5.1\`;
+      const fallbackUrl = \`\${ctx.server}/gemineko-sprites/\${wmRole}-thinking.png?v=0.5.1\`;
+
+      let wm = document.getElementById(WATERMARK_ID);
+      if (!wm) {
+        wm = document.createElement('div');
+        wm.id = WATERMARK_ID;
+        wm.innerHTML = '<div class="gk-wm-crest"></div><img class="gk-wm-sprite" alt="" /><div class="gk-wm-tag"></div>';
+        host.prepend(wm);
+      } else if (wm.parentElement !== host) {
+        host.prepend(wm);
+      }
+
+      const crest = wm.querySelector('.gk-wm-crest');
+      if (crest && crest.getAttribute('data-role') !== wmRole) {
+        crest.setAttribute('data-role', wmRole);
+        crest.innerHTML = ROLE_CREST_SVGS[wmRole] || ROLE_CREST_SVGS.neon;
+      }
+      const img = wm.querySelector('img.gk-wm-sprite');
+      if (img) {
+        if (img.dataset.gkErrBound !== '1') {
+          img.dataset.gkErrBound = '1';
+          img.addEventListener('error', () => {
+            if (img.dataset.gkFb === '1') return;
+            img.dataset.gkFb = '1';
+            img.src = img.dataset.gkFallbackSrc || \`\${ctx.server}/gemineko-sprites/neon-thinking.png?v=0.5.1\`;
+          });
+        }
+        img.dataset.gkFallbackSrc = fallbackUrl;
+        if (img.getAttribute('data-src') !== spriteUrl) {
+          img.dataset.gkFb = '0';
+          img.setAttribute('data-src', spriteUrl);
+          img.src = spriteUrl;
+        }
+      }
+      const tag = wm.querySelector('.gk-wm-tag');
+      if (tag) {
+        const nextTitle = pal.crestTitle || \`\${wmRole.toUpperCase()} · GEMINEKO\`;
+        if (tag.textContent !== nextTitle) tag.textContent = nextTitle;
       }
     }
 
@@ -830,7 +1236,7 @@ pre.gk-code-collapsed {
           <div class="gk-home-cast">
             \${HOME_ROLES.map((r) => \`
               <button type="button" class="gk-home-actor" data-home-role="\${r.id}" title="\${r.tip}">
-                <img src="\${ctx.server}/gemineko-sprites/\${r.sprite}?v=0.5.0" alt="\${r.name}" />
+                <img src="\${ctx.server}/gemineko-sprites/\${r.sprite}?v=0.5.1" alt="\${r.name}" />
                 <span>\${r.name}</span>
               </button>
             \`).join('')}
@@ -841,7 +1247,7 @@ pre.gk-code-collapsed {
           img.addEventListener('error', () => {
             if (img.dataset.gkFallback === '1') return;
             img.dataset.gkFallback = '1';
-            img.src = \`\${ctx.server}/gemineko-sprites/\${rId}-thinking.png?v=0.5.0\`;
+            img.src = \`\${ctx.server}/gemineko-sprites/\${rId}-thinking.png?v=0.5.1\`;
           });
         });
         stage.addEventListener('click', (e) => {
@@ -856,24 +1262,40 @@ pre.gk-code-collapsed {
       }
     }
 
+    function makeGlowingSvgParticle(kind, sizePx, color, glowColor) {
+      const wrap = document.createElement('span');
+      let svg = '';
+      if (kind === 'paw') {
+        svg = \`<svg width="\${sizePx}" height="\${sizePx}" viewBox="0 0 36 36" fill="none"><g fill="\${color}"><ellipse cx="18" cy="23" rx="9" ry="6.5"/><circle cx="9.2" cy="14" r="3"/><circle cx="15" cy="10.5" r="3.2"/><circle cx="21" cy="10.5" r="3.2"/><circle cx="26.8" cy="14" r="3"/></g></svg>\`;
+      } else if (kind === 'prism') {
+        svg = \`<svg width="\${sizePx}" height="\${sizePx}" viewBox="0 0 32 32" fill="none"><polygon points="16,3 28,16 16,29 4,16" fill="\${color}" fill-opacity="0.88" stroke="#ffffff" stroke-width="1.2"/></svg>\`;
+      } else {
+        svg = \`<svg width="\${sizePx}" height="\${sizePx}" viewBox="0 0 32 32" fill="none"><path d="M16 2 Q18.8 13.2 30 16 Q18.8 18.8 16 30 Q13.2 18.8 2 16 Q13.2 13.2 16 2 Z" fill="\${color}"/></svg>\`;
+      }
+      wrap.innerHTML = svg;
+      wrap.style.filter = \`drop-shadow(0 0 8px \${glowColor}) drop-shadow(0 2px 6px rgba(15,23,42,0.28))\`;
+      return wrap;
+    }
+
     function spawnSendSparks() {
       if (!cfg.enabled || cfg.focusMode || cfg.motionLevel === 'off') return;
       const now = Date.now();
-      if (now - lastSendSparkAt < 450) return;
+      if (now - lastSendSparkAt < 420) return;
       lastSendSparkAt = now;
       const box = document.getElementById('antigravity.agentSidePanelInputBox');
       if (!box) return;
       const r = box.getBoundingClientRect();
-      const syms = ['✦', '🐾', '✧'];
-      for (let i = 0; i < 3; i++) {
-        const sp = document.createElement('span');
+      const pal = ROLE_PALETTES[resolveActiveRoleId(ctx.getActivity())] || ROLE_PALETTES.neon;
+      const kinds = ['star', 'paw', 'prism', 'paw'];
+      const colors = [pal.primary, pal.accent2, pal.accent3, pal.primary];
+      for (let i = 0; i < 4; i++) {
+        const sp = makeGlowingSvgParticle(kinds[i], 20 + (i % 2) * 4, colors[i], pal.glow);
         sp.className = 'gk-send-spark';
-        sp.textContent = syms[i % syms.length];
-        sp.style.left = Math.round(r.right - 36 - i * 18) + 'px';
-        sp.style.top = Math.round(r.top + 6) + 'px';
-        sp.style.setProperty('--sx', Math.round((Math.random() - 0.5) * 28) + 'px');
+        sp.style.left = Math.round(r.right - 40 - i * 20) + 'px';
+        sp.style.top = Math.round(r.top + 4) + 'px';
+        sp.style.setProperty('--sx', Math.round((Math.random() - 0.5) * 34) + 'px');
         document.body?.appendChild(sp);
-        setTimeout(() => { if (sp.isConnected) sp.remove(); }, 900);
+        setTimeout(() => { if (sp.isConnected) sp.remove(); }, 1000);
       }
     }
 
@@ -1028,27 +1450,33 @@ pre.gk-code-collapsed {
       setTimeout(() => { if (b.isConnected) b.remove(); }, duration);
     }
 
-    function spawnStardust(originX, originY, count = 14, mode = 'confetti') {
+    /** 释放高可见度彩色发光 SVG 爪印/星芒/晶棱星尘雨 */
+    function spawnStardust(originX, originY, count = 32, mode = 'confetti') {
       if (cfg.focusMode && mode !== 'force') return;
-      const icons = mode === 'paw' ? ['🐾', '✨', '⭐', '💫'] : ['✨', '⭐', '💖', '🌟'];
-      for (let i = 0; i < count; i++) {
-        const p = document.createElement('span');
+      const pal = ROLE_PALETTES[resolveActiveRoleId(ctx.getActivity())] || ROLE_PALETTES.neon;
+      const colors = [pal.primary, pal.accent2, pal.accent3, '#a855f7', '#ec4899'];
+      const kinds = mode === 'paw' ? ['paw', 'paw', 'star', 'prism'] : ['star', 'paw', 'prism'];
+      const actualCount = mode === 'paw' ? Math.max(32, count) : Math.max(16, count);
+      for (let i = 0; i < actualCount; i++) {
+        const sizePx = mode === 'paw' ? Math.round(24 + Math.random() * 14) : Math.round(20 + Math.random() * 10);
+        const col = colors[i % colors.length];
+        const p = makeGlowingSvgParticle(kinds[i % kinds.length], sizePx, col, pal.glow);
         p.className = 'gk-stardust-particle';
-        p.textContent = icons[i % icons.length];
         const x = mode === 'paw'
-          ? Math.round(Math.random() * (window.innerWidth - 40) + 20)
-          : Math.round(originX + (Math.random() - 0.5) * 180);
+          ? Math.round(Math.random() * (window.innerWidth - 48) + 24)
+          : Math.round(originX + (Math.random() - 0.5) * 200);
         const y = mode === 'paw'
-          ? -12
-          : Math.round(originY - 12 - Math.random() * 24);
+          ? Math.round(-28 - Math.random() * 60)
+          : Math.round(originY - 14 - Math.random() * 26);
+        const durSec = mode === 'paw' ? (2.8 + Math.random() * 1.5) : (1.1 + Math.random() * 0.5);
         p.style.left = x + 'px';
         p.style.top = y + 'px';
-        p.style.setProperty('--dx', Math.round((Math.random() - 0.5) * 90) + 'px');
-        p.style.setProperty('--dy', (mode === 'paw' ? Math.round(window.innerHeight * 0.72 + Math.random() * 140) : Math.round(-50 - Math.random() * 65)) + 'px');
-        p.style.setProperty('--rot', Math.round((Math.random() - 0.5) * 320) + 'deg');
-        p.style.setProperty('--dur', (mode === 'paw' ? (1.8 + Math.random() * 0.9) : (0.9 + Math.random() * 0.4)).toFixed(2) + 's');
+        p.style.setProperty('--dx', Math.round((Math.random() - 0.5) * 140) + 'px');
+        p.style.setProperty('--dy', (mode === 'paw' ? Math.round(window.innerHeight * 0.85 + Math.random() * 160) : Math.round(-65 - Math.random() * 80)) + 'px');
+        p.style.setProperty('--rot', Math.round((Math.random() - 0.5) * 340) + 'deg');
+        p.style.setProperty('--dur', durSec.toFixed(2) + 's');
         document.body?.appendChild(p);
-        setTimeout(() => { if (p.isConnected) p.remove(); }, mode === 'paw' ? 2900 : 1400);
+        setTimeout(() => { if (p.isConnected) p.remove(); }, Math.round(durSec * 1000) + 150);
       }
     }
 
@@ -1071,7 +1499,7 @@ pre.gk-code-collapsed {
       track.className = 'gk-parade-track';
       for (const r of ['neon', 'hydrogen', 'carbon', 'claude', 'gpt']) {
         const img = document.createElement('img');
-        img.src = \`\${ctx.server}/gemineko-sprites/\${r}-running.png?v=0.5.0\`;
+        img.src = \`\${ctx.server}/gemineko-sprites/\${r}-running.png?v=0.5.1\`;
         img.alt = r;
         track.appendChild(img);
       }
@@ -1079,7 +1507,7 @@ pre.gk-code-collapsed {
       document.body?.appendChild(overlay);
       setTimeout(() => { if (overlay.isConnected) overlay.remove(); }, 3700);
 
-      spawnStardust(window.innerWidth / 2, window.innerHeight - 110, 22, 'force');
+      spawnStardust(window.innerWidth / 2, window.innerHeight - 110, 26, 'force');
       if (source === 'host') {
         postEvent({ type: 'hive-poke-burst', role, combo: 5, source: 'host' });
       }
@@ -1126,7 +1554,7 @@ pre.gk-code-collapsed {
         pokeTimestamps = [];
         triggerHiveParadeBurst(r, 'host');
       } else {
-        spawnStardust(clientX, clientY, 6, 'confetti');
+        spawnStardust(clientX, clientY, 12, 'confetti');
       }
     }
 
@@ -1155,7 +1583,7 @@ pre.gk-code-collapsed {
           lastTurnSig = activity.turnCompletedAt || String(Date.now());
           const dock = document.getElementById(ctx.dockId);
           const rect = dock ? dock.getBoundingClientRect() : { left: window.innerWidth * 0.4, top: window.innerHeight - 120 };
-          spawnStardust(rect.left + 80, rect.top, 14, 'confetti');
+          spawnStardust(rect.left + 80, rect.top, 20, 'confetti');
         }
       }
       lastActive = isActive;
@@ -1185,9 +1613,10 @@ pre.gk-code-collapsed {
       bar.id = MINI_BAR_ID;
       bar.innerHTML = \`
         <div style="display:flex;justify-content:space-between;align-items:center;font-weight:700;">
-          <span>🎨 基米窝主题快切</span>
+          <span>🎨 基米窝主题与汉化快切</span>
           <button class="gk-mini-chip" data-act="open-workshop" title="在基米窝侧边栏打开完整工坊">完整工坊 ↗</button>
         </div>
+        <div class="gk-mini-label">基底配色：</div>
         <div class="gk-mini-row" data-group="presets">
           <button class="gk-mini-chip" data-preset="auto">跟随宿主</button>
           <button class="gk-mini-chip" data-preset="nebula-day">星云冷白</button>
@@ -1195,34 +1624,54 @@ pre.gk-code-collapsed {
           <button class="gk-mini-chip" data-preset="starry-nest">星空猫窝</button>
           <button class="gk-mini-chip" data-preset="carbon-obsidian">碳晶黑曜</button>
         </div>
+        <div class="gk-mini-label">二次元浓度：</div>
         <div class="gk-mini-row">
-          <button class="gk-mini-chip" data-act="toggle-focus">专注编码 0fps</button>
-          <button class="gk-mini-chip" data-act="toggle-enabled">启用主题</button>
+          <button class="gk-mini-chip" data-intensity="vivid">浓郁二次元</button>
+          <button class="gk-mini-chip" data-intensity="balanced">均衡日常</button>
+          <button class="gk-mini-chip" data-intensity="minimal">极简专注</button>
+        </div>
+        <div class="gk-mini-label">反重力宿主汉化：</div>
+        <div class="gk-mini-row">
+          <button class="gk-mini-chip" data-i18n="auto">跟随系统</button>
+          <button class="gk-mini-chip" data-i18n="neko-zh">哈基米萌系</button>
+          <button class="gk-mini-chip" data-i18n="zh">标准中文</button>
+          <button class="gk-mini-chip" data-i18n="off">English</button>
+        </div>
+        <div class="gk-mini-row" style="margin-top:2px;">
+          <button class="gk-mini-chip" data-act="toggle-focus">专注 0fps</button>
+          <button class="gk-mini-chip" data-act="rain">🐾 爪印雨</button>
           <button class="gk-mini-chip" data-act="burst">💥 捅基米窝</button>
+          <button class="gk-mini-chip" data-act="toggle-enabled">总开关</button>
         </div>
       \`;
       bar.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
         const preset = btn.getAttribute('data-preset');
+        const intensity = btn.getAttribute('data-intensity');
+        const i18nMode = btn.getAttribute('data-i18n');
         const act = btn.getAttribute('data-act');
         if (preset) {
-          cfg = sanitizeLocalCfg({ ...cfg, enabled: true, preset });
-          applyThemeDom(ctx.getActivity());
-          syncMiniBarState();
+          applyConfig({ ...cfg, enabled: true, preset });
           persistPatch({ enabled: true, preset });
+        } else if (intensity) {
+          applyConfig({ ...cfg, enabled: true, themeIntensity: intensity });
+          persistPatch({ enabled: true, themeIntensity: intensity });
+        } else if (i18nMode) {
+          const nextI18n = { ...(cfg.i18n || {}), mode: i18nMode };
+          applyConfig({ ...cfg, i18n: nextI18n });
+          persistPatch({ i18n: nextI18n });
         } else if (act === 'toggle-focus') {
           const next = !cfg.focusMode;
-          cfg = sanitizeLocalCfg({ ...cfg, focusMode: next });
-          applyThemeDom(ctx.getActivity());
-          syncMiniBarState();
+          applyConfig({ ...cfg, focusMode: next });
           persistPatch({ focusMode: next });
         } else if (act === 'toggle-enabled') {
           const next = !cfg.enabled;
-          cfg = sanitizeLocalCfg({ ...cfg, enabled: next });
-          applyThemeDom(ctx.getActivity());
-          syncMiniBarState();
+          applyConfig({ ...cfg, enabled: next });
           persistPatch({ enabled: next });
+        } else if (act === 'rain') {
+          spawnStardust(window.innerWidth / 2, 0, 34, 'paw');
+          bar.classList.remove('is-open');
         } else if (act === 'burst') {
           triggerHiveParadeBurst(lastRole || 'neon', 'host');
           bar.classList.remove('is-open');
@@ -1242,6 +1691,12 @@ pre.gk-code-collapsed {
       bar.querySelectorAll('[data-preset]').forEach((b) => {
         b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-preset') === cfg.preset);
       });
+      bar.querySelectorAll('[data-intensity]').forEach((b) => {
+        b.classList.toggle('is-active', cfg.enabled && b.getAttribute('data-intensity') === (cfg.themeIntensity || 'vivid'));
+      });
+      bar.querySelectorAll('[data-i18n]').forEach((b) => {
+        b.classList.toggle('is-active', b.getAttribute('data-i18n') === (cfg.i18n?.mode || 'auto'));
+      });
       const focusBtn = bar.querySelector('[data-act="toggle-focus"]');
       if (focusBtn) focusBtn.classList.toggle('is-active', Boolean(cfg.focusMode));
       const enBtn = bar.querySelector('[data-act="toggle-enabled"]');
@@ -1255,7 +1710,7 @@ pre.gk-code-collapsed {
       bar.classList.toggle('is-open', open);
       if (open && anchorBtn) {
         const r = anchorBtn.getBoundingClientRect();
-        bar.style.left = Math.max(12, Math.min(window.innerWidth - 268, Math.round(r.left))) + 'px';
+        bar.style.left = Math.max(12, Math.min(window.innerWidth - 304, Math.round(r.left))) + 'px';
         bar.style.top = Math.max(18, Math.round(r.top - bar.offsetHeight - 10)) + 'px';
       }
     }
@@ -1413,7 +1868,7 @@ pre.gk-code-collapsed {
         <button type="button" data-c="btw">💬 /btw 侧边快问</button>
         <button type="button" data-c="copy">📋 \${selText ? '复制选中内容' : (pickedPath ? '复制识别路径' : '复制当前片段')}</button>
         <button type="button" data-c="ref">📎 作为 @引用填入输入框</button>
-        <button type="button" data-c="theme">🎨 快速切换基米窝主题 / 专注档</button>
+        <button type="button" data-c="theme">🎨 切换基米窝皮肤 / 浓度 / 汉化</button>
       \`;
       menu.onclick = (ev) => {
         const b = ev.target.closest('button');
@@ -1435,7 +1890,7 @@ pre.gk-code-collapsed {
         menu.classList.remove('is-open');
       };
       menu.classList.add('is-open');
-      menu.style.left = Math.max(8, Math.min(window.innerWidth - 210, e.clientX)) + 'px';
+      menu.style.left = Math.max(8, Math.min(window.innerWidth - 220, e.clientX)) + 'px';
       menu.style.top = Math.max(8, Math.min(window.innerHeight - 165, e.clientY)) + 'px';
     }
 
@@ -1466,8 +1921,8 @@ pre.gk-code-collapsed {
       }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && String(e.key || '').toLowerCase() === 'm') {
         e.preventDefault();
-        spawnStardust(window.innerWidth / 2, 0, 20, 'paw');
-        showSpeechBubble('🐾 爪印星尘雨降临基米窝！', 2200);
+        spawnStardust(window.innerWidth / 2, 0, 34, 'paw');
+        showSpeechBubble('🐾 炫彩爪印星尘雨降临基米窝！', 2200);
         return;
       }
       if (e.key === KONAMI_SEQ[konamiIdx]) {
@@ -1483,8 +1938,10 @@ pre.gk-code-collapsed {
 
     function applyConfig(nextCfg) {
       cfg = sanitizeLocalCfg(nextCfg);
-      applyThemeDom(ctx.getActivity());
+      const act = ctx.getActivity();
+      applyThemeDom(act);
       syncMiniBarState();
+      ctx.onConfigApplied?.(cfg);
     }
 
     function triggerEvent(evt) {
@@ -1492,8 +1949,8 @@ pre.gk-code-collapsed {
       if (evt.type === 'hive-poke-burst') {
         triggerHiveParadeBurst(evt.role || 'neon', 'sidecar');
       } else if (evt.type === 'stardust-rain') {
-        spawnStardust(window.innerWidth / 2, 0, 22, 'paw');
-        showSpeechBubble('✨ 来自侧边栏的爪印星尘雨~', 2200);
+        spawnStardust(window.innerWidth / 2, 0, 36, 'paw');
+        showSpeechBubble('✨ 来自基米窝的炫彩爪印星尘雨~', 2200);
       }
     }
 
@@ -1514,6 +1971,7 @@ pre.gk-code-collapsed {
         decorateLongCodeBlocks();
         if (cfg.enabled) {
           syncConvAurora();
+          syncCornerWatermark(ctx.getActivity(), resolveActiveRoleId(ctx.getActivity()));
           syncHomeStage();
         }
       }
@@ -1547,7 +2005,7 @@ pre.gk-code-collapsed {
       document.removeEventListener('click', onGlobalClickCloseMenus, true);
       window.removeEventListener('keydown', onKeyDownComposerOrEgg, true);
 
-      for (const id of [THEME_STYLE_ID, WP_LAYER_ID, AURORA_HOST_ID, HOME_STAGE_ID, NIGHT_LAYER_ID, AURORA_SWEEP_ID, OUTLINE_FAB_ID, OUTLINE_POP_ID, CTX_MENU_ID, MINI_BAR_ID]) {
+      for (const id of [THEME_STYLE_ID, WP_LAYER_ID, AURORA_HOST_ID, WATERMARK_ID, HOME_STAGE_ID, NIGHT_LAYER_ID, AURORA_SWEEP_ID, OUTLINE_FAB_ID, OUTLINE_POP_ID, CTX_MENU_ID, MINI_BAR_ID]) {
         const el = document.getElementById(id);
         if (el) el.remove();
       }
@@ -1559,10 +2017,10 @@ pre.gk-code-collapsed {
       }
       const root = document.documentElement;
       if (root) {
-        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
+        for (const attr of ['data-gk-theme','data-gk-scheme','data-gk-role','data-gk-intensity','data-gk-radius','data-gk-motion','data-gk-focus','data-gk-smooth','data-gk-accent-on','data-gk-wallpaper']) {
           root.removeAttribute(attr);
         }
-        for (const prop of ['--gk-role-primary','--gk-role-accent2','--gk-role-accent3','--gk-role-glow','--gk-role-gradient','--gk-role-spark','--gk-aurora-1','--gk-aurora-2','--gk-aurora-3','--gk-ambient-alpha']) {
+        for (const prop of ['--gk-role-primary','--gk-role-accent2','--gk-role-accent3','--gk-role-glow','--gk-role-gradient','--gk-role-spark','--gk-role-tint','--gk-catnest-pattern','--gk-aurora-1','--gk-aurora-2','--gk-aurora-3','--gk-ambient-alpha','--gk-watermark-opacity']) {
           root.style.removeProperty(prop);
         }
       }
