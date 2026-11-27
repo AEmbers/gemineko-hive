@@ -140,6 +140,16 @@ test('35 张角色×动作 128x128 PNG 立绘全部就绪且具备 RGBA 透明�
       assert.ok(frameCount >= 2, `${role}-${action}.png 动画帧数应 >= 2，实际为 ${frameCount}`);
     }
   }
+
+  for (const gemName of ['home-star-gem-light.png', 'home-star-gem-dark.png']) {
+    const gemPath = path.join(spritesDir, gemName);
+    assert.ok(fs.existsSync(gemPath), `缺少首页 3D 星钻素材: ${gemName}`);
+    const buf = fs.readFileSync(gemPath);
+    assert.equal(buf.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', `${gemName} 不是合法 PNG`);
+    assert.equal(buf.readUInt32BE(16), 256, `${gemName} 宽度应为 256`);
+    assert.equal(buf.readUInt32BE(20), 256, `${gemName} 高度应为 256`);
+    assert.equal(buf[25], 6, `${gemName} 应为 RGBA(colorType=6) 透明 PNG`);
+  }
 });
 
 test('buildGeminekoBundle 生成轻量化自包含脚本并包含透明猫窝/花名与全量汉化能力', () => {
@@ -629,6 +639,10 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(cdpScript, /home-greeting-mark/);
     assert.match(cdpScript, /gemineko-home-emblem/);
     assert.match(cdpScript, /gk-he-gem/);
+    assert.match(cdpScript, /gk-he-caustic/);
+    assert.match(cdpScript, /gkGem3DFloat/);
+    assert.match(cdpScript, /--gk-gem-ry/);
+    assert.match(cdpScript, /data:image\/png;base64/);
     assert.match(cdpScript, /gkGemSheenSweep/);
     assert.match(cdpScript, /gkStarTwinkle/);
     assert.match(cdpScript, /syncHomeBrandEmblem/);

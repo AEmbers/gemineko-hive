@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.6.5] - 2026-11-27
+
+### Changed & Restored
+- **左上角小图标无损还原为「流动炫彩圆角宝石方框 × 发光纯白猫爪星芒」**：
+  - 恢复 `v0.6.2` 备受好评的 `[data-testid="app-icon-new-conversation-button"]` 造型（`28×28px` 圆角炫彩宝石底座 + `19×19px` 发光纯白猫爪与右上星芒）；
+- **空白首页正中央主 Logo 升级为「电影级 4 层视差裸眼 3D 晶透猫耳星钻」**：
+  - 预渲染浅/深双色高透 3D 立体晶透猫耳星钻素材，经外部四向泛洪抠图生成 `256×256` RGBA 透明贴图（`assets/sprites/home-star-gem-light.png`、`home-star-gem-dark.png`），并内联至主题运行时按 `data-gk-scheme="light" / "dark"` 无缝切换；
+  - 构建 `#gemineko-home-emblem` 真实 3D 透视舞台（`116×116px`、`perspective: 680px`、`preserve-3d`），由底部霓虹彩虹焦散投影层（`translateZ(-22px)`）、核心 3D 晶透猫耳星钻本体（`translateZ(0px)`）、随轮廓裁剪的前景高光追踪扫光层（`translateZ(14px)`）与最前景悬浮伴生碎星（`translateZ(28px)`）组成，实现常态 `gkGem3DFloat` 裸眼 3D 微摆及鼠标 380px 内实时 3D 倾角、反方向焦散位移与棱镜高光追踪效果。
+
 ## [0.6.4] - 2026-11-27
 
 ### Changed

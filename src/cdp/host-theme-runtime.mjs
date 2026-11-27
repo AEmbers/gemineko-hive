@@ -3,7 +3,12 @@
  * 参考真实宿主 CSS Token 与 data-testid 选择器深度适配全界面，零修改 app.asar。
  */
 
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DEFAULT_HOST_THEME_CONFIG, ROLE_PALETTES, THEME_PRESETS } from '../theme/host-theme-config.mjs';
+
+const THEME_RUNTIME_DIR = dirname(fileURLToPath(import.meta.url));
 
 function pawGroupSvg(x, y, rot, scale = 1) {
   return [
@@ -178,28 +183,33 @@ function buildPawSpinnerSvgMap() {
   return out;
 }
 
-/** 左上角《基米窝》精简版 4 切面炫彩猫耳星钻（✦）SVG data URI */
+/** 左上角《基米窝》纯白发光猫爪×星芒矢量徽标（叠加在流动炫彩宝石底座之上） */
 function buildTopBrandPawUri() {
   const svg = [
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" fill="none">',
-    '<defs>',
-    '<linearGradient id="gkt1" x1="4" y1="6" x2="18" y2="18" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#E0F2FE"/><stop offset="100%" stop-color="#38BDF8"/></linearGradient>',
-    '<linearGradient id="gkt2" x1="18" y1="4" x2="32" y2="18" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#60A5FA"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient>',
-    '<linearGradient id="gkt3" x1="4" y1="18" x2="18" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#A855F7"/><stop offset="100%" stop-color="#EC4899"/></linearGradient>',
-    '<linearGradient id="gkt4" x1="18" y1="18" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#F43F5E"/><stop offset="100%" stop-color="#FBBF24"/></linearGradient>',
-    '</defs>',
-    '<path d="M10.5 14Q7 8.5 8 4.8Q12 5.5 15.5 9.2Z" fill="url(#gkt1)" fill-opacity="0.88" stroke="#FFFFFF" stroke-width="0.9"/>',
-    '<path d="M25.5 14Q29 8.5 28 4.8Q24 5.5 20.5 9.2Z" fill="url(#gkt2)" fill-opacity="0.88" stroke="#FFFFFF" stroke-width="0.9"/>',
-    '<path d="M3.5 18Q15 15 18 3.5L18 18Z" fill="url(#gkt1)"/>',
-    '<path d="M18 3.5Q21 15 32.5 18L18 18Z" fill="url(#gkt2)"/>',
-    '<path d="M3.5 18Q15 21 18 32.5L18 18Z" fill="url(#gkt3)"/>',
-    '<path d="M32.5 18Q21 21 18 32.5L18 18Z" fill="url(#gkt4)"/>',
-    '<path d="M18 3.5Q21 15 32.5 18Q21 21 18 32.5Q15 21 3.5 18Q15 15 18 3.5Z" stroke="#FFFFFF" stroke-opacity="0.85" stroke-width="0.9"/>',
-    '<path d="M18 9L19.4 16.6L27 18L19.4 19.4L18 27L16.6 19.4L9 18L16.6 16.6Z" fill="#FFFFFF" fill-opacity="0.72"/>',
-    '<path d="M30.2 5.2L30.8 7.2L32.8 7.8L30.8 8.4L30.2 10.4L29.6 8.4L27.6 7.8L29.6 7.2Z" fill="#FBBF24"/>',
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">',
+    '<path d="M12 12.2c-2.6 0-4.6 1.75-4.6 3.9 0 1.45 1.15 2.45 2.7 2.45.78 0 1.38-.22 1.9-.22s1.12.22 1.9.22c1.55 0 2.7-1 2.7-2.45 0-2.15-2-3.9-4.6-3.9Z" fill="#ffffff"/>',
+    '<circle cx="6.7" cy="10.8" r="1.45" fill="#ffffff"/>',
+    '<circle cx="9.9" cy="8.5" r="1.55" fill="#ffffff"/>',
+    '<circle cx="14.1" cy="8.5" r="1.55" fill="#ffffff"/>',
+    '<circle cx="17.3" cy="10.8" r="1.45" fill="#ffffff"/>',
+    '<path d="M19.2 2.4L19.85 4.35L21.8 5L19.85 5.65L19.2 7.6L18.55 5.65L16.6 5L18.55 4.35Z" fill="#FFFBEB"/>',
     '</svg>',
   ].join('');
   return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+}
+
+/** 读取预渲染 3D 晶透猫耳星钻 256×256 透明 PNG 为内联 Base64 Data URI（带矢量兜底） */
+function readHomeGemDataUri(fileName, fallbackBuilder) {
+  try {
+    const absPath = resolve(THEME_RUNTIME_DIR, '..', '..', 'assets', 'sprites', fileName);
+    if (existsSync(absPath)) {
+      const b64 = readFileSync(absPath).toString('base64');
+      return `url("data:image/png;base64,${b64}")`;
+    }
+  } catch {
+    // 忽略读取异常并降级到内置 SVG
+  }
+  return fallbackBuilder();
 }
 
 /** 空白首页正中央 120×120 珠宝级 8 切面立体炫彩哈基米猫耳星钻（✦）SVG data URI */
@@ -263,7 +273,8 @@ export function buildHostThemeRuntimeSnippet() {
   const roleSpinnersJson = JSON.stringify(buildRoleSpinnerSvgMap());
   const pawSpinnersJson = JSON.stringify(buildPawSpinnerSvgMap());
   const topBrandPawJson = JSON.stringify(buildTopBrandPawUri());
-  const homeBrandCatJson = JSON.stringify(buildHomeBrandCatUri());
+  const homeGemLightJson = JSON.stringify(readHomeGemDataUri('home-star-gem-light.png', buildHomeBrandCatUri));
+  const homeGemDarkJson = JSON.stringify(readHomeGemDataUri('home-star-gem-dark.png', buildHomeBrandCatUri));
 
   return `
   function initHostThemeSuite(ctx) {
@@ -275,7 +286,8 @@ export function buildHostThemeRuntimeSnippet() {
     const ROLE_SPINNERS = ${roleSpinnersJson};
     const PAW_SPINNERS = ${pawSpinnersJson};
     const TOP_BRAND_PAW_URI = ${topBrandPawJson};
-    const HOME_BRAND_CAT_URI = ${homeBrandCatJson};
+    const HOME_GEM_LIGHT_URI = ${homeGemLightJson};
+    const HOME_GEM_DARK_URI = ${homeGemDarkJson};
     const THEME_STYLE_ID = 'gemineko-host-theme-v5';
     const WP_LAYER_ID = 'gemineko-wallpaper-layer';
     const AURORA_HOST_ID = 'gemineko-conv-aurora';
@@ -1442,18 +1454,27 @@ pre.gk-code-collapsed {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
-@keyframes gkHomeLogoFloat {
-  0%, 100% { transform: translateY(0px) scale(1); }
-  50% { transform: translateY(-4px) scale(1.03); }
+@keyframes gkGem3DFloat {
+  0%, 100% { transform: translate3d(0px, 0px, 0px) rotateX(4deg) rotateY(-6deg) rotateZ(-0.6deg); }
+  33% { transform: translate3d(0px, -4px, 6px) rotateX(-3deg) rotateY(7deg) rotateZ(0.8deg); }
+  66% { transform: translate3d(0px, -2px, 3px) rotateX(5deg) rotateY(3deg) rotateZ(-0.3deg); }
+}
+@keyframes gkGemIridescence {
+  0%, 100% {
+    filter: drop-shadow(0 14px 28px rgba(79, 70, 229, 0.28)) drop-shadow(0 4px 12px rgba(56, 189, 248, 0.24)) saturate(1.06) hue-rotate(-5deg);
+  }
+  50% {
+    filter: drop-shadow(0 18px 34px rgba(168, 85, 247, 0.34)) drop-shadow(0 6px 16px rgba(236, 72, 153, 0.26)) saturate(1.18) hue-rotate(8deg);
+  }
 }
 @keyframes gkGemSheenSweep {
-  0%, 58% { transform: translateX(-145%) rotate(24deg); opacity: 0; }
-  72% { opacity: 0.92; }
-  88%, 100% { transform: translateX(155%) rotate(24deg); opacity: 0; }
+  0%, 56% { transform: translateX(-150%) rotate(24deg); opacity: 0; }
+  70% { opacity: 0.85; }
+  88%, 100% { transform: translateX(160%) rotate(24deg); opacity: 0; }
 }
 @keyframes gkStarTwinkle {
-  0%, 100% { opacity: 0.45; transform: scale(0.84) rotate(0deg); }
-  50% { opacity: 1; transform: scale(1.16) rotate(16deg); }
+  0%, 100% { opacity: 0.45; transform: translateZ(28px) scale(0.84) rotate(0deg); }
+  50% { opacity: 1; transform: translateZ(28px) scale(1.16) rotate(16deg); }
 }
 @keyframes gkAuroraFlowDriftA {
   0%, 100% { transform: translate3d(-4%, 2%, 0) scale(0.96, 1.0); filter: blur(36px) saturate(145%) hue-rotate(-8deg); }
@@ -1483,7 +1504,7 @@ html[data-gk-theme] #\${AURORA_HOST_ID} {
   mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.24) 22%, #000 52%, #000 100%) !important;
 }
 
-/* 焦点 1：左上角 Antigravity 小 A 替换为精简立体炫彩猫耳星钻（✦） */
+/* 焦点 1：左上角 Antigravity 小 A 全量还原为《基米窝》发光炫彩猫爪星芒宝石徽章 */
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"] {
   position: relative !important;
   width: 28px !important;
@@ -1506,45 +1527,42 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-ne
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"]::before {
   content: "";
   position: absolute;
-  inset: -4px;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.36) 0%, rgba(139, 92, 246, 0.28) 42%, rgba(236, 72, 153, 0.16) 68%, transparent 85%);
-  filter: blur(5px);
-  opacity: 0.45;
-  transition: opacity 0.22s ease;
+  inset: 0;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #0EA5E9 0%, #6366F1 32%, #A855F7 56%, #EC4899 78%, #F59E0B 100%);
+  background-size: 220% 220%;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 4px 14px -2px rgba(139, 92, 246, 0.45), 0 0 10px rgba(14, 165, 233, 0.28);
+  animation: gkPrismHairlineFlow 7s linear infinite;
   pointer-events: none;
-}
-html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"]:hover::before {
-  opacity: 0.92;
 }
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"]::after {
   content: "";
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 19px;
+  height: 19px;
   background-image: \${TOP_BRAND_PAW_URI};
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  filter: drop-shadow(0 2px 6px rgba(139, 92, 246, 0.34));
+  filter: drop-shadow(0 1px 3px rgba(15, 23, 42, 0.32));
   pointer-events: none;
   z-index: 1;
 }
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="app-icon-new-conversation-button"]:hover {
-  transform: scale(1.14) rotate(-6deg) !important;
+  transform: scale(1.08) rotate(-4deg) !important;
 }
 
-/* 焦点 3：空白首页中央大 A 全量替换为 96×96 立体多切面炫彩猫耳星钻（✦）+ 镜面斜扫光 + 伴生碎星 */
+/* 焦点 3：空白首页中央大 A 全量升级为 116×116 电影级裸眼 3D 晶透猫耳星钻（✦）× 4 层视差折射 */
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) .agy-home .home-greeting-mark,
 html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="home-greeting"] .home-greeting-mark {
   display: none !important;
 }
 #\${HOME_EMBLEM_ID} {
   position: relative !important;
-  width: 96px !important;
-  height: 96px !important;
-  min-width: 96px !important;
-  min-height: 96px !important;
+  width: 116px !important;
+  height: 116px !important;
+  min-width: 116px !important;
+  min-height: 116px !important;
   margin: 0 auto 14px !important;
   display: flex !important;
   align-items: center !important;
@@ -1553,87 +1571,135 @@ html[data-gk-theme]:not([data-gk-intensity="minimal"]) [data-testid="home-greeti
   user-select: none !important;
   overflow: visible !important;
   flex-shrink: 0 !important;
+  perspective: 680px !important;
+  perspective-origin: 50% 48% !important;
 }
 #\${HOME_EMBLEM_ID} .gk-he-halo {
   position: absolute;
-  inset: -26px;
+  inset: -28px;
   border-radius: 999px;
   pointer-events: none;
-  filter: blur(24px);
-  opacity: 0.52;
+  filter: blur(26px);
+  opacity: 0.56;
   background:
-    radial-gradient(circle at 30% 34%, rgba(56, 189, 248, 0.52) 0%, transparent 56%),
-    radial-gradient(circle at 72% 38%, rgba(139, 92, 246, 0.48) 0%, transparent 56%),
-    radial-gradient(circle at 52% 74%, rgba(236, 72, 153, 0.42) 0%, rgba(245, 158, 11, 0.24) 42%, transparent 72%);
+    radial-gradient(circle at 28% 32%, rgba(56, 189, 248, 0.52) 0%, transparent 56%),
+    radial-gradient(circle at 74% 38%, rgba(168, 85, 247, 0.48) 0%, transparent 56%),
+    radial-gradient(circle at 50% 76%, rgba(236, 72, 153, 0.42) 0%, rgba(251, 191, 36, 0.24) 44%, transparent 72%);
   animation: gkAuroraFlowDriftA 7.5s ease-in-out infinite;
 }
 html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-halo {
+  opacity: 0.78;
+}
+#\${HOME_EMBLEM_ID} .gk-he-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  will-change: transform;
+  animation: gkGem3DFloat 6.2s ease-in-out infinite;
+  transition: transform 0.28s var(--gk-ease-spring);
+}
+#\${HOME_EMBLEM_ID} .gk-he-stage.is-tilting {
+  animation: none !important;
+  transform: rotateX(var(--gk-gem-rx, 0deg)) rotateY(var(--gk-gem-ry, 0deg)) translateZ(6px) !important;
+  transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+#\${HOME_EMBLEM_ID}:hover .gk-he-stage {
+  transform: rotateX(var(--gk-gem-rx, -4deg)) rotateY(var(--gk-gem-ry, 6deg)) scale(1.06) translateZ(10px) !important;
+}
+#\${HOME_EMBLEM_ID}.is-sparkling .gk-he-stage {
+  animation: none !important;
+  transform: rotateX(-8deg) rotateY(12deg) scale(1.14) translateZ(14px) !important;
+}
+#\${HOME_EMBLEM_ID} .gk-he-caustic {
+  position: absolute;
+  inset: 10px;
+  border-radius: 999px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 36% 40%, rgba(56, 189, 248, 0.56) 0%, transparent 52%),
+    radial-gradient(circle at 68% 42%, rgba(192, 132, 252, 0.52) 0%, transparent 52%),
+    radial-gradient(circle at 52% 68%, rgba(244, 114, 182, 0.44) 0%, transparent 56%);
+  filter: blur(12px);
   opacity: 0.68;
+  transform: translate3d(var(--gk-gem-cx, 0px), var(--gk-gem-cy, 0px), -22px) scale(0.92);
+  transition: transform 0.18s ease-out, opacity 0.24s ease;
+}
+html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-caustic {
+  opacity: 0.92;
+  filter: blur(14px) brightness(1.16);
 }
 #\${HOME_EMBLEM_ID} .gk-he-gem {
   position: relative;
   z-index: 1;
-  width: 96px;
-  height: 96px;
+  width: 116px;
+  height: 116px;
+  display: block;
   pointer-events: none;
-  background-image: \${HOME_BRAND_CAT_URI};
+  transform: translateZ(0px);
+  background-image: \${HOME_GEM_LIGHT_URI};
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  filter: drop-shadow(0 10px 26px rgba(99, 102, 241, 0.28)) drop-shadow(0 3px 10px rgba(236, 72, 153, 0.20));
-  transition: transform 0.24s var(--gk-ease-spring), filter 0.24s ease;
-  animation: gkHomeLogoFloat 4.4s ease-in-out infinite;
-  overflow: hidden;
+  animation: gkGemIridescence 5.4s ease-in-out infinite;
+  transition: filter 0.24s ease;
+}
+html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-gem {
+  background-image: \${HOME_GEM_DARK_URI};
+}
+#\${HOME_EMBLEM_ID}.is-sparkling .gk-he-gem {
+  filter: brightness(1.18) saturate(1.26) drop-shadow(0 0 30px rgba(255, 255, 255, 0.88)) drop-shadow(0 10px 28px rgba(139, 92, 246, 0.52)) !important;
 }
 #\${HOME_EMBLEM_ID} .gk-he-sheen {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  -webkit-mask-image: \${HOME_BRAND_CAT_URI};
-  mask-image: \${HOME_BRAND_CAT_URI};
+  transform: translateZ(14px);
+  -webkit-mask-image: \${HOME_GEM_LIGHT_URI};
+  mask-image: \${HOME_GEM_LIGHT_URI};
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
   -webkit-mask-size: contain;
   mask-size: contain;
+  background: radial-gradient(circle 48px at var(--gk-gem-gx, 36%) var(--gk-gem-gy, 28%), rgba(255, 255, 255, 0.52) 0%, rgba(186, 230, 253, 0.22) 48%, transparent 76%);
+  mix-blend-mode: screen;
+  overflow: hidden;
+}
+html[data-gk-scheme="dark"] #\${HOME_EMBLEM_ID} .gk-he-sheen {
+  -webkit-mask-image: \${HOME_GEM_DARK_URI};
+  mask-image: \${HOME_GEM_DARK_URI};
 }
 #\${HOME_EMBLEM_ID} .gk-he-sheen::before {
   content: "";
   position: absolute;
-  inset: -30%;
-  background: linear-gradient(122deg, transparent 36%, rgba(255, 255, 255, 0.78) 49%, rgba(255, 255, 255, 0.92) 50%, rgba(255, 255, 255, 0.72) 51%, transparent 64%);
-  animation: gkGemSheenSweep 4.2s ease-in-out infinite;
+  inset: -34%;
+  background: linear-gradient(122deg, transparent 36%, rgba(255, 255, 255, 0.72) 49%, rgba(255, 255, 255, 0.92) 50%, rgba(255, 255, 255, 0.68) 51%, transparent 64%);
+  animation: gkGemSheenSweep 4.6s ease-in-out infinite;
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   pointer-events: none;
   line-height: 1;
+  transform: translateZ(28px);
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark-a {
   top: 4px;
-  right: 2px;
+  right: 4px;
   font-size: 13px !important;
   color: #FBBF24;
-  text-shadow: 0 0 10px rgba(251, 191, 36, 0.78);
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.82);
   animation: gkStarTwinkle 3.2s ease-in-out infinite;
 }
 #\${HOME_EMBLEM_ID} .gk-he-spark-b {
-  bottom: 6px;
-  left: 4px;
+  bottom: 8px;
+  left: 6px;
   font-size: 11px !important;
   color: #38BDF8;
-  text-shadow: 0 0 9px rgba(56, 189, 248, 0.76);
+  text-shadow: 0 0 9px rgba(56, 189, 248, 0.80);
   animation: gkStarTwinkle 3.8s ease-in-out 1.4s infinite;
-}
-#\${HOME_EMBLEM_ID}:hover .gk-he-gem {
-  transform: scale(1.08) translateY(-2px);
-  filter: drop-shadow(0 14px 32px rgba(99, 102, 241, 0.36)) drop-shadow(0 4px 14px rgba(236, 72, 153, 0.28));
-}
-#\${HOME_EMBLEM_ID}.is-sparkling .gk-he-gem {
-  transform: scale(1.16) !important;
-  filter: brightness(1.14) drop-shadow(0 0 28px rgba(255, 255, 255, 0.85)) drop-shadow(0 8px 26px rgba(139, 92, 246, 0.45)) !important;
 }
 html[data-gk-theme] .agy-home > :not(#\${AURORA_HOST_ID}):not(#\${WATERMARK_ID}) {
   position: relative;
@@ -2077,6 +2143,7 @@ html[data-gk-theme]:is([data-gk-focus="1"], [data-gk-motion="off"]) :is(
   [data-testid="app-icon-new-conversation-button"]::before,
   [data-testid="conversation-row-sidebar"][data-selected="true"]::after,
   #\${HOME_EMBLEM_ID} .gk-he-halo,
+  #\${HOME_EMBLEM_ID} .gk-he-stage,
   #\${HOME_EMBLEM_ID} .gk-he-gem,
   #\${HOME_EMBLEM_ID} .gk-he-sheen::before,
   #\${HOME_EMBLEM_ID} .gk-he-spark,
@@ -2223,8 +2290,8 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       if (!emblem) {
         emblem = document.createElement('div');
         emblem.id = HOME_EMBLEM_ID;
-        emblem.title = '点击摸摸基米窝炫彩猫耳星钻 ✦';
-        emblem.innerHTML = '<span class="gk-he-halo"></span><span class="gk-he-gem"><span class="gk-he-sheen"></span></span><span class="gk-he-spark gk-he-spark-a">✦</span><span class="gk-he-spark gk-he-spark-b">✦</span>';
+        emblem.title = '点击摸摸基米窝 3D 晶透猫耳星钻 ✦';
+        emblem.innerHTML = '<span class="gk-he-halo"></span><div class="gk-he-stage"><span class="gk-he-caustic"></span><span class="gk-he-gem"></span><span class="gk-he-sheen"></span><span class="gk-he-spark gk-he-spark-a">✦</span><span class="gk-he-spark gk-he-spark-b">✦</span></div>';
         emblem.addEventListener('click', (e) => {
           e.stopPropagation();
           emblem.classList.remove('is-sparkling');
@@ -2682,6 +2749,15 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       el.style.removeProperty('--gk-rim-alpha');
     }
 
+    function clearHomeGemTilt() {
+      const stage = document.querySelector('#' + HOME_EMBLEM_ID + ' .gk-he-stage');
+      if (!stage) return;
+      stage.classList.remove('is-tilting');
+      for (const prop of ['--gk-gem-rx', '--gk-gem-ry', '--gk-gem-cx', '--gk-gem-cy', '--gk-gem-gx', '--gk-gem-gy']) {
+        stage.style.removeProperty(prop);
+      }
+    }
+
     function clearAllOpticalRims() {
       if (rimRafId) {
         cancelAnimationFrame(rimRafId);
@@ -2689,6 +2765,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       }
       for (const el of litRimEls) clearRimProps(el);
       litRimEls.clear();
+      clearHomeGemTilt();
     }
 
     function flushOpticalRimFrame() {
@@ -2724,6 +2801,31 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       }
       litRimEls.clear();
       for (const el of nextLit) litRimEls.add(el);
+
+      // 首页中央 3D 晶透星钻鼠标视差（旋转晶体角度 + 焦散反向位移 + 镜面高光追踪）
+      const emblem = document.getElementById(HOME_EMBLEM_ID);
+      const stage = emblem?.querySelector('.gk-he-stage');
+      if (emblem && stage && getMotionEnabled()) {
+        const er = emblem.getBoundingClientRect();
+        const cx = er.left + er.width / 2;
+        const cy = er.top + er.height / 2;
+        const gDist = Math.hypot(px - cx, py - cy);
+        if (er.width > 16 && gDist <= 380) {
+          const nx = Math.max(-1, Math.min(1, (px - cx) / 220));
+          const ny = Math.max(-1, Math.min(1, (py - cy) / 220));
+          stage.style.setProperty('--gk-gem-rx', (-ny * 17).toFixed(2) + 'deg');
+          stage.style.setProperty('--gk-gem-ry', (nx * 19).toFixed(2) + 'deg');
+          stage.style.setProperty('--gk-gem-cx', (-nx * 12).toFixed(1) + 'px');
+          stage.style.setProperty('--gk-gem-cy', (-ny * 10).toFixed(1) + 'px');
+          stage.style.setProperty('--gk-gem-gx', (50 + nx * 34).toFixed(1) + '%');
+          stage.style.setProperty('--gk-gem-gy', (50 + ny * 34).toFixed(1) + '%');
+          stage.classList.add('is-tilting');
+        } else {
+          clearHomeGemTilt();
+        }
+      } else if (stage) {
+        clearHomeGemTilt();
+      }
     }
 
     function onRimPointerMove(e) {
