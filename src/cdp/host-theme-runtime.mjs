@@ -3426,7 +3426,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       } else if (!isActive && lastActive) {
         const elapsed = Date.now() - activeSinceMs;
         if (
-          elapsed >= 8000 &&
+          elapsed >= 4000 &&
           !activity.hasError &&
           cfg.enabled &&
           cfg.linkages?.taskFinishConfetti !== false &&
@@ -3434,7 +3434,8 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         ) {
           lastTurnSig = activity.turnCompletedAt || String(Date.now());
           const dock = document.getElementById(ctx.dockId);
-          const rect = dock ? dock.getBoundingClientRect() : { left: window.innerWidth * 0.4, top: window.innerHeight - 120 };
+          const dr = dock && !dock.classList.contains('is-hidden') ? dock.getBoundingClientRect() : null;
+          const rect = dr && dr.width > 0 ? dr : { left: window.innerWidth * 0.4, top: window.innerHeight - 120 };
           spawnStardust(rect.left + 80, rect.top, 20, 'confetti');
           if (cfg.memes?.enabled !== false && cfg.memes?.autoFinishSticker !== false) {
             ctx.onLongTaskFinished?.(nextRole);

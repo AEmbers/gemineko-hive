@@ -756,6 +756,9 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     const themeRuntimeTxt = fs.readFileSync(path.join(REPO_ROOT, 'src/cdp/host-theme-runtime.mjs'), 'utf8');
     assert.match(themeRuntimeTxt, /--gk-tail-x/, '气泡应支持动态指向尾巴 --gk-tail-x');
     assert.match(themeRuntimeTxt, /function onDockPoke\(role,\s*clientX,\s*clientY,\s*anchorEl\s*=\s*null\)/);
+    assert.match(themeRuntimeTxt, /elapsed\s*>=\s*4000/, '自动收工贴纸阈值应降至 4000ms');
+    const rulesTxt = fs.readFileSync(path.join(REPO_ROOT, 'rules/AGENTS.md'), 'utf8');
+    assert.match(rulesTxt, /默认主动/, 'rules/AGENTS.md 应包含积极发表情规范');
     assert.match(bundleContent, /gemineko-sidecar-shell/);
     assert.match(bundleContent, /guardLoadingSkeleton/);
     assert.match(bundleContent, /offsetWidth/);

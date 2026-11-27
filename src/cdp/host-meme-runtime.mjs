@@ -243,15 +243,18 @@ export function buildHostMemeRuntimeSnippet() {
       if (!picked) return;
 
       const dock = document.getElementById(ctx.dockId);
-      const rect = dock ? dock.getBoundingClientRect() : { left: 28, top: window.innerHeight - 128 };
+      const dr = dock && !dock.classList.contains('is-hidden') ? dock.getBoundingClientRect() : null;
+      const rect = dr && dr.width > 0
+        ? dr
+        : { left: Math.max(24, window.innerWidth - 220), top: Math.max(160, window.innerHeight - 96) };
       const toast = document.createElement('div');
       toast.id = TOAST_ID;
       toast.innerHTML = \`<img src="\${picked.url}" alt="" /><span>收工啦 · \${picked.caption}</span>\`;
       toast.style.left = Math.max(12, Math.min(window.innerWidth - 180, Math.round(rect.left + 10))) + 'px';
-      toast.style.top = Math.max(20, Math.round(rect.top - 122)) + 'px';
+      toast.style.top = Math.max(20, Math.min(window.innerHeight - 136, Math.round(rect.top - 122))) + 'px';
       toast.addEventListener('click', () => toast.remove());
       document.body?.appendChild(toast);
-      setTimeout(() => { if (toast.isConnected) toast.remove(); }, 4800);
+      setTimeout(() => { if (toast.isConnected) toast.remove(); }, 5500);
     }
 
     function insertMemeToComposer(caption) {
