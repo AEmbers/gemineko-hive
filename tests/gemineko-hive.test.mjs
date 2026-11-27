@@ -749,6 +749,8 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     assert.match(bundleContent, /gemineko_typography_v1/);
     assert.match(bundleContent, /gn-font-val/);
     assert.match(bundleContent, /\.gn-live-sub[\s\S]{0,160}--gn-font-scale/);
+    assert.match(bundleContent, /image-rendering:\s*auto\s*!important/);
+    assert.match(bundleContent, /\.msg-av\.bee\s*\{[\s\S]{0,180}--gn-font-scale/);
     for (const relSrc of ['src/cdp/host-injector.mjs', 'src/cdp/host-theme-runtime.mjs', 'src/cdp/host-meme-runtime.mjs']) {
       const srcTxt = fs.readFileSync(path.join(REPO_ROOT, relSrc), 'utf8');
       assert.match(srcTxt, /var\(--gk-host-font-scale,\s*1\)/, `${relSrc} 应接入 --gk-host-font-scale 动态缩放`);

@@ -1841,7 +1841,7 @@ export function bootGeminekoHive() {
         const ch = resolveMemberCharacter(name);
         const src = getSpriteSrcForGifOrMsg(ch.name, ch.state);
         const pxCls = prefs.artStyle === 'pixel' ? ' is-pixel' : '';
-        return `<span class="msg-av bee" style="background:transparent" aria-hidden="true"><img class="gn-msg-avatar${pxCls}" data-gn-agent="${ch.name.replace(/"/g, '&quot;')}" src="${src}" alt="" width="24" height="24"></span>`;
+        return `<span class="msg-av bee" style="background:transparent" aria-hidden="true"><img class="gn-msg-avatar${pxCls}" data-gn-agent="${ch.name.replace(/"/g, '&quot;')}" src="${src}" alt="" width="48" height="48"></span>`;
       };
     }
 

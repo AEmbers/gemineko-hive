@@ -12,6 +12,10 @@
 - **调优猫娘表情积极触发节奏与客户端自动收工贴纸**：
   - [rules/AGENTS.md](rules/AGENTS.md) 将日常问答、接梗与任务收工（含 Plan-Execute 收尾）调整为默认主动调用 `send_meme` 配 1 张贴切贴纸，中途执行期仍保持专注不刷屏；
   - 将 [host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs) 的自动撒花与收工贴纸触发阈值从 `8s` 降至 `4s`，并优化 [host-meme-runtime.mjs](src/cdp/host-meme-runtime.mjs) 中 Dock 隐藏时的浮层锚点回退与 `5.5s` 展示时长。
+- **修复蜂窝立绘模糊锯齿并联动字号缩放全端立绘与图标**：
+  - 解除原生 `styles.css` / `hive.css` 注入的 `image-rendering: pixelated` 锯齿采样，为 [gemineko-theme.css](src/theme/gemineko-theme.css) 中所有 25 态 Q 版立绘与图标（`.gn-sprite-img`、`.gn-live-avatar`、`.gn-brand-dot`、`.msg-av.bee img.gn-msg-avatar`、`.graph .node-bee` 等）恢复平滑重采样 `image-rendering: auto !important`（像素画风 `.is-pixel` 保留像素风）；
+  - 将消息板头像由 `24×24`（`32×28` 非正方框）扩大至 `46px × var(--gn-font-scale)`（默认约 `50×50px`，悬停放大 `1.22×`），成员/总览/关系图 `.beebox`、顶栏徽标与实时头像同步跟随 `--gn-font-scale` 缩放；
+  - 将 [host-injector.mjs](src/cdp/host-injector.mjs)、[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs) 与 [host-meme-runtime.mjs](src/cdp/host-meme-runtime.mjs) 中的 Dock 猫娘、行内小猫、首页角色、猫爪大纲球与表情缩略图全部联动 `var(--gk-host-font-scale)` 缩放。
 
 ### Changed & Upgraded
 - **品牌视觉同源双生重塑（锚定官方三视图 [q-neon.png](assets/triviews/q-neon.png) × Google Gemini 四色光学棱镜）**：

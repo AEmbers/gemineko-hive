@@ -242,8 +242,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       }
       #\${DOCK_ID} .gk-dock-cat {
         position: relative;
-        width: 58px;
-        height: 58px;
+        width: calc(58px * var(--gk-host-font-scale, 1));
+        height: calc(58px * var(--gk-host-font-scale, 1));
         flex-shrink: 0;
         pointer-events: auto;
         cursor: pointer;
@@ -255,9 +255,10 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         justify-content: center;
       }
       #\${DOCK_ID} img.gk-dock-sprite {
-        width: 58px;
-        height: 58px;
+        width: calc(58px * var(--gk-host-font-scale, 1));
+        height: calc(58px * var(--gk-host-font-scale, 1));
         object-fit: contain;
+        image-rendering: auto;
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
@@ -359,8 +360,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         border: none;
         background: rgba(139, 92, 246, 0.14);
         color: #6d28d9;
-        width: 18px;
-        height: 18px;
+        width: calc(18px * var(--gk-host-font-scale, 1));
+        height: calc(18px * var(--gk-host-font-scale, 1));
         border-radius: 999px;
         cursor: pointer;
         font-size: calc(11px * var(--gk-host-font-scale, 1)) !important;
@@ -381,8 +382,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         display: inline-flex !important;
         align-items: center;
         justify-content: center;
-        width: 34px;
-        height: 34px;
+        width: calc(34px * var(--gk-host-font-scale, 1));
+        height: calc(34px * var(--gk-host-font-scale, 1));
         margin-right: 6px;
         flex-shrink: 0;
         background: transparent !important;
@@ -392,9 +393,10 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
         vertical-align: middle;
       }
       .\${INLINE_CLASS} img.gk-inline-sprite {
-        width: 34px;
-        height: 34px;
+        width: calc(34px * var(--gk-host-font-scale, 1));
+        height: calc(34px * var(--gk-host-font-scale, 1));
         object-fit: contain;
+        image-rendering: auto;
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;

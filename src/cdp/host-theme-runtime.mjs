@@ -1189,9 +1189,10 @@ html[data-gk-smooth="1"] * { scroll-behavior: smooth; }
   background: color-mix(in srgb, var(--gk-role-primary, #8b5cf6) 14%, transparent);
 }
 #\${HOME_STAGE_ID} .gk-home-actor img {
-  width: 54px;
-  height: 54px;
+  width: calc(58px * var(--gk-host-font-scale, 1));
+  height: calc(58px * var(--gk-host-font-scale, 1));
   object-fit: contain;
+  image-rendering: auto;
   filter: drop-shadow(0 5px 12px var(--gk-role-glow));
 }
 #\${HOME_STAGE_ID} .gk-home-actor span {
@@ -1456,7 +1457,7 @@ html[data-gk-scheme="dark"] #\${NIGHT_LAYER_ID} {
   box-shadow: 0 10px 30px rgba(139, 92, 246, 0.42); pointer-events: none; animation: gkBubblePop 0.25s ease-out;
 }
 .gk-dock-theme-btn {
-  border: none; background: rgba(139, 92, 246, 0.16); color: inherit; width: 19px; height: 19px;
+  border: none; background: rgba(139, 92, 246, 0.16); color: inherit; width: calc(19px * var(--gk-host-font-scale, 1)); height: calc(19px * var(--gk-host-font-scale, 1));
   border-radius: 999px; cursor: pointer; font-size: calc(11px * var(--gk-host-font-scale, 1)) !important; line-height: 1; padding: 0;
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
@@ -1476,11 +1477,11 @@ html[data-gk-scheme="dark"] #\${NIGHT_LAYER_ID} {
 }
 #\${MINI_BAR_ID} button.gk-mini-chip.is-active { background: var(--gk-role-primary, #8b5cf6); color: #fff; border-color: transparent; }
 #\${OUTLINE_FAB_ID} {
-  position: fixed; right: 18px; top: 96px; z-index: 2147483620; width: 32px; height: 32px; border-radius: 999px;
+  position: fixed; right: 18px; top: 96px; z-index: 2147483620; width: calc(32px * var(--gk-host-font-scale, 1)); height: calc(32px * var(--gk-host-font-scale, 1)); border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--gk-role-primary) 34%, var(--glass-border)); background: var(--gk-popover-bg, var(--glass));
   background-image: var(--gk-surface-sheen); color: var(--gk-role-primary, #8b5cf6);
   box-shadow: var(--nux-chip-shadow); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-  font-size: 15px !important; opacity: 0.82; transition: opacity 0.18s ease, transform 0.18s var(--gk-ease-spring);
+  font-size: calc(15px * var(--gk-host-font-scale, 1)) !important; opacity: 0.82; transition: opacity 0.18s ease, transform 0.18s var(--gk-ease-spring);
 }
 #\${OUTLINE_FAB_ID}:hover { opacity: 1; transform: scale(1.1); }
 #\${OUTLINE_POP_ID} {

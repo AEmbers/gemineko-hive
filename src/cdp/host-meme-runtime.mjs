@@ -152,7 +152,7 @@ export function buildHostMemeRuntimeSnippet() {
   transform: scale(1.06);
   border-color: var(--gk-role-primary, #8b5cf6);
 }
-#\${PICKER_ID} button.gk-mp-item img { width: 54px; height: 54px; object-fit: contain; }
+#\${PICKER_ID} button.gk-mp-item img { width: calc(56px * var(--gk-host-font-scale, 1)); height: calc(56px * var(--gk-host-font-scale, 1)); object-fit: contain; image-rendering: auto; }
 #\${PICKER_ID} button.gk-mp-item span { font-size: calc(9.5px * var(--gk-host-font-scale, 1)) !important; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
       \`;
       document.head.appendChild(st);

@@ -135,10 +135,11 @@ html[data-gn-preset="carbon-obsidian"] {
 }
 
 .gn-brand-dot {
-  width: 20px;
-  height: 20px;
+  width: calc(22px * var(--gn-font-scale, 1.077));
+  height: calc(22px * var(--gn-font-scale, 1.077));
   border-radius: 7px;
   object-fit: cover;
+  image-rendering: auto !important;
   box-shadow: 0 0 0 1.5px rgba(245, 158, 11, 0.45);
 }
 
@@ -314,9 +315,10 @@ html[data-gn-preset="carbon-obsidian"] {
 }
 
 .gn-live-avatar {
-  width: 42px;
-  height: 42px;
+  width: calc(48px * var(--gn-font-scale, 1.077));
+  height: calc(48px * var(--gn-font-scale, 1.077));
   object-fit: contain;
+  image-rendering: auto !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -390,6 +392,7 @@ html[data-gn-preset="carbon-obsidian"] {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  image-rendering: auto !important;
   display: block;
   background: transparent !important;
   border: none !important;
@@ -405,7 +408,7 @@ html[data-gn-preset="carbon-obsidian"] {
 }
 
 .gn-sprite-img.is-pixel {
-  image-rendering: pixelated;
+  image-rendering: pixelated !important;
   border-radius: 6px;
 }
 
@@ -481,25 +484,40 @@ body:not([data-gemineko-minimal="1"]) .o2-tile {
   animation: gn-zzz-float 2.1s ease-in-out infinite;
 }
 
-/* 消息板头像彻底透明无白底 */
+/* 消息板头像彻底透明无白底 + 解除原生 pixelated 锯齿并随字号放大 */
+.feed .msg:not(.msg-system) {
+  grid-template-columns: calc(46px * var(--gn-font-scale, 1.077)) minmax(0, 1fr) !important;
+  column-gap: calc(12px * var(--gn-font-scale, 1.077)) !important;
+}
+
 .msg-av.bee {
+  width: calc(46px * var(--gn-font-scale, 1.077)) !important;
+  height: calc(46px * var(--gn-font-scale, 1.077)) !important;
+  overflow: visible !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
 }
 
 .msg-av.bee img.gn-msg-avatar {
-  width: 100%;
-  height: 100%;
+  width: 100% !important;
+  height: 100% !important;
   object-fit: contain;
+  image-rendering: auto !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   filter: drop-shadow(0 1px 4px rgba(124, 108, 246, 0.24));
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.msg-av.bee img.gn-msg-avatar:hover {
+  transform: scale(1.22);
+  filter: drop-shadow(0 4px 10px rgba(124, 108, 246, 0.42));
 }
 
 .msg-av.bee img.gn-msg-avatar.is-pixel {
-  image-rendering: pixelated;
+  image-rendering: pixelated !important;
 }
 
 /* ---------- 真正像「星空猫窝」的柔光星云 + 猫爪星芒美学（零六边形） ---------- */
@@ -1314,4 +1332,31 @@ body {
 .gn-action-chip,
 .gn-store-tag {
   font-size: calc(10px * var(--gn-font-scale, 1.077));
+}
+/* 蜂窝成员列表/总览/关系图平滑抗锯齿与随字号同步放大 */
+.graph .node-bee,
+.pane .hv-row img,
+.pane .o2-onb-i img {
+  image-rendering: auto !important;
+}
+.pane .o2-mrow.bees {
+  grid-template-columns: calc(58px * var(--gn-font-scale, 1.077)) minmax(0, 1fr) !important;
+}
+.pane .o2-mav.bee .beebox,
+.pane .o2-tile .beebox,
+.pane .hv-bee .beebox,
+.pane .hv-row img {
+  width: calc(52px * var(--gn-font-scale, 1.077)) !important;
+  height: calc(52px * var(--gn-font-scale, 1.077)) !important;
+}
+.pane .o2-tile.lg .beebox,
+.pane .hv-bee.sz-q .beebox {
+  width: calc(70px * var(--gn-font-scale, 1.077)) !important;
+  height: calc(70px * var(--gn-font-scale, 1.077)) !important;
+}
+.pane .o2-wchip.bee .beebox,
+.pane .o2-swarm .o2-sb .beebox,
+.pane .hv-bee.sz-xs .beebox {
+  width: calc(28px * var(--gn-font-scale, 1.077)) !important;
+  height: calc(28px * var(--gn-font-scale, 1.077)) !important;
 }
