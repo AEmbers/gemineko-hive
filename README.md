@@ -44,6 +44,43 @@
       <sub><strong>🎨 伴生猫娘 Dock × 零延迟主题与汉化快切面板</strong></sub>
     </td>
   </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/13-ask-stage-starry-nest.webp" alt="深色交互提问思考舞台" /><br />
+      <sub><strong>🤔 交互提问思考舞台（深色 · 抱臂沉思猫娘 × 选项轮盘气泡）</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/14-ask-stage-nebula-day.webp" alt="浅色交互提问思考舞台" /><br />
+      <sub><strong>💡 交互提问思考舞台（浅色 · 悬停实时锁亮选项）</strong></sub>
+    </td>
+  </tr>
+</table>
+
+### 🐝→🐱 原生 Swarm vs 《基米窝》4 大视图 1:1 换装对比
+
+> 同一份 5 角色实时蜂巢数据下，官方原版 Swarm（左）与 **Gemineko Hive · 基米窝**（右）四大核心视图 1:1 对比：
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/15-swarm-compare-overview.webp" alt="Swarm 总览对比：官方原版 vs 基米窝美化" /><br />
+      <sub><strong>📊 总览（Overview）对比：极简列表 → 光学猫爪暗纹 × APNG 实时态</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/16-swarm-compare-board.webp" alt="Swarm 消息板对比：官方原版 vs 基米窝美化" /><br />
+      <sub><strong>💬 消息板（Board）对比：像素蜂群 → 25 态透明猫娘气泡</strong></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/17-swarm-compare-members.webp" alt="Swarm 成员对比：官方原版 vs 基米窝美化" /><br />
+      <sub><strong>👥 成员（Members）对比：默认小标 → 角色专属立绘 × 状态徽章</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/18-swarm-compare-graph.webp" alt="Swarm 关系图谱对比：官方原版 vs 基米窝美化" /><br />
+      <sub><strong>🕸️ 关系图谱（Graph）对比：黑框六边形 → 猫耳软垫关系猫窝</strong></sub>
+    </td>
+  </tr>
 </table>
 
 ### 🎨 7 大官配 & 社区主题全览（纯净首页 × 对话双屏）
