@@ -11,6 +11,116 @@
   面向 <strong>Google Antigravity</strong> 的开源主题引擎 × 社区主题商店：内置官方旗舰《基米窝》（极薄 `app.asar` 主进程引导免 `19222` 端口 + 剧场级反重力冷启动画 + 3D 晶透猫耳星钻 + 12 控件专属彩蛋软萌配音 + 25 态透明 APNG 伴生猫娘 + 5 角色联动皮肤），支持第三方主题包热插拔、一键导出投稿与 GitHub Star/更新推送闭环！
 </p>
 
+<p align="center">
+  <img src="docs/showcase/03-starry-nest-chat-hive.webp" width="96%" alt="Gemineko Hive 星空猫窝 · 对话 × 基米窝双屏实时联动" />
+</p>
+
+---
+
+## 🖼️ 全主题高保真视觉画廊（7 套主题 × 多维交互）
+
+> 以下全部画面均实拍于纯净隔离环境：左侧为实时主题、输入栏伴生猫娘、代码高亮与免 ASAR 内联猫娘表情，右侧为独立《基米窝》侧边栏（支持 5 角色 25 态演示与实时追踪）。
+
+### 🌟 剧场级启动动画 & 核心交互高光
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/08-startup-five-neko.webp" alt="剧场级反重力启动动画" /><br />
+      <sub><strong>剧场级冷启动画（星钻绽放 × 五哈基米环绕）</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/09-theme-store.webp" alt="社区主题商店卡片墙" /><br />
+      <sub><strong>🏪 社区主题商店 × 一键换装与热导入</strong></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/11-swarm-demo-graph.webp" alt="5 角色猫耳软垫关系猫窝图谱" /><br />
+      <sub><strong>🐾 猫耳软垫「关系猫窝」5 角色实时图谱</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/12-dock-quick-bar.webp" alt="输入栏猫娘 Dock 与主题汉化快切浮层" /><br />
+      <sub><strong>🎨 伴生猫娘 Dock × 零延迟主题与汉化快切面板</strong></sub>
+    </td>
+  </tr>
+</table>
+
+### 🎨 7 大官配 & 社区主题全览（纯净首页 × 对话双屏）
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/01-nebula-day-home.webp" alt="星云冷白 · 纯净首页" /><br />
+      <sub><strong>01. 星云冷白（官方浅色 · 首页舞台）</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/01-nebula-day-chat-hive.webp" alt="星云冷白 · 对话双屏" /><br />
+      <sub><strong>01. 星云冷白（对话 × 基米窝双屏）</strong></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/02-cream-paper-home.webp" alt="奶油暖纸 · 纯净首页" /><br />
+      <sub><strong>02. 奶油暖纸（低蓝光护眼 · 首页舞台）</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/02-cream-paper-chat-hive.webp" alt="奶油暖纸 · 对话双屏" /><br />
+      <sub><strong>02. 奶油暖纸（对话 × 基米窝双屏）</strong></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/03-starry-nest-home.webp" alt="星空猫窝 · 纯净首页" /><br />
+      <sub><strong>03. 星空猫窝（官方旗舰深色 · 首页舞台）</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/03-starry-nest-chat-hive.webp" alt="星空猫窝 · 对话双屏" /><br />
+      <sub><strong>03. 星空猫窝（对话 × 基米窝双屏）</strong></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/04-carbon-obsidian-home.webp" alt="碳晶黑曜 · 纯净首页" /><br />
+      <sub><strong>04. 碳晶黑曜（纯黑高定 · 首页舞台）</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/04-carbon-obsidian-chat-hive.webp" alt="碳晶黑曜 · 对话双屏" /><br />
+      <sub><strong>04. 碳晶黑曜（对话 × 基米窝双屏）</strong></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/05-kyoto-sakura-glass-home.webp" alt="京都樱吹雪 · 纯净首页" /><br />
+      <sub><strong>05. 京都樱吹雪 · 光学玻璃（社区包 · 首页）</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/05-kyoto-sakura-glass-chat-hive.webp" alt="京都樱吹雪 · 对话双屏" /><br />
+      <sub><strong>05. 京都樱吹雪（对话 × 基米窝双屏）</strong></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/06-cyber-emerald-matrix-home.webp" alt="翡翠矩阵 · 纯净首页" /><br />
+      <sub><strong>06. 翡翠矩阵 · 赛博终端（社区包 · 首页）</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/06-cyber-emerald-matrix-chat-hive.webp" alt="翡翠矩阵 · 对话双屏" /><br />
+      <sub><strong>06. 翡翠矩阵（对话 × 基米窝双屏）</strong></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/showcase/07-solar-amber-atelier-home.webp" alt="暖金琥珀 · 纯净首页" /><br />
+      <sub><strong>07. 暖金琥珀 · 创作室（社区包 · 首页）</strong></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/showcase/07-solar-amber-atelier-chat-hive.webp" alt="暖金琥珀 · 对话双屏" /><br />
+      <sub><strong>07. 暖金琥珀（对话 × 基米窝双屏）</strong></sub>
+    </td>
+  </tr>
+</table>
+
 ---
 
 ## ✨ v0.8.0–v0.8.6 最新旗舰特性
