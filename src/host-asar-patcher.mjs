@@ -9,6 +9,7 @@
 
 import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +17,21 @@ import vm from 'node:vm';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
+
+function resolveRawFs() {
+  if (process.versions?.electron) {
+    try {
+      const req = createRequire(import.meta.url);
+      const origFs = req('original-fs');
+      if (origFs && typeof origFs.openSync === 'function') {
+        return origFs;
+      }
+    } catch {}
+  }
+  return fs;
+}
+
+const rawFs = resolveRawFs();
 
 export const HOST_ASAR_MARK_START = "'__GEMINEKO_HOST_LOADER_START__';";
 export const HOST_ASAR_MARK_END = "'__GEMINEKO_HOST_LOADER_END__';";
@@ -43,20 +59,20 @@ export class AsarArchive {
   }
 
   static readHeader(asarPath) {
-    const fd = fs.openSync(asarPath, 'r');
+    const fd = rawFs.openSync(asarPath, 'r');
     try {
       const sizeBuf = Buffer.alloc(8);
-      fs.readSync(fd, sizeBuf, 0, 8, 0);
+      rawFs.readSync(fd, sizeBuf, 0, 8, 0);
       const headerSize = sizeBuf.readUInt32LE(4);
       const headerBuf = Buffer.alloc(headerSize);
-      fs.readSync(fd, headerBuf, 0, headerSize, 8);
+      rawFs.readSync(fd, headerBuf, 0, headerSize, 8);
       const jsonLen = headerBuf.readUInt32LE(4);
       const jsonStr = headerBuf.subarray(8, 8 + jsonLen).toString('utf8');
       const header = JSON.parse(jsonStr);
       const baseOffset = 8 + headerSize;
       return { header, baseOffset, headerSize, jsonLen };
     } finally {
-      fs.closeSync(fd);
+      rawFs.closeSync(fd);
     }
   }
 
@@ -86,22 +102,22 @@ export class AsarArchive {
     }
     if (cur.unpacked) {
       const unpackedPath = path.join(`${sourceAsar}.unpacked`, ...parts);
-      return fs.existsSync(unpackedPath) ? fs.readFileSync(unpackedPath) : null;
+      return rawFs.existsSync(unpackedPath) ? rawFs.readFileSync(unpackedPath) : null;
     }
     if (cur.offset === undefined || cur.size === undefined) return null;
-    const fd = fs.openSync(sourceAsar, 'r');
+    const fd = rawFs.openSync(sourceAsar, 'r');
     try {
       const buf = Buffer.alloc(cur.size);
-      fs.readSync(fd, buf, 0, cur.size, baseOffset + parseInt(cur.offset, 10));
+      rawFs.readSync(fd, buf, 0, cur.size, baseOffset + parseInt(cur.offset, 10));
       return buf;
     } finally {
-      fs.closeSync(fd);
+      rawFs.closeSync(fd);
     }
   }
 
   static patchArchive(sourceAsar, targetAsar, filePatches) {
     const { header, baseOffset } = this.readHeader(sourceAsar);
-    const srcFd = fs.openSync(sourceAsar, 'r');
+    const srcFd = rawFs.openSync(sourceAsar, 'r');
     let destFd = null;
     try {
       const fileEntries = [];
@@ -154,23 +170,23 @@ export class AsarArchive {
       }
 
       const newHeaderBuf = this.createHeaderBuffer(JSON.stringify(header));
-      destFd = fs.openSync(targetAsar, 'w');
-      fs.writeSync(destFd, newHeaderBuf, 0, newHeaderBuf.length, 0);
+      destFd = rawFs.openSync(targetAsar, 'w');
+      rawFs.writeSync(destFd, newHeaderBuf, 0, newHeaderBuf.length, 0);
 
       let writePos = newHeaderBuf.length;
       const copyChunk = 256 * 1024;
       const copyBuf = Buffer.alloc(copyChunk);
       for (const item of packed) {
         if (item.patchBuffer) {
-          fs.writeSync(destFd, item.patchBuffer, 0, item.patchBuffer.length, writePos);
+          rawFs.writeSync(destFd, item.patchBuffer, 0, item.patchBuffer.length, writePos);
           writePos += item.patchBuffer.length;
         } else {
           let remaining = item.oldSize;
           let readPos = baseOffset + item.oldOffset;
           while (remaining > 0) {
             const toRead = Math.min(remaining, copyChunk);
-            fs.readSync(srcFd, copyBuf, 0, toRead, readPos);
-            fs.writeSync(destFd, copyBuf, 0, toRead, writePos);
+            rawFs.readSync(srcFd, copyBuf, 0, toRead, readPos);
+            rawFs.writeSync(destFd, copyBuf, 0, toRead, writePos);
             readPos += toRead;
             writePos += toRead;
             remaining -= toRead;
@@ -178,8 +194,8 @@ export class AsarArchive {
         }
       }
     } finally {
-      if (destFd !== null) try { fs.closeSync(destFd); } catch {}
-      try { fs.closeSync(srcFd); } catch {}
+      if (destFd !== null) try { rawFs.closeSync(destFd); } catch {}
+      try { rawFs.closeSync(srcFd); } catch {}
     }
   }
 }
@@ -231,7 +247,7 @@ export function resolveAntigravityResources(opts = {}) {
   let resourcesDir = '';
   for (const dir of candidates) {
     if (!dir) continue;
-    if (fs.existsSync(path.join(dir, 'app.asar'))) {
+    if (rawFs.existsSync(path.join(dir, 'app.asar'))) {
       resourcesDir = dir;
       break;
     }
@@ -525,7 +541,7 @@ export function getHostAsarStatus(opts = {}) {
   const { resourcesDir, asarPath, bakPath } = resolveAntigravityResources(opts);
   const cliApplyCmd = buildCliCommandHint('apply');
   const cliRestoreCmd = buildCliCommandHint('restore');
-  if (!resourcesDir || !fs.existsSync(asarPath)) {
+  if (!resourcesDir || !rawFs.existsSync(asarPath)) {
     return {
       ok: true,
       found: false,
@@ -548,7 +564,7 @@ export function getHostAsarStatus(opts = {}) {
     const mainBuf = AsarArchive.readFile(asarPath, 'dist/main.js');
     const mainText = mainBuf ? mainBuf.toString('utf8') : '';
     patched = mainText.includes(HOST_ASAR_MARK_START) && mainText.includes(HOST_ASAR_MARK_END);
-    const asarBuf = fs.readFileSync(asarPath);
+    const asarBuf = rawFs.readFileSync(asarPath);
     hasLocalization = asarBuf.includes('__ANTIGRAVITY_CHINESE_LOCALIZATION_START__');
     hasMemeRenderer = asarBuf.includes('__ANTIGRAVITY_MEME_RENDERER_START__');
   } catch {}
@@ -557,7 +573,7 @@ export function getHostAsarStatus(opts = {}) {
     found: true,
     resourcesDir,
     asarPath,
-    bakExists: fs.existsSync(bakPath),
+    bakExists: rawFs.existsSync(bakPath),
     patched,
     version: patched ? HOST_ASAR_VERSION : '',
     hasLocalization,
@@ -573,20 +589,20 @@ function commitPatchedAsar(sourceAsar, targetAsar, filePatches, allowKillRunning
   try {
     AsarArchive.patchArchive(sourceAsar, tmpAsar, filePatches);
     try {
-      if (fs.existsSync(targetAsar)) fs.unlinkSync(targetAsar);
-      fs.renameSync(tmpAsar, targetAsar);
+      if (rawFs.existsSync(targetAsar)) rawFs.unlinkSync(targetAsar);
+      rawFs.renameSync(tmpAsar, targetAsar);
       return { written: true };
     } catch (err) {
       if (err?.code === 'EBUSY' || err?.code === 'EPERM' || !allowKillRunning) {
-        try { if (fs.existsSync(tmpAsar)) fs.unlinkSync(tmpAsar); } catch {}
+        try { if (rawFs.existsSync(tmpAsar)) rawFs.unlinkSync(tmpAsar); } catch {}
         return { written: false, locked: true, error: err?.message || String(err) };
       }
-      fs.copyFileSync(tmpAsar, targetAsar);
-      try { fs.unlinkSync(tmpAsar); } catch {}
+      rawFs.copyFileSync(tmpAsar, targetAsar);
+      try { rawFs.unlinkSync(tmpAsar); } catch {}
       return { written: true };
     }
   } finally {
-    try { if (fs.existsSync(tmpAsar)) fs.unlinkSync(tmpAsar); } catch {}
+    try { if (rawFs.existsSync(tmpAsar)) rawFs.unlinkSync(tmpAsar); } catch {}
   }
 }
 
@@ -597,7 +613,7 @@ function commitPatchedAsar(sourceAsar, targetAsar, filePatches, allowKillRunning
 export function applyHostAsarPatch(opts = {}) {
   const { resourcesDir, asarPath, bakPath } = resolveAntigravityResources(opts);
   const cliApplyCmd = buildCliCommandHint('apply');
-  if (!resourcesDir || !fs.existsSync(asarPath)) {
+  if (!resourcesDir || !rawFs.existsSync(asarPath)) {
     throw new Error('未检测到 Antigravity 客户端 app.asar 目录，仅可使用 CDP 兼容模式');
   }
   const allowKillRunning = Boolean(opts.allowKillRunning);
@@ -632,8 +648,8 @@ export function applyHostAsarPatch(opts = {}) {
     }
   }
 
-  if (!fs.existsSync(bakPath)) {
-    fs.copyFileSync(asarPath, bakPath);
+  if (!rawFs.existsSync(bakPath)) {
+    rawFs.copyFileSync(asarPath, bakPath);
   }
 
   const mainBuf = AsarArchive.readFile(asarPath, 'dist/main.js');
@@ -659,7 +675,7 @@ export function applyHostAsarPatch(opts = {}) {
 
   if (closedForPatch && !opts.noRestart && process.platform === 'win32') {
     const exePath = path.join(path.dirname(resourcesDir), 'Antigravity.exe');
-    if (fs.existsSync(exePath)) {
+    if (rawFs.existsSync(exePath)) {
       spawn(exePath, [], { detached: true, stdio: 'ignore' }).unref();
     }
   }
@@ -679,7 +695,7 @@ export function applyHostAsarPatch(opts = {}) {
 export function restoreHostAsarPatch(opts = {}) {
   const { resourcesDir, asarPath } = resolveAntigravityResources(opts);
   const cliRestoreCmd = buildCliCommandHint('restore');
-  if (!resourcesDir || !fs.existsSync(asarPath)) {
+  if (!resourcesDir || !rawFs.existsSync(asarPath)) {
     throw new Error('未检测到 Antigravity 客户端 app.asar 目录');
   }
   const allowKillRunning = Boolean(opts.allowKillRunning);
@@ -743,7 +759,7 @@ export function restoreHostAsarPatch(opts = {}) {
 
   if (closedForPatch && !opts.noRestart && process.platform === 'win32') {
     const exePath = path.join(path.dirname(resourcesDir), 'Antigravity.exe');
-    if (fs.existsSync(exePath)) {
+    if (rawFs.existsSync(exePath)) {
       spawn(exePath, [], { detached: true, stdio: 'ignore' }).unref();
     }
   }
