@@ -468,6 +468,11 @@ export function buildHostThemeRuntimeSnippet() {
           soundEnabled: typeof c.easterEggs?.soundEnabled === 'boolean' ? c.easterEggs.soundEnabled : true,
           unlocked: Array.isArray(c.easterEggs?.unlocked) ? c.easterEggs.unlocked : [],
         },
+        startup: {
+          enabled: typeof c.startup?.enabled === 'boolean' ? c.startup.enabled : true,
+          soundEnabled: typeof c.startup?.soundEnabled === 'boolean' ? c.startup.soundEnabled : true,
+          voiceEnabled: typeof c.startup?.voiceEnabled === 'boolean' ? c.startup.voiceEnabled : true,
+        },
         spriteQuality: cleanQ,
       };
     }
@@ -3727,6 +3732,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
           <button class="gk-mini-chip" data-i18n="off">English</button>
         </div>
         <div class="gk-mini-row" style="margin-top:2px;">
+          <button class="gk-mini-chip" data-act="replay-startup">✨ 重播片头</button>
           <button class="gk-mini-chip" data-act="meme-picker">😸 表情库</button>
           <button class="gk-mini-chip" data-act="toggle-focus">专注 0fps</button>
           <button class="gk-mini-chip" data-act="toggle-egg-sound">🔊 彩蛋音</button>
@@ -3793,6 +3799,9 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
         } else if (act === 'burst') {
           triggerHiveParadeBurst(lastRole || 'neon', 'host');
           bar.classList.remove('is-open');
+        } else if (act === 'replay-startup') {
+          bar.classList.remove('is-open');
+          ctx.replayStartup?.();
         } else if (act === 'meme-picker') {
           bar.classList.remove('is-open');
           ctx.openMemePicker?.(bar);

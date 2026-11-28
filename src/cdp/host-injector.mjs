@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { buildHostEasterEggsRuntimeSnippet } from './host-easter-eggs-runtime.mjs';
 import { buildHostI18nRuntimeSnippet } from './host-i18n-runtime.mjs';
 import { buildHostMemeRuntimeSnippet } from './host-meme-runtime.mjs';
+import { buildHostStartupRuntimeSnippet } from './host-startup-runtime.mjs';
 import { buildHostThemeRuntimeSnippet } from './host-theme-runtime.mjs';
 
 const DEFAULT_DEBUG_PORT = 19222;
@@ -182,6 +183,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   const i18nSnippet = buildHostI18nRuntimeSnippet();
   const memeSnippet = buildHostMemeRuntimeSnippet();
   const eggsSnippet = buildHostEasterEggsRuntimeSnippet();
+  const startupSnippet = buildHostStartupRuntimeSnippet();
   return `(() => {
   const SERVER = ${baseJson};
   const LOGO_URI = ${logoJson};
@@ -1101,6 +1103,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   ${memeSnippet}
   ${themeSnippet}
   ${eggsSnippet}
+  ${startupSnippet}
 
   const i18nEngine = initHostI18nEngine(INITIAL_THEME_CONFIG);
   const memeEngine = initHostMemeEngine({
@@ -1109,6 +1112,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     initialConfig: INITIAL_THEME_CONFIG,
   });
   let eggEngine = null;
+  let startupEngine = null;
   const themeSuite = initHostThemeSuite({
     server: SERVER,
     token: SIDE_TOKEN,
@@ -1119,6 +1123,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
       i18nEngine?.applyConfig?.(nextCfg);
       memeEngine?.applyConfig?.(nextCfg);
       eggEngine?.applyConfig?.(nextCfg);
+      startupEngine?.applyConfig?.(nextCfg);
       renderDockState();
       syncActiveStatusSprite();
       syncDockPosition();
@@ -1126,6 +1131,12 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     },
     onLongTaskFinished: () => memeEngine?.triggerFinishSticker?.(),
     openMemePicker: (anchorEl) => memeEngine?.toggleMemePicker?.(anchorEl),
+    replayStartup: () => startupEngine?.replay?.({ manual: true }),
+  });
+  startupEngine = initHostStartupEngine({
+    server: SERVER,
+    initialConfig: INITIAL_THEME_CONFIG,
+    spawnStardust: themeSuite?.spawnStardust,
   });
   eggEngine = initHostEasterEggs({
     server: SERVER,
@@ -1175,6 +1186,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   syncDockPosition();
   syncActiveStatusSprite();
   replaceOpenSwarmPillLogo();
+  startupEngine?.maybeAutoPlay?.();
 
   domObserver = new MutationObserver(() => {
     if (stopped) return;
@@ -1217,6 +1229,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     i18nEngine?.unmount?.();
     memeEngine?.unmount?.();
     eggEngine?.unmount?.();
+    startupEngine?.unmount?.();
     themeSuite?.unmount?.();
     cleanupLegacyNodes();
     const dock = document.getElementById(DOCK_ID);
@@ -1288,6 +1301,23 @@ export class CdpHostInjector {
     }
     await this.tryAttach();
     return this.getStatus();
+  }
+
+  /**
+   * 触发主窗口重播一次剧场级反重力启动动画。
+   * @returns {Promise<{ ok: boolean, replayed: boolean }>}
+   */
+  async replayStartup() {
+    if (!this.enabled) return { ok: false, replayed: false };
+    if (this.state !== 'attached') {
+      await this.tryAttach();
+    }
+    const resp = await this.evaluateOnTarget(
+      'Boolean(typeof window.__GEMINEKO_REPLAY_STARTUP__ === "function" && window.__GEMINEKO_REPLAY_STARTUP__({ manual: true }))',
+      true,
+    );
+    const replayed = Boolean(resp?.result?.value);
+    return { ok: replayed, replayed };
   }
 
   /**

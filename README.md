@@ -13,6 +13,21 @@
 
 ---
 
+## ✨ v0.9.0 剧场级反重力启动动画（双模 0ms 强化）
+
+- **「星钻 × 五哈基米」60fps 开场过场（零入侵 CDP 默认开箱即用）**：
+  - 每次冷启自动演绎约 `2.6s` 剧场级实时光学片头：反重力星尘升腾 → 1024px 沉睡水晶星钻绽放 → 5 位真实动态 APNG 哈基米沿星轨依次亮起环绕 → 炫彩品牌字标，自动随当前主题深浅色与角色强调色联动；
+  - **智能双轨无缝收尾**：落在首页时片头星钻精准飞入并融合到首页大星钻 Logo；落在历史对话页时化作反重力棱镜光浪向上浮散退场；任意点击 / `Esc` 瞬时跳过，并严格遵守「专注 0fps」「关闭动效」与全局静音开关；
+  - **声音仪式感**：内置立体声星晶反重力主旋律音效（`startup-chime.mp3`）与猫娘招牌开机问候语音（`startup-welcome.mp3`），可在「精细工坊」独立开关音效/语音或随时点击 **✨ 立即重播预览**（主窗口快切栏亦提供一键重播）。
+- **可选 0ms 原生 `app.asar` 零白屏强化补丁**：
+  - 支持在「精细工坊 → 反重力启动动画」查看共存状态并一键启用/无损移除，或在关闭 Antigravity 后在终端执行：
+    ```bash
+    node bin/gemineko-hive.mjs startup-asar status
+    node bin/gemineko-hive.mjs startup-asar apply
+    node bin/gemineko-hive.mjs startup-asar restore
+    ```
+  - 采用独立标记块增量注入 `dist/preload.js`，绝不覆写已有 `app.asar.bak`，与 `chinese-toolkit` / `agy-meme` 安全共存、卸载仅剥离自身标记块。
+
 ## ✨ v0.7.0 开放主题引擎 × 社区主题商店
 
 - **双层品牌架构（开源引擎 × 旗舰官包）**：

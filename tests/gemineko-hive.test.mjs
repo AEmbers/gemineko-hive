@@ -28,6 +28,14 @@ import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../s
 import { buildHostI18nRuntimeSnippet, translateHostText } from '../src/cdp/host-i18n-runtime.mjs';
 import { buildCdpOverlayScript, formatDockModelDisplay, formatDockToolDisplay } from '../src/cdp/host-injector.mjs';
 import { parseMemeCaptionFromText } from '../src/cdp/host-meme-runtime.mjs';
+import { buildHostStartupRuntimeSnippet } from '../src/cdp/host-startup-runtime.mjs';
+import {
+  STARTUP_ASAR_MARK_END,
+  STARTUP_ASAR_MARK_START,
+  applyStartupAsarPatch,
+  getStartupAsarStatus,
+  restoreStartupAsarPatch,
+} from '../src/startup-asar-patcher.mjs';
 import { BRAND_META } from '../src/meta/brand.mjs';
 import { compareSemver, createGithubPulseService } from '../src/sidecar/github-pulse.mjs';
 import { createHiveSidecarServer } from '../src/sidecar/server.mjs';
@@ -1755,5 +1763,139 @@ test('原生 Swarm 更新覆盖自动自愈：曾开启换肤则自动恢复，�
     assert.equal(untouchedSt.logoBackupExists, false);
   } finally {
     await srvUntouched.close();
+  }
+});
+
+test('剧场级反重力启动动画：配置清洗、运行时代码安全、双模 0ms app.asar 无损共存补丁与路由闭环', async () => {
+  // 1. startup 配置默认值与字段清洗
+  assert.deepEqual(DEFAULT_HOST_THEME_CONFIG.startup, {
+    enabled: true,
+    soundEnabled: true,
+    voiceEnabled: true,
+  });
+  const cleanedStartup = sanitizeHostThemeConfig({
+    startup: { enabled: false, soundEnabled: 'invalid', voiceEnabled: false },
+  });
+  assert.deepEqual(cleanedStartup.startup, {
+    enabled: false,
+    soundEnabled: true,
+    voiceEnabled: false,
+  });
+
+  // 2. 启动动画运行时代码语法与关键特性断言（绝不含 cursor: grabbing）
+  const startupSnippet = buildHostStartupRuntimeSnippet();
+  assert.doesNotMatch(startupSnippet, /cursor:\s*grabbing/);
+  assert.match(startupSnippet, /gemineko-startup-stage/);
+  assert.match(startupSnippet, /__GEMINEKO_0MS_SPLASH__/);
+  assert.match(startupSnippet, /__GEMINEKO_REPLAY_STARTUP__/);
+  assert.match(startupSnippet, /startup-chime\.mp3/);
+  assert.match(startupSnippet, /startup-welcome\.mp3/);
+  assert.match(startupSnippet, /is-docking/);
+  assert.match(startupSnippet, /is-wave-out/);
+  new Function(`${startupSnippet}\nreturn initHostStartupEngine;`);
+
+  const cdpFull = buildCdpOverlayScript('http://127.0.0.1:19876', '', { sideToken: 'tk' });
+  assert.match(cdpFull, /initHostStartupEngine/);
+  assert.match(cdpFull, /data-act="replay-startup"/);
+
+  // 3. 合成含第三方补丁（汉化 + agy-meme）的模拟 app.asar 并验证无损叠加/剥离与既有 .bak 保护
+  const tmpResDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gemineko-asar-test-'));
+  try {
+    const asarFile = path.join(tmpResDir, 'app.asar');
+    const bakFile = path.join(tmpResDir, 'app.asar.bak');
+    const locMarker = "'__ANTIGRAVITY_CHINESE_LOCALIZATION_START__';\nconsole.log('zh-cn');";
+    const memeMarker = "'__ANTIGRAVITY_MEME_RENDERER_START__';\nconsole.log('meme');";
+    const origPreload = `"use strict";\n${locMarker}\n${memeMarker}\nexports.ok = true;\n`;
+
+    const payload = Buffer.from(origPreload, 'utf8');
+    const headerJson = JSON.stringify({
+      files: {
+        dist: {
+          files: {
+            'preload.js': { size: payload.length, offset: '0' },
+          },
+        },
+      },
+    });
+    const headerBuf = AsarArchive.createHeaderBuffer(headerJson);
+    fs.writeFileSync(asarFile, Buffer.concat([headerBuf, payload]));
+    fs.writeFileSync(bakFile, Buffer.from('OFFICIAL_BAK_SENTINEL', 'utf8'));
+
+    const st0 = getStartupAsarStatus({ resourcesDir: tmpResDir });
+    assert.equal(st0.found, true);
+    assert.equal(st0.patched, false);
+    assert.equal(st0.hasLocalization, true);
+
+    const ap1 = applyStartupAsarPatch({ resourcesDir: tmpResDir, allowKillRunning: false, noRestart: true });
+    assert.equal(ap1.ok, true);
+    assert.equal(ap1.status.patched, true);
+    assert.equal(fs.readFileSync(bakFile, 'utf8'), 'OFFICIAL_BAK_SENTINEL', '绝不能覆写已存在的官方 app.asar.bak');
+
+    const patchedPreload = AsarArchive.readFile(asarFile, 'dist/preload.js').toString('utf8');
+    assert.ok(patchedPreload.includes(STARTUP_ASAR_MARK_START));
+    assert.ok(patchedPreload.includes(STARTUP_ASAR_MARK_END));
+    assert.ok(patchedPreload.includes(locMarker), '必须完整保留汉化补丁');
+    assert.ok(patchedPreload.includes(memeMarker), '必须完整保留表情包补丁');
+    assert.ok(patchedPreload.includes('__GEMINEKO_0MS_SPLASH__'));
+
+    const ap2 = applyStartupAsarPatch({ resourcesDir: tmpResDir, allowKillRunning: false, noRestart: true });
+    assert.equal(ap2.ok, true);
+    const patchedTwice = AsarArchive.readFile(asarFile, 'dist/preload.js').toString('utf8');
+    assert.equal(patchedTwice.split(STARTUP_ASAR_MARK_START).length - 1, 1);
+
+    const rs1 = restoreStartupAsarPatch({ resourcesDir: tmpResDir, allowKillRunning: false, noRestart: true });
+    assert.equal(rs1.ok, true);
+    assert.equal(rs1.status.patched, false);
+    const restoredPreload = AsarArchive.readFile(asarFile, 'dist/preload.js').toString('utf8');
+    assert.ok(!restoredPreload.includes(STARTUP_ASAR_MARK_START));
+    assert.ok(restoredPreload.includes(locMarker));
+    assert.ok(restoredPreload.includes(memeMarker));
+
+    // 4. Sidecar 音频与启动动画接口校验
+    const sb = createFakeSwarmSandbox();
+    const cfgDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gemineko-startup-cfg-'));
+    const srv = await createHiveSidecarServer({
+      port: 0,
+      enableCdp: false,
+      swarmDir: sb.swarmDir,
+      appDataDirs: [sb.appDataDir],
+      sideToken: 'test-startup-tok',
+      themeConfigPath: path.join(cfgDir, 'theme-config.json'),
+      startupAsarOpts: { resourcesDir: tmpResDir },
+    });
+    try {
+      const chimeRes = await srv.inject({ url: '/gemineko-audio/startup-chime.mp3' });
+      assert.equal(chimeRes.statusCode, 200);
+      assert.equal(chimeRes.headers['content-type'], 'audio/mpeg');
+      assert.ok(Number(chimeRes.headers['content-length']) > 5000);
+
+      const welcomeRes = await srv.inject({ url: '/gemineko-audio/startup-welcome.mp3' });
+      assert.equal(welcomeRes.statusCode, 200);
+      assert.equal(welcomeRes.headers['content-type'], 'audio/mpeg');
+      assert.ok(Number(welcomeRes.headers['content-length']) > 5000);
+
+      const asarStRes = await srv.inject({ url: '/api/startup-asar/status' });
+      assert.equal(asarStRes.statusCode, 200);
+      assert.equal(asarStRes.json().found, true);
+      assert.equal(asarStRes.json().patched, false);
+
+      const replayNoAuth = await srv.inject({ method: 'POST', url: '/api/startup/replay', body: '{}' });
+      assert.equal(replayNoAuth.statusCode, 403);
+
+      const replayOk = await srv.inject({
+        method: 'POST',
+        url: '/api/startup/replay',
+        headers: { 'x-sidecar-token': 'test-startup-tok', 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      assert.equal(replayOk.statusCode, 200);
+      assert.equal(replayOk.json().ok, false);
+    } finally {
+      await srv.close();
+      fs.rmSync(sb.root, { recursive: true, force: true });
+      fs.rmSync(cfgDir, { recursive: true, force: true });
+    }
+  } finally {
+    fs.rmSync(tmpResDir, { recursive: true, force: true });
   }
 });

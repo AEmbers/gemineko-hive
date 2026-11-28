@@ -28,6 +28,8 @@ export function createThemeWorkshopController(deps) {
     registry: [],
     registrySource: 'bundled',
     github: null,
+    startupAsar: null,
+    startupCmdHint: '',
     lastEventSeq: 0,
     loading: false,
     warning: '',
@@ -199,11 +201,12 @@ export function createThemeWorkshopController(deps) {
     state.loading = true;
     try {
       const suffix = forceRefresh ? '?refresh=1' : '';
-      const [cfgRes, regRes, ghRes, hostAsarRes] = await Promise.all([
+      const [cfgRes, regRes, ghRes, hostAsarRes, startupAsarRes] = await Promise.all([
         deps.hostApi('/api/theme/config'),
         deps.hostApi(`/api/store/registry${suffix}`),
         deps.hostApi(`/api/github/status${suffix}`),
         deps.hostApi('/api/host-asar/status').catch(() => null),
+        deps.hostApi('/api/startup-asar/status').catch(() => null),
       ]);
       if (cfgRes?.ok) {
         state.config = withLocalTypo(cfgRes.config);
@@ -224,6 +227,9 @@ export function createThemeWorkshopController(deps) {
       }
       if (hostAsarRes?.ok) {
         state.hostAsar = hostAsarRes;
+      }
+      if (startupAsarRes?.ok) {
+        state.startupAsar = startupAsarRes;
       }
       render();
     } catch {
@@ -842,7 +848,49 @@ export function createThemeWorkshopController(deps) {
 
         ${renderHostAsarCardHtml()}
 
+        ${renderStartupCardHtml(c)}
+
         ${renderEggDexCardHtml(c)}
+      </div>
+    `;
+  }
+
+  function renderStartupCardHtml(c) {
+    const st = c.startup || {};
+    const asar = state.startupAsar;
+    const badgeText = !asar
+      ? '检测中…'
+      : !asar.found
+        ? '仅 CDP 模式（未检测到本地 app.asar）'
+        : asar.patched
+          ? `✅ 0ms 强化已开启 v${escWorkshopHtml(asar.version || '0.9.0')}`
+          : '⚪ 当前仅 CDP 开场（可选开启 0ms 强化）';
+    const coexistHint = asar?.found
+      ? `共存检测：汉化 ${asar.hasLocalization ? '✅' : '—'} · 表情包 ${asar.hasMemeRenderer ? '✅' : '—'}（独立标记块安全叠加，保留既有 .bak）`
+      : '未找到本地客户端安装包，CDP 启动过场已自动接管';
+    const cmdText = state.startupCmdHint || (asar?.patched ? asar?.cliRestoreCmd : asar?.cliApplyCmd) || '';
+
+    return `
+      <div class="gn-ws-card">
+        <div class="gn-ws-card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>🚀 6. 反重力启动动画（星钻 × 五哈基米 · 双模 0ms 强化）</span>
+          <button type="button" class="gn-pill is-primary" data-ws-act="replay-startup">✨ 立即重播预览</button>
+        </div>
+        <div class="gn-ws-switches">
+          ${renderSwitchRow('冷启自动播放启动动画', 'data-ws-startup="enabled"', st.enabled !== false)}
+          ${renderSwitchRow('星晶反重力开机音效', 'data-ws-startup="soundEnabled"', st.soundEnabled !== false)}
+          ${renderSwitchRow('猫娘招牌开机问候语音', 'data-ws-startup="voiceEnabled"', st.voiceEnabled !== false)}
+        </div>
+        <div class="gn-ws-sub" style="margin-top:6px;">当前覆盖 0ms 强化状态：<strong>${badgeText}</strong></div>
+        <div class="gn-ws-sub">${escWorkshopHtml(coexistHint)}</div>
+        ${asar?.found ? `
+          <div class="gn-ws-row" style="margin-top:6px;flex-wrap:wrap;gap:6px;">
+            <button type="button" class="gn-pill" data-ws-act="apply-startup-asar">⚡ ${asar.patched ? '更新 0ms 强化补丁' : '启用 0ms 零白屏强化'}</button>
+            ${asar.patched ? '<button type="button" class="gn-pill" data-ws-act="restore-startup-asar">↺ 无损移除 0ms 补丁</button>' : ''}
+            ${cmdText ? '<button type="button" class="gn-pill" data-ws-act="copy-startup-cmd">📋 复制终端一键命令</button>' : ''}
+          </div>
+        ` : ''}
+        ${state.startupCmdHint ? `<div class="gn-ws-sub" style="margin-top:4px;word-break:break-all;">终端命令：<code>${escWorkshopHtml(state.startupCmdHint)}</code></div>` : ''}
       </div>
     `;
   }
@@ -923,7 +971,7 @@ export function createThemeWorkshopController(deps) {
     return `
       <div class="gn-ws-card">
         <div class="gn-ws-card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span>🥚 5. 哈基米彩蛋图鉴（已发现 ${found} / ${total}）</span>
+          <span>🥚 7. 哈基米彩蛋图鉴（已发现 ${found} / ${total}）</span>
           <div style="display:flex;gap:6px;align-items:center;">
             ${allDone ? `<button type="button" class="gn-pill is-primary" data-ws-act="supreme-parade">👑 召唤至尊圆头耄耋阅兵</button>` : '<span class="gn-ws-sub">集齐 13 枚解锁终极隐藏彩蛋</span>'}
             <button type="button" class="gn-pill" data-ws-act="reset-eggs" title="清空收集记录">↺ 重置图鉴</button>
@@ -1031,6 +1079,46 @@ export function createThemeWorkshopController(deps) {
         else if (act === 'keep-alchemy') void keepAlchemy();
         else if (act === 'revert-alchemy') revertAlchemy();
         else if (act === 'reset-eggs') void resetEggProgress();
+        else if (act === 'replay-startup') {
+          void deps.hostApi('/api/startup/replay', { method: 'POST', body: '{}' }).then((r) => {
+            showWorkshopToast(r?.replayed ? '✨ 已在主窗口播放反重力启动动画！' : '主窗口尚未附着，请确认 Antigravity 已打开', !r?.replayed);
+          }).catch(() => showWorkshopToast('重播请求失败', true));
+        }
+        else if (act === 'apply-startup-asar') {
+          showWorkshopToast('正在检测并写入 0ms app.asar 启动强化...');
+          void deps.hostApi('/api/startup-asar/apply', { method: 'POST', body: '{}' }).then((r) => {
+            if (r?.status) state.startupAsar = r.status;
+            if (r?.ok) {
+              state.startupCmdHint = '';
+              showWorkshopToast('✅ 0ms 启动强化补丁写入成功（重启 Antigravity 生效）');
+            } else {
+              state.startupCmdHint = r?.cliApplyCmd || state.startupAsar?.cliApplyCmd || '';
+              showWorkshopToast(r?.message || '客户端运行中无法热覆盖，请关闭后在独立终端运行下方命令', true);
+            }
+            render();
+          }).catch(() => showWorkshopToast('0ms 补丁写入失败', true));
+        }
+        else if (act === 'restore-startup-asar') {
+          void deps.hostApi('/api/startup-asar/restore', { method: 'POST', body: '{}' }).then((r) => {
+            if (r?.status) state.startupAsar = r.status;
+            if (r?.ok) {
+              state.startupCmdHint = '';
+              showWorkshopToast('↺ 已无损剥离 0ms 启动强化补丁（汉化与表情包完整保留）');
+            } else {
+              state.startupCmdHint = r?.cliRestoreCmd || state.startupAsar?.cliRestoreCmd || '';
+              showWorkshopToast(r?.message || '客户端运行中占用文件，请关闭后在独立终端运行移除命令', true);
+            }
+            render();
+          }).catch(() => showWorkshopToast('移除失败', true));
+        }
+        else if (act === 'copy-startup-cmd') {
+          const cmd = state.startupCmdHint || (state.startupAsar?.patched ? state.startupAsar?.cliRestoreCmd : state.startupAsar?.cliApplyCmd) || '';
+          if (cmd && navigator.clipboard?.writeText) {
+            void navigator.clipboard.writeText(cmd).then(() => showWorkshopToast('📋 已复制终端命令，关闭客户端后粘贴执行即可'));
+          } else {
+            showWorkshopToast(cmd || '暂无命令');
+          }
+        }
         else if (act === 'apply-host-asar') {
           showWorkshopToast('正在检测并写入极薄 app.asar 主进程引导钩子...');
           void deps.hostApi('/api/host-asar/apply', { method: 'POST', body: '{}' }).then((r) => {
@@ -1190,6 +1278,11 @@ export function createThemeWorkshopController(deps) {
       }
       if (target.getAttribute('data-ws-egg-sound') === '1') {
         void savePatch({ easterEggs: { ...(c.easterEggs || {}), soundEnabled: Boolean(target.checked) } });
+        return;
+      }
+      const startupKey = target.getAttribute('data-ws-startup');
+      if (startupKey) {
+        void savePatch({ startup: { ...(c.startup || {}), [startupKey]: Boolean(target.checked) } });
         return;
       }
       const memeKey = target.getAttribute('data-ws-meme');

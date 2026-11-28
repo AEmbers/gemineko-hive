@@ -687,6 +687,11 @@ export const DEFAULT_HOST_THEME_CONFIG = {
     soundEnabled: true,
     unlocked: [],
   },
+  startup: {
+    enabled: true,
+    soundEnabled: true,
+    voiceEnabled: true,
+  },
   spriteQuality: '1024',
   updatedAt: 0,
 };
@@ -866,6 +871,8 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
     : (ALLOWED_DOCK_SIDES.has(bDock.side) ? bDock.side : 'left');
   const srcEggs = src.easterEggs && typeof src.easterEggs === 'object' ? src.easterEggs : {};
   const bEggs = b.easterEggs || DEFAULT_HOST_THEME_CONFIG.easterEggs;
+  const srcStartup = src.startup && typeof src.startup === 'object' ? src.startup : {};
+  const bStartup = b.startup || DEFAULT_HOST_THEME_CONFIG.startup;
   const rawUnlocked = Array.isArray(srcEggs.unlocked)
     ? srcEggs.unlocked
     : (Array.isArray(bEggs.unlocked) ? bEggs.unlocked : []);
@@ -958,6 +965,11 @@ export function sanitizeHostThemeConfig(raw, base = DEFAULT_HOST_THEME_CONFIG) {
     easterEggs: {
       soundEnabled: asBool(srcEggs.soundEnabled, asBool(bEggs.soundEnabled, true)),
       unlocked: Array.from(unlockedSet),
+    },
+    startup: {
+      enabled: asBool(srcStartup.enabled, asBool(bStartup.enabled, true)),
+      soundEnabled: asBool(srcStartup.soundEnabled, asBool(bStartup.soundEnabled, true)),
+      voiceEnabled: asBool(srcStartup.voiceEnabled, asBool(bStartup.voiceEnabled, true)),
     },
     spriteQuality: ALLOWED_SPRITE_QUALITIES.has(String(src.spriteQuality || ''))
       ? String(src.spriteQuality)

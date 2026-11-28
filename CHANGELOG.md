@@ -20,6 +20,14 @@
 
 ## [Unreleased]
 
+### Added
+- **「星钻 × 五哈基米」剧场级反重力启动动画（双模 0ms 强化，#11）**：
+  - **60fps 剧场级 CDP 启动动画引擎（[host-startup-runtime.mjs](src/cdp/host-startup-runtime.mjs)、[host-injector.mjs](src/cdp/host-injector.mjs)）**：零入侵开箱即用，整合 Canvas 2D 反重力星尘光丝、1024px 沉睡水晶星钻棱镜绽放、5 位真实动态 APNG 哈基米沿星轨亮起环绕与炫彩品牌字标，随当前深浅色与强调色实时联动；总长约 `2.6s`，每次冷启自动播 1 次，支持任意点击 / `Esc` / `Space` / `Enter` 瞬时跳过，严格遵守专注 0fps 与动效开关；
+  - **智能双轨无缝收尾**：落在首页且 `#gemineko-home-emblem` 可见时，片头星钻精准缩放飞行并融合落位到首页大星钻；落在历史对话页时，化作反重力棱镜光浪向上浮散退场；
+  - **开机声音仪式感（[startup-chime.mp3](assets/audio/startup-chime.mp3)、[startup-welcome.mp3](assets/audio/startup-welcome.mp3)）**：新增立体声物理合成星晶反重力主旋律音效（失败自动降级 WebAudio 和弦）与固定招牌猫娘开机问候语音「欢迎回窝，反重力星钻已就绪喵~」，支持在精细工坊独立开关音效与语音；
+  - **可选 0ms 原生 `app.asar` 零白屏强化补丁（[startup-asar-patcher.mjs](src/startup-asar-patcher.mjs)、[gemineko-hive.mjs](bin/gemineko-hive.mjs)）**：零外部依赖纯 Node.js ASAR 增量修补，仅以独立标记块注入 `dist/preload.js` 覆盖开屏早期加载阶段并与 CDP 主片头无缝接力，绝不覆写既有 `app.asar.bak`、与中文汉化及表情包补丁安全共存、支持一键无损剥离；
+  - **工坊控制卡与快切栏入口（[theme-workshop.js](src/theme/theme-workshop.js)、[host-theme-runtime.mjs](src/cdp/host-theme-runtime.mjs)、[server.mjs](src/sidecar/server.mjs)）**：新增 `POST /api/startup/replay` 与 `/api/startup-asar/{status,apply,restore}` 接口，支持主窗口快切栏与精细工坊一键重播预览及 0ms 补丁管理。
+
 ### Fixed
 - **降低输入栏猫娘挂件层级并在原生弹出菜单/对话框重叠时自动避让隐藏（#10）**：
   - 将 [host-injector.mjs](src/cdp/host-injector.mjs) 中 `#gemineko-cdp-composer-dock` 常驻 `z-index` 从 `99980` 降至 `25`，并加固 `.is-hidden` 与其子节点的 `pointer-events: none !important`；

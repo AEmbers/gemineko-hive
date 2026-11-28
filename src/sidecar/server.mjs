@@ -25,6 +25,7 @@ import {
 } from '../host-asar-patcher.mjs';
 import { BRAND_META } from '../meta/brand.mjs';
 import { applyNativePatch, getNativePatchStatus, resolveSwarmPaths, restoreNativePatch } from '../native-patcher.mjs';
+import { applyStartupAsarPatch, getStartupAsarStatus, restoreStartupAsarPatch } from '../startup-asar-patcher.mjs';
 import { buildDemoSwarmSnapshot } from '../theme/demo-data.js';
 import {
   ALLOWED_EASTER_EGG_IDS,
@@ -1414,6 +1415,55 @@ export async function createHiveSidecarServer(options = {}) {
       }
       broadcastSse('host-toggle', { enabled: nextEnabled });
       sendJson(res, 200, { ok: true, cdp: buildHostStatusSummary() });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/startup/replay') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      if (!cdpInjector) {
+        sendJson(res, 200, { ok: false, replayed: false, error: 'CDP injector disabled' });
+        return;
+      }
+      try {
+        const result = await cdpInjector.replayStartup();
+        sendJson(res, 200, result);
+      } catch (err) {
+        sendJson(res, 500, { ok: false, replayed: false, error: err?.message || String(err) });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/startup-asar/status') {
+      sendJson(res, 200, getStartupAsarStatus(options.startupAsarOpts));
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/startup-asar/apply') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      try {
+        sendJson(res, 200, applyStartupAsarPatch({ ...(options.startupAsarOpts || {}), allowKillRunning: false }));
+      } catch (err) {
+        sendJson(res, 500, { ok: false, error: err?.message || String(err) });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/startup-asar/restore') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      try {
+        sendJson(res, 200, restoreStartupAsarPatch({ ...(options.startupAsarOpts || {}), allowKillRunning: false }));
+      } catch (err) {
+        sendJson(res, 500, { ok: false, error: err?.message || String(err) });
+      }
       return;
     }
 

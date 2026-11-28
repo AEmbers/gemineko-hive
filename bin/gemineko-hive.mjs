@@ -10,6 +10,11 @@
 
 import { applyHostAsarPatch, getHostAsarStatus, restoreHostAsarPatch } from '../src/host-asar-patcher.mjs';
 import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../src/native-patcher.mjs';
+import {
+  applyStartupAsarPatch,
+  getStartupAsarStatus,
+  restoreStartupAsarPatch,
+} from '../src/startup-asar-patcher.mjs';
 
 function parseArgs(argv) {
   const positional = [];
@@ -47,6 +52,37 @@ function main() {
   };
 
   let res;
+  if (cmd === 'startup-asar') {
+    const subCmd = positional[1] || 'status';
+    const asarOpts = {
+      installDir: typeof flags['install-dir'] === 'string' ? flags['install-dir'] : undefined,
+      resourcesDir: typeof flags['resources-dir'] === 'string' ? flags['resources-dir'] : undefined,
+      allowKillRunning: !flags['no-kill'],
+      noRestart: Boolean(flags['no-restart']),
+      forceSelf: Boolean(flags['force-self']),
+    };
+    if (subCmd === 'status') res = getStartupAsarStatus(asarOpts);
+    else if (subCmd === 'apply') res = applyStartupAsarPatch(asarOpts);
+    else if (subCmd === 'restore') res = restoreStartupAsarPatch(asarOpts);
+    else {
+      console.log('用法: node bin/gemineko-hive.mjs startup-asar <status|apply|restore> [--no-kill] [--json]');
+      return;
+    }
+    if (asJson) {
+      console.log(JSON.stringify(res, null, 2));
+      return;
+    }
+    if (subCmd === 'status') {
+      console.log(`[基米窝 0ms 启动强化] ${res.found ? (res.patched ? `已安装 v${res.version}` : '未安装（可一键开启）') : '未检测到 Antigravity app.asar'}`);
+      if (res.found) {
+        console.log(`  resources: ${res.resourcesDir}`);
+        console.log(`  共存状态 : 汉化=${res.hasLocalization ? '✅' : '—'} | 表情包=${res.hasMemeRenderer ? '✅' : '—'} | bak=${res.bakExists ? '✅' : '—'}`);
+      }
+      return;
+    }
+    console.log(res.ok ? `[基米窝 0ms 启动强化] 操作成功 (${res.action})` : `[基米窝 0ms 启动强化] ${res.message || '未完成'}`);
+    return;
+  }
   if (cmd === 'host-asar') {
     const subCmd = positional[1] || 'status';
     const asarOpts = {
