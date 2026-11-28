@@ -1423,8 +1423,13 @@ export async function createHiveSidecarServer(options = {}) {
         sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
         return;
       }
+      if (sseClients.size > 0) {
+        broadcastSse('startup-replay', { manual: true, ts: Date.now() });
+        sendJson(res, 200, { ok: true, replayed: true, transport: 'native-asar' });
+        return;
+      }
       if (!cdpInjector) {
-        sendJson(res, 200, { ok: false, replayed: false, error: 'CDP injector disabled' });
+        sendJson(res, 200, { ok: false, replayed: false, error: '主窗口尚未附着（CDP 与原生引导均未连接）' });
         return;
       }
       try {

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.4] - 2026-11-28
+
+### Fixed & Improved
+- **根治「星钻 × 五哈基米」启动动画重启冷启触发异常并打通 SSE 重播（Ref #11, #12）**：
+  - **解锁冷启免手势自动播音（[host-asar-patcher.mjs](src/host-asar-patcher.mjs)）**：极薄主进程引导钩子升级至 `v0.8.4`，在启动早期追加 Chromium `autoplay-policy=no-user-gesture-required` 开关，彻底解决“手动重播有声、重启冷启因无用户手势被静音拦截”；同时新增 `ep.origin === lastObservedOrigin` 校验与 `__GEMINEKO_STARTUP_PLAYING__` 防砍断守卫（同步接入 [host-injector.mjs](src/cdp/host-injector.mjs) `tryAttach`/`verifyAndReinject`），绝不在片头播放到一半时被二次重注切断；
+  - **冷启就绪门禁 × 延迟锁死 × 首帧预解码（[host-startup-runtime.mjs](src/cdp/host-startup-runtime.mjs)）**：新增 `isHostReadyForStartup()` 跳过 `AuthBootstrap` `#t=` 过渡与隐藏窗口、等待 React 首帧节点挂出；将 `sessionStorage` 已播标记延迟至真实播出 `>=420ms` 或用户主动跳过时写入，半路被打断可自动补播；冷启时先等待星钻图与 5 位猫娘立绘预解码就绪（`450ms` 超时兜底）再开启时间线，告别首次无缓存空框抢跑；
+  - **SSE 重播通道 & 工坊收口（[server.mjs](src/sidecar/server.mjs)、[theme-workshop.js](src/theme/theme-workshop.js)）**：`POST /api/startup/replay` 优先通过 `/api/host-events` SSE 广播 `startup-replay`（免 `19222` 端口点击「立即重播预览」同样毫秒级生效），并收口重复的旧版 `preload` 补丁按钮。
+
 ## [0.8.3] - 2026-11-28
 
 ### Added & Fixed

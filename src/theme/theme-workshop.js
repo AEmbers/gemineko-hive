@@ -857,23 +857,16 @@ export function createThemeWorkshopController(deps) {
 
   function renderStartupCardHtml(c) {
     const st = c.startup || {};
-    const asar = state.startupAsar;
-    const badgeText = !asar
-      ? '检测中…'
-      : !asar.found
-        ? '仅 CDP 模式（未检测到本地 app.asar）'
-        : asar.patched
-          ? `✅ 0ms 强化已开启 v${escWorkshopHtml(asar.version || '0.9.0')}`
-          : '⚪ 当前仅 CDP 开场（可选开启 0ms 强化）';
-    const coexistHint = asar?.found
-      ? `共存检测：汉化 ${asar.hasLocalization ? '✅' : '—'} · 表情包 ${asar.hasMemeRenderer ? '✅' : '—'}（独立标记块安全叠加，保留既有 .bak）`
-      : '未找到本地客户端安装包，CDP 启动过场已自动接管';
-    const cmdText = state.startupCmdHint || (asar?.patched ? asar?.cliRestoreCmd : asar?.cliApplyCmd) || '';
+    const legacyAsar = state.startupAsar;
+    const hostAsar = state.hostAsar;
+    const modeHint = hostAsar?.nativeConnected || hostAsar?.patched
+      ? '✨ 当前已接入上方「原生 0ms 沉浸引导」：支持 0ms 防白屏 + 冷启免点击自动播音 + 重启稳定触发'
+      : '💡 推荐启用上方「5. 原生 0ms 沉浸引导」以解锁冷启免点击自动播音与零白屏体验';
 
     return `
       <div class="gn-ws-card">
         <div class="gn-ws-card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span>🚀 6. 反重力启动动画（星钻 × 五哈基米 · 双模 0ms 强化）</span>
+          <span>🚀 6. 反重力启动动画（星钻 × 五哈基米）</span>
           <button type="button" class="gn-pill is-primary" data-ws-act="replay-startup">✨ 立即重播预览</button>
         </div>
         <div class="gn-ws-switches">
@@ -881,16 +874,12 @@ export function createThemeWorkshopController(deps) {
           ${renderSwitchRow('星晶反重力开机音效', 'data-ws-startup="soundEnabled"', st.soundEnabled !== false)}
           ${renderSwitchRow('猫娘招牌开机问候语音', 'data-ws-startup="voiceEnabled"', st.voiceEnabled !== false)}
         </div>
-        <div class="gn-ws-sub" style="margin-top:6px;">当前覆盖 0ms 强化状态：<strong>${badgeText}</strong></div>
-        <div class="gn-ws-sub">${escWorkshopHtml(coexistHint)}</div>
-        ${asar?.found ? `
+        <div class="gn-ws-sub" style="margin-top:6px;">${escWorkshopHtml(modeHint)}</div>
+        ${legacyAsar?.found && legacyAsar.patched ? `
           <div class="gn-ws-row" style="margin-top:6px;flex-wrap:wrap;gap:6px;">
-            <button type="button" class="gn-pill" data-ws-act="apply-startup-asar">⚡ ${asar.patched ? '更新 0ms 强化补丁' : '启用 0ms 零白屏强化'}</button>
-            ${asar.patched ? '<button type="button" class="gn-pill" data-ws-act="restore-startup-asar">↺ 无损移除 0ms 补丁</button>' : ''}
-            ${cmdText ? '<button type="button" class="gn-pill" data-ws-act="copy-startup-cmd">📋 复制终端一键命令</button>' : ''}
+            <button type="button" class="gn-pill" data-ws-act="restore-startup-asar">↺ 移除旧版 preload 0ms 补丁（推荐改用上方 5 号卡原生引导）</button>
           </div>
         ` : ''}
-        ${state.startupCmdHint ? `<div class="gn-ws-sub" style="margin-top:4px;word-break:break-all;">终端命令：<code>${escWorkshopHtml(state.startupCmdHint)}</code></div>` : ''}
       </div>
     `;
   }
@@ -902,15 +891,15 @@ export function createThemeWorkshopController(deps) {
       if (!asar.found) {
         badgeText = '仅 CDP 模式（未检测到本地 app.asar）';
       } else if (asar.nativeConnected) {
-        badgeText = `⚡ 原生 0ms 已直连（v${escWorkshopHtml(asar.version || '0.8.3')} · 免 19222 端口）`;
+        badgeText = `⚡ 原生 0ms 已直连（v${escWorkshopHtml(asar.version || '0.8.4')} · 免 19222 端口 + 自动播音）`;
       } else if (asar.patched) {
-        badgeText = `✅ 已写入引导钩子 v${escWorkshopHtml(asar.version || '0.8.3')}（重启 Antigravity 生效）`;
+        badgeText = `✅ 已写入引导钩子 v${escWorkshopHtml(asar.version || '0.8.4')}（重启 Antigravity 生效）`;
       } else {
         badgeText = '⚪ 当前走 19222 CDP 兜底通道（可一键开启原生 0ms 引导）';
       }
     }
     const coexistHint = asar?.found
-      ? `共存检测：汉化 ${asar.hasLocalization ? '✅' : '—'} · 表情包 ${asar.hasMemeRenderer ? '✅' : '—'} · 原版备份 ${asar.bakExists ? '✅' : '自动创建'}（仅写入约 4KB 极薄钩子至 dist/main.js，热改色/词典/皮肤零重启）`
+      ? `共存检测：汉化 ${asar.hasLocalization ? '✅' : '—'} · 表情包 ${asar.hasMemeRenderer ? '✅' : '—'} · 原版备份 ${asar.bakExists ? '✅' : '自动创建'}（含 0ms 防白屏、冷启免手势播音与免 19222 直连；热改色/词典/皮肤零重启）`
       : '未找到本地客户端安装包，插件保持纯 CDP 兼容运行';
     const cmdText = state.hostAsarCmdHint || (asar?.patched ? asar?.cliRestoreCmd : asar?.cliApplyCmd) || '';
 

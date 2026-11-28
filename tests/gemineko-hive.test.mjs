@@ -1861,6 +1861,8 @@ test('剧场级反重力启动动画：配置清洗、运行时代码安全、�
       appDataDirs: [sb.appDataDir],
       sideToken: 'test-startup-tok',
       themeConfigPath: path.join(cfgDir, 'theme-config.json'),
+      runtimeEndpointPath: path.join(cfgDir, 'runtime-endpoint.json'),
+      autoHealNativePatch: false,
       startupAsarOpts: { resourcesDir: tmpResDir },
     });
     try {
@@ -1897,5 +1899,175 @@ test('剧场级反重力启动动画：配置清洗、运行时代码安全、�
     }
   } finally {
     fs.rmSync(tmpResDir, { recursive: true, force: true });
+  }
+});
+
+test('启动动画冷启门禁、未满 420ms 中断不锁死、420ms 后标记已播及 SSE startup-replay 回归（v0.8.4）', async () => {
+  // 1. 极薄主进程引导块必须包含 autoplay-policy 与 __GEMINEKO_STARTUP_PLAYING__ 防砍断守卫
+  const mainLoaderBlock = buildMainHostLoaderBlock();
+  assert.match(mainLoaderBlock, /autoplay-policy/);
+  assert.match(mainLoaderBlock, /no-user-gesture-required/);
+  assert.match(mainLoaderBlock, /__GEMINEKO_STARTUP_PLAYING__/);
+  assert.doesNotThrow(() => new vm.Script(mainLoaderBlock));
+
+  // 2. 启动动画冷启就绪门禁 & sessionStorage 延迟写入验证
+  const startupSnippet = buildHostStartupRuntimeSnippet();
+  const makeMockEnv = (initialHash = '#t=REDACTED', initialHidden = false) => {
+    const store = new Map();
+    const addedEls = [];
+    const docListeners = new Map();
+    const winListeners = new Map();
+    const rootNode = { childElementCount: initialHash ? 0 : 1 };
+    const doc = {
+      readyState: 'complete',
+      visibilityState: initialHidden ? 'hidden' : 'visible',
+      head: { appendChild() {} },
+      body: {
+        appendChild(el) {
+          addedEls.push(el);
+        },
+      },
+      documentElement: {
+        getAttribute() {
+          return 'dark';
+        },
+        style: { colorScheme: 'dark' },
+        appendChild() {},
+      },
+      getElementById(id) {
+        if (id === 'root') return rootNode;
+        if (id === 'gemineko-startup-style') return null;
+        return null;
+      },
+      addEventListener(evt, fn) {
+        docListeners.set(evt, fn);
+      },
+      removeEventListener(evt, fn) {
+        if (docListeners.get(evt) === fn) docListeners.delete(evt);
+      },
+    };
+    const win = {
+      location: { hash: initialHash },
+      innerWidth: 1280,
+      innerHeight: 720,
+      devicePixelRatio: 1,
+      matchMedia: () => ({ matches: true }),
+      addEventListener(evt, fn) {
+        winListeners.set(evt, fn);
+      },
+      removeEventListener(evt, fn) {
+        if (winListeners.get(evt) === fn) winListeners.delete(evt);
+      },
+    };
+    const makeFakeEl = () => ({
+      id: '',
+      innerHTML: '',
+      classList: { add() {}, remove() {}, contains: () => false },
+      style: { setProperty() {} },
+      querySelector(sel) {
+        if (sel === '.gk-st-canvas') return null;
+        return makeFakeEl();
+      },
+      addEventListener() {},
+      remove() {},
+    });
+    doc.createElement = () => makeFakeEl();
+    const factory = new Function(
+      'window',
+      'document',
+      'sessionStorage',
+      'requestAnimationFrame',
+      `${startupSnippet}\nreturn initHostStartupEngine;`,
+    );
+    const init = factory(
+      win,
+      doc,
+      {
+        getItem: (k) => (store.has(k) ? store.get(k) : null),
+        setItem: (k, v) => store.set(k, String(v)),
+      },
+      (cb) => setTimeout(cb, 0),
+    );
+    return { init, win, doc, rootNode, store, addedEls };
+  };
+
+  // 2a. 在 #t= 引导过渡页调用 maybeAutoPlay：等待期间绝不写 SESSION_KEY，等 hash 清空且 root 挂载后自动播出
+  const envAuth = makeMockEnv('#t=REDACTED', false);
+  const engAuth = envAuth.init({ server: '', initialConfig: { enabled: true } });
+  assert.equal(engAuth.maybeAutoPlay(), true);
+  assert.equal(envAuth.store.get('__gemineko_startup_played_v1__') || null, null);
+  assert.equal(envAuth.addedEls.length, 0, '处于 #t= 过渡态时不应过早挂出舞台');
+
+  envAuth.win.location.hash = '';
+  envAuth.rootNode.childElementCount = 1;
+  await new Promise((r) => setTimeout(r, 180));
+  assert.equal(envAuth.addedEls.length, 1, '就绪后应自动触发播出');
+  assert.equal(envAuth.win.__GEMINEKO_STARTUP_PLAYING__, true);
+  assert.equal(envAuth.store.get('__gemineko_startup_played_v1__') || null, null, '播出未满 420ms 不应提前锁死');
+
+  // 未满 420ms 时强制 unmount()（模拟重注打断），应清理播放标记且不写 SESSION_KEY
+  engAuth.unmount();
+  assert.equal(envAuth.win.__GEMINEKO_STARTUP_PLAYING__, false);
+  assert.equal(envAuth.store.get('__gemineko_startup_played_v1__') || null, null);
+
+  // 2b. 就绪页面播满 >= 420ms 后应锁定 SESSION_KEY = '1'
+  const envReady = makeMockEnv('', false);
+  const engReady = envReady.init({ server: '', initialConfig: { enabled: true } });
+  assert.equal(engReady.maybeAutoPlay(), true);
+  assert.equal(envReady.addedEls.length, 1);
+  await new Promise((r) => setTimeout(r, 480));
+  assert.equal(envReady.store.get('__gemineko_startup_played_v1__'), '1');
+  engReady.unmount();
+
+  // 3. 验证 native-asar SSE 在线时 POST /api/startup/replay 通过 SSE 广播触发
+  const { outPath: bundlePath } = buildGeminekoBundle();
+  const sb = createFakeSwarmSandbox();
+  const srv = await createHiveSidecarServer({
+    port: 0,
+    bundlePath,
+    swarmDir: sb.swarmDir,
+    appDataDirs: [sb.appDataDir],
+    themeConfigPath: path.join(sb.root, 'theme-config.json'),
+    runtimeEndpointPath: path.join(sb.root, 'runtime-endpoint.json'),
+    autoHealNativePatch: false,
+    sideToken: 'test-replay-sse',
+    enableCdp: false,
+  });
+
+  let sseReq = null;
+  let sseRes = null;
+  try {
+    let allFrames = '';
+    await new Promise((resolveReady, rejectReady) => {
+      const t = setTimeout(() => rejectReady(new Error('SSE hello timeout')), 3000);
+      sseReq = http.get(`${srv.origin}/api/host-events?token=test-replay-sse`, (res) => {
+        sseRes = res;
+        res.on('data', (chunk) => {
+          allFrames += chunk.toString('utf8');
+          if (allFrames.includes('event: hello')) {
+            clearTimeout(t);
+            resolveReady();
+          }
+        });
+      });
+      sseReq.on('error', rejectReady);
+    });
+
+    const replayRes = await srv.inject({
+      method: 'POST',
+      url: '/api/startup/replay',
+      headers: { 'X-Sidecar-Token': 'test-replay-sse', 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(replayRes.statusCode, 200);
+    assert.deepEqual(replayRes.json(), { ok: true, replayed: true, transport: 'native-asar' });
+
+    await new Promise((r) => setTimeout(r, 60));
+    assert.match(allFrames, /event: startup-replay/);
+  } finally {
+    try { sseRes?.destroy(); } catch {}
+    try { sseReq?.destroy(); } catch {}
+    await srv.close();
+    fs.rmSync(sb.root, { recursive: true, force: true });
   }
 });

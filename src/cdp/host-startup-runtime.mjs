@@ -48,6 +48,25 @@ export function buildHostStartupRuntimeSnippet() {
     let cfg = ctx?.initialConfig || {};
     let activeRun = null;
     let unmounted = false;
+    let cancelPendingWait = null;
+
+    function isHostReadyForStartup() {
+      if (typeof document === 'undefined') return false;
+      if (document.readyState === 'loading') return false;
+      if (!document.body) return false;
+      if (typeof document.visibilityState === 'string' && document.visibilityState === 'hidden') return false;
+      const hashStr = String(window.location?.hash || '');
+      if (/^#t=/i.test(hashStr)) return false;
+      const rootEl = document.getElementById?.('root') || document.getElementById?.('app');
+      if (rootEl && Number(rootEl.childElementCount || 0) === 0) return false;
+      return true;
+    }
+
+    function markSessionPlayed(run) {
+      if (!run || run.manual || run.playedMarked) return;
+      run.playedMarked = true;
+      try { sessionStorage.setItem(SESSION_KEY, '1'); } catch {}
+    }
 
     function isDarkScheme() {
       const attr = document.documentElement?.getAttribute('data-gk-scheme');
@@ -553,7 +572,11 @@ export function buildHostStartupRuntimeSnippet() {
       if (!activeRun) return;
       const run = activeRun;
       activeRun = null;
+      if (!immediate && !run.manual) {
+        markSessionPlayed(run);
+      }
       run.stopped = true;
+      window.__GEMINEKO_STARTUP_PLAYING__ = false;
       for (const tid of run.timers) clearTimeout(tid);
       run.timers.length = 0;
       run.stopCanvas?.();
@@ -582,14 +605,15 @@ export function buildHostStartupRuntimeSnippet() {
       const manual = Boolean(opts?.manual);
       if (!manual && !shouldAutoPlay()) return false;
 
+      if (cancelPendingWait) {
+        try { cancelPendingWait(); } catch {}
+        cancelPendingWait = null;
+      }
       if (activeRun) {
         stopActiveRun(true);
       }
 
-      if (!manual) {
-        try { sessionStorage.setItem(SESSION_KEY, '1'); } catch {}
-      }
-
+      window.__GEMINEKO_STARTUP_PLAYING__ = true;
       ensureStyle();
       const dark = isDarkScheme();
       const palette = resolvePalette();
@@ -663,6 +687,8 @@ export function buildHostStartupRuntimeSnippet() {
         timers,
         stopCanvas,
         stopped: false,
+        manual,
+        playedMarked: false,
         chimeAudio: null,
         voiceAudio: null,
         synthCtx: null,
@@ -689,105 +715,151 @@ export function buildHostStartupRuntimeSnippet() {
       const tDock = Math.max(1580, 1880 - headOffset);
       const tCleanup = tDock + 740;
 
-      requestAnimationFrame(() => {
-        if (run.stopped) return;
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+          if (run.stopped) return;
+          stage.classList.add('is-visible');
+        });
+      } else {
         stage.classList.add('is-visible');
-      });
-
-      addTimer(() => stage.classList.add('is-bloom'), tBloom);
-      addTimer(() => stage.classList.add('is-roster'), tRoster);
-      addTimer(() => stage.classList.add('is-titles'), tTitles);
-
-      const masterSound = cfg?.easterEggs?.soundEnabled !== false;
-      const playChime = masterSound && cfg?.startup?.soundEnabled !== false;
-      const playVoice = masterSound && cfg?.startup?.voiceEnabled !== false;
-
-      if (playChime && ctx?.server) {
-        addTimer(() => {
-          try {
-            const a = new Audio(\`\${ctx.server}/gemineko-audio/startup-chime.mp3\`);
-            a.volume = 0.72;
-            run.chimeAudio = a;
-            a.play().catch(() => {
-              run.synthCtx = playSynthStartupChime();
-            });
-          } catch {
-            run.synthCtx = playSynthStartupChime();
-          }
-        }, 35);
       }
 
-      if (playVoice && ctx?.server) {
-        addTimer(() => {
-          try {
-            const v = new Audio(\`\${ctx.server}/gemineko-audio/startup-welcome.mp3\`);
-            v.volume = 0.9;
-            run.voiceAudio = v;
-            v.play().catch(() => {});
-          } catch {}
-        }, Math.max(460, tTitles - 40));
-      }
+      const beginTimeline = () => {
+        if (run.stopped || activeRun !== run) return;
 
-      addTimer(() => {
-        isClosingRef.current = true;
-        const gemWrap = stage.querySelector('.gk-st-gem-wrap');
-        const targetEmblem = document.getElementById('gemineko-home-emblem');
-        const targetStage = targetEmblem?.querySelector('.gk-he-stage') || targetEmblem;
-        const targetRect = targetStage && typeof targetStage.getBoundingClientRect === 'function'
-          ? targetStage.getBoundingClientRect()
-          : null;
-        const isHomeTargetVisible = Boolean(
-          targetRect &&
-          targetRect.width > 36 &&
-          targetRect.height > 36 &&
-          targetRect.top >= -40 &&
-          targetRect.bottom <= (window.innerHeight || 1000) + 40
-        );
+        addTimer(() => stage.classList.add('is-bloom'), tBloom);
+        addTimer(() => stage.classList.add('is-roster'), tRoster);
+        addTimer(() => stage.classList.add('is-titles'), tTitles);
+        // 确认用户真实观看到演出（>= 420ms）后才锁定 sessionStorage，防止半路重载砍断导致永久失播
+        addTimer(() => markSessionPlayed(run), 420);
 
-        if (isHomeTargetVisible && gemWrap && targetEmblem) {
-          const srcRect = gemWrap.getBoundingClientRect();
-          const srcCx = srcRect.left + srcRect.width / 2;
-          const srcCy = srcRect.top + srcRect.height / 2;
-          const dstCx = targetRect.left + targetRect.width / 2;
-          const dstCy = targetRect.top + targetRect.height / 2;
-          const dx = Math.round(dstCx - srcCx);
-          const dy = Math.round(dstCy - srcCy);
-          const scale = Number((targetRect.width / Math.max(80, srcRect.width)).toFixed(3));
+        const masterSound = cfg?.easterEggs?.soundEnabled !== false;
+        const playChime = masterSound && cfg?.startup?.soundEnabled !== false;
+        const playVoice = masterSound && cfg?.startup?.voiceEnabled !== false;
 
-          run.hiddenHomeEl = targetEmblem;
-          targetEmblem.style.visibility = 'hidden';
-          stage.classList.add('is-docking');
-
-          gemWrap.style.transition = 'transform 620ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease 460ms';
-          gemWrap.style.transform = \`translate3d(\${dx}px, calc(-34px + \${dy}px), 0) scale(\${scale})\`;
-          gemWrap.style.opacity = '0.96';
-
+        if (playChime && ctx?.server) {
           addTimer(() => {
-            if (run.hiddenHomeEl) {
-              run.hiddenHomeEl.style.visibility = '';
-              run.hiddenHomeEl = null;
+            try {
+              const a = new Audio(\`\${ctx.server}/gemineko-audio/startup-chime.mp3\`);
+              a.volume = 0.72;
+              run.chimeAudio = a;
+              a.play().catch(() => {
+                run.synthCtx = playSynthStartupChime();
+              });
+            } catch {
+              run.synthCtx = playSynthStartupChime();
             }
-            targetEmblem.classList.add('is-sparkling');
-            ctx.spawnStardust?.(dstCx, dstCy, 22, 'spark');
-            setTimeout(() => { try { targetEmblem.classList.remove('is-sparkling'); } catch {} }, 640);
-          }, 560);
-        } else {
-          stage.classList.add('is-wave-out');
+          }, 35);
         }
-      }, tDock);
 
-      addTimer(() => {
-        if (activeRun !== run) return;
-        activeRun = null;
-        run.stopped = true;
-        run.stopCanvas?.();
-        window.removeEventListener('keydown', run.onKeyDown, true);
-        if (run.hiddenHomeEl) {
-          try { run.hiddenHomeEl.style.visibility = ''; } catch {}
-          run.hiddenHomeEl = null;
+        if (playVoice && ctx?.server) {
+          addTimer(() => {
+            try {
+              const v = new Audio(\`\${ctx.server}/gemineko-audio/startup-welcome.mp3\`);
+              v.volume = 0.9;
+              run.voiceAudio = v;
+              v.play().catch(() => {});
+            } catch {}
+          }, Math.max(460, tTitles - 40));
         }
-        try { stage.remove(); } catch {}
-      }, tCleanup);
+
+        addTimer(() => {
+          isClosingRef.current = true;
+          const gemWrap = stage.querySelector('.gk-st-gem-wrap');
+          const targetEmblem = document.getElementById('gemineko-home-emblem');
+          const targetStage = targetEmblem?.querySelector('.gk-he-stage') || targetEmblem;
+          const targetRect = targetStage && typeof targetStage.getBoundingClientRect === 'function'
+            ? targetStage.getBoundingClientRect()
+            : null;
+          const isHomeTargetVisible = Boolean(
+            targetRect &&
+            targetRect.width > 36 &&
+            targetRect.height > 36 &&
+            targetRect.top >= -40 &&
+            targetRect.bottom <= (window.innerHeight || 1000) + 40
+          );
+
+          if (isHomeTargetVisible && gemWrap && targetEmblem) {
+            const srcRect = gemWrap.getBoundingClientRect();
+            const srcCx = srcRect.left + srcRect.width / 2;
+            const srcCy = srcRect.top + srcRect.height / 2;
+            const dstCx = targetRect.left + targetRect.width / 2;
+            const dstCy = targetRect.top + targetRect.height / 2;
+            const dx = Math.round(dstCx - srcCx);
+            const dy = Math.round(dstCy - srcCy);
+            const scale = Number((targetRect.width / Math.max(80, srcRect.width)).toFixed(3));
+
+            run.hiddenHomeEl = targetEmblem;
+            targetEmblem.style.visibility = 'hidden';
+            stage.classList.add('is-docking');
+
+            gemWrap.style.transition = 'transform 620ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease 460ms';
+            gemWrap.style.transform = \`translate3d(\${dx}px, calc(-34px + \${dy}px), 0) scale(\${scale})\`;
+            gemWrap.style.opacity = '0.96';
+
+            addTimer(() => {
+              if (run.hiddenHomeEl) {
+                run.hiddenHomeEl.style.visibility = '';
+                run.hiddenHomeEl = null;
+              }
+              targetEmblem.classList.add('is-sparkling');
+              ctx.spawnStardust?.(dstCx, dstCy, 22, 'spark');
+              setTimeout(() => { try { targetEmblem.classList.remove('is-sparkling'); } catch {} }, 640);
+            }, 560);
+          } else {
+            stage.classList.add('is-wave-out');
+          }
+        }, tDock);
+
+        addTimer(() => {
+          if (activeRun !== run) return;
+          markSessionPlayed(run);
+          activeRun = null;
+          run.stopped = true;
+          window.__GEMINEKO_STARTUP_PLAYING__ = false;
+          run.stopCanvas?.();
+          window.removeEventListener('keydown', run.onKeyDown, true);
+          if (run.hiddenHomeEl) {
+            try { run.hiddenHomeEl.style.visibility = ''; } catch {}
+            run.hiddenHomeEl = null;
+          }
+          try { stage.remove(); } catch {}
+        }, tCleanup);
+      };
+
+      // 冷启预加载星钻与 5 位猫娘立绘（最多等待 450ms 超时兜底），避免首帧无图抢跑
+      if (manual || typeof Image !== 'function' || !ctx?.server) {
+        beginTimeline();
+      } else {
+        let started = false;
+        const startOnce = () => {
+          if (started || run.stopped) return;
+          started = true;
+          beginTimeline();
+        };
+        addTimer(startOnce, 450);
+        for (const m of ROSTER) {
+          try {
+            const sprImg = new Image();
+            sprImg.src = \`\${ctx.server}/gemineko-sprites/\${m.file}?q=\${spriteQ}\`;
+          } catch {}
+        }
+        try {
+          const gemPre = new Image();
+          gemPre.onload = () => {
+            if (typeof gemPre.decode === 'function') {
+              gemPre.decode().catch(() => {}).finally(startOnce);
+            } else {
+              startOnce();
+            }
+          };
+          gemPre.onerror = startOnce;
+          gemPre.src = gemSrc;
+          if (gemPre.complete) startOnce();
+        } catch {
+          startOnce();
+        }
+      }
 
       return true;
     }
@@ -803,12 +875,66 @@ export function buildHostStartupRuntimeSnippet() {
     }
 
     function maybeAutoPlay() {
-      return play({ manual: false });
+      if (!shouldAutoPlay()) return false;
+      if (isHostReadyForStartup()) {
+        return play({ manual: false });
+      }
+      if (cancelPendingWait) return true;
+
+      const waitStartedAt = Date.now();
+      let pollId = null;
+      const cleanupWait = () => {
+        if (pollId) {
+          clearTimeout(pollId);
+          pollId = null;
+        }
+        try { document.removeEventListener?.('visibilitychange', onReadySignal); } catch {}
+        try { document.removeEventListener?.('DOMContentLoaded', onReadySignal); } catch {}
+        try { window.removeEventListener?.('hashchange', onReadySignal); } catch {}
+        if (cancelPendingWait === cleanupWait) {
+          cancelPendingWait = null;
+        }
+      };
+      const onReadySignal = () => {
+        if (unmounted) {
+          cleanupWait();
+          return;
+        }
+        if (!shouldAutoPlay()) {
+          cleanupWait();
+          return;
+        }
+        const elapsed = Date.now() - waitStartedAt;
+        const hiddenNow = typeof document.visibilityState === 'string' && document.visibilityState === 'hidden';
+        const authTransition = /^#t=/i.test(String(window.location?.hash || ''));
+        if (isHostReadyForStartup() || (elapsed >= 4500 && !hiddenNow && !authTransition)) {
+          cleanupWait();
+          play({ manual: false });
+          return;
+        }
+        if (elapsed >= 8000) {
+          cleanupWait();
+          return;
+        }
+        pollId = setTimeout(onReadySignal, 120);
+      };
+
+      cancelPendingWait = cleanupWait;
+      try { document.addEventListener?.('visibilitychange', onReadySignal); } catch {}
+      try { document.addEventListener?.('DOMContentLoaded', onReadySignal); } catch {}
+      try { window.addEventListener?.('hashchange', onReadySignal); } catch {}
+      pollId = setTimeout(onReadySignal, 120);
+      return true;
     }
 
     function unmount() {
       unmounted = true;
+      if (cancelPendingWait) {
+        try { cancelPendingWait(); } catch {}
+        cancelPendingWait = null;
+      }
       stopActiveRun(true);
+      window.__GEMINEKO_STARTUP_PLAYING__ = false;
       const st = document.getElementById(STYLE_ID);
       if (st) st.remove();
       try {

@@ -1177,6 +1177,9 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
           }
         } catch {}
       });
+      hostEventSource.addEventListener('startup-replay', () => {
+        try { startupEngine?.replay?.({ manual: true }); } catch {}
+      });
     } catch {
       hostEventSource = null;
     }
@@ -1445,7 +1448,7 @@ export class CdpHostInjector {
    */
   async verifyAndReinject() {
     if (!this.enabled || !this.ws || this.ws.readyState !== 1) return;
-    const alive = await this.evaluateOnTarget('Boolean(window.__GEMINEKO_CDP_OVERLAY_V7__)', true);
+    const alive = await this.evaluateOnTarget('Boolean(window.__GEMINEKO_CDP_OVERLAY_V7__ || window.__GEMINEKO_STARTUP_PLAYING__)', true);
     if (alive === false) {
       const script = buildCdpOverlayScript(this.serverBaseUrl, this.logoDataUri, {
         sideToken: this.sideToken,
@@ -1524,7 +1527,7 @@ export class CdpHostInjector {
         this.lastError = '';
         try {
           const alreadySameServer = await this.evaluateOnTarget(
-            `Boolean(window.__GEMINEKO_CDP_OVERLAY_V7__ && window.__GEMINEKO_HOST_SERVER__ === ${JSON.stringify(this.serverBaseUrl)})`,
+            `Boolean(window.__GEMINEKO_STARTUP_PLAYING__ || (window.__GEMINEKO_CDP_OVERLAY_V7__ && window.__GEMINEKO_HOST_SERVER__ === ${JSON.stringify(this.serverBaseUrl)}))`,
             true,
           );
           if (alreadySameServer === true) {

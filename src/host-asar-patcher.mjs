@@ -35,7 +35,7 @@ const rawFs = resolveRawFs();
 
 export const HOST_ASAR_MARK_START = "'__GEMINEKO_HOST_LOADER_START__';";
 export const HOST_ASAR_MARK_END = "'__GEMINEKO_HOST_LOADER_END__';";
-export const HOST_ASAR_VERSION = '0.8.3';
+export const HOST_ASAR_VERSION = '0.8.4';
 
 /**
  * 剥离文本中成对出现的标记块及其紧邻前导换行与空白。
@@ -275,6 +275,13 @@ export function buildMainHostLoaderBlock() {
     const { app, webContents } = electron || {};
     if (!app || !webContents) return;
 
+    // 解锁主世界冷启音频自动播放策略，避免重播有声但冷启无手势被静音拦截
+    try {
+      if (typeof app.isReady !== 'function' || !app.isReady()) {
+        app.commandLine?.appendSwitch?.('autoplay-policy', 'no-user-gesture-required');
+      }
+    } catch {}
+
     const sidecarDataDir = pathMod.join(osMod.homedir(), '.gemini', 'antigravity', 'sidecar_data', 'gemineko-hive');
     const endpointFile = pathMod.join(sidecarDataDir, 'runtime-endpoint.json');
     const configFiles = [
@@ -288,7 +295,7 @@ export function buildMainHostLoaderBlock() {
     const retryCounts = new Map();
     let dirWatcher = null;
     let watchDebounce = null;
-    let lastObservedEndpointSig = '';
+    let lastObservedOrigin = '';
 
     const readJsonSafe = (fp) => {
       try {
@@ -388,8 +395,8 @@ export function buildMainHostLoaderBlock() {
           watchDebounce = setTimeout(() => {
             watchDebounce = null;
             const ep = readValidEndpoint();
-            if (!ep || ep.sig === lastObservedEndpointSig) return;
-            lastObservedEndpointSig = ep.sig;
+            if (!ep || ep.origin === lastObservedOrigin) return;
+            lastObservedOrigin = ep.origin;
             for (const wc of tracked) {
               if (!wc || wc.isDestroyed?.()) {
                 tracked.delete(wc);
@@ -406,15 +413,16 @@ export function buildMainHostLoaderBlock() {
       }
     };
 
-    const scheduleRetry = (wc) => {
+    const scheduleRetry = (wc, delayMs = null) => {
       if (!wc || wc.isDestroyed?.() || retryTimers.has(wc)) return;
       const attempt = retryCounts.get(wc) || 0;
       if (attempt >= RETRY_DELAYS.length) return;
-      retryCounts.set(wc, attempt + 1);
+      if (delayMs === null) retryCounts.set(wc, attempt + 1);
+      const wait = typeof delayMs === 'number' ? delayMs : RETRY_DELAYS[attempt];
       const timer = setTimeout(() => {
         retryTimers.delete(wc);
-        void tryInject(wc, false);
-      }, RETRY_DELAYS[attempt]);
+        void tryInject(wc, delayMs !== null);
+      }, wait);
       timer.unref?.();
       retryTimers.set(wc, timer);
     };
@@ -427,17 +435,27 @@ export function buildMainHostLoaderBlock() {
         return false;
       }
       if (!isTargetHubWebContents(wc, ep.origin)) return false;
-      lastObservedEndpointSig = ep.sig;
+      lastObservedOrigin = ep.origin;
       applyEarlySurfaceCss(wc);
 
       try {
         const probeExpr = `(() => {
           if (window.__GEMINEKO_SIDECAR_MODE__) return 'sidecar';
+          if (window.__GEMINEKO_STARTUP_PLAYING__) return 'playing';
           if (window.__GEMINEKO_CDP_OVERLAY_V7__ && window.__GEMINEKO_HOST_SERVER__ === ${JSON.stringify(ep.origin)}) return 'same';
           return 'need';
         })()`;
         const probe = await wc.executeJavaScript(probeExpr, false);
         if (probe === 'sidecar') return false;
+        if (probe === 'playing') {
+          if (forceRefresh) {
+            scheduleRetry(wc, 1200);
+          } else {
+            clearRetry(wc);
+            retryCounts.delete(wc);
+          }
+          return true;
+        }
         if (probe === 'same' && !forceRefresh) {
           clearRetry(wc);
           retryCounts.delete(wc);
