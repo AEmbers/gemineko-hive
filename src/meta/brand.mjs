@@ -13,9 +13,9 @@ function readPackageVersion() {
   try {
     const raw = JSON.parse(readFileSync(PKG_PATH, 'utf8'));
     const ver = String(raw?.version || '').trim();
-    return ver || '0.8.5';
+    return ver || '0.8.6';
   } catch {
-    return '0.8.5';
+    return '0.8.6';
   }
 }
 

@@ -4,7 +4,7 @@
   <img src="assets/logo.png" width="124" alt="Gemineko Hive Icon" />
 </p>
 
-<h1 align="center">Gemineko Hive · 基米窝 v0.8.5</h1>
+<h1 align="center">Gemineko Hive · 基米窝 v0.8.6</h1>
 
 <p align="center">
   <strong>“坏了，捅了基米窝了！”</strong><br />
@@ -13,7 +13,7 @@
 
 ---
 
-## ✨ v0.8.0–v0.8.5 最新旗舰特性
+## ✨ v0.8.0–v0.8.6 最新旗舰特性
 
 - **极薄 `app.asar` 主进程引导层 × SSE 实时热引擎（免 `19222` 端口 + 原生 Swarm 更新自愈，#12）**：
   - 支持在「精细工坊 → ⚡ 5. 原生 0ms 沉浸引导」或关闭 Antigravity 后执行 `node bin/gemineko-hive.mjs host-asar apply`：仅向 `dist/main.js` 增量写入 ~4KB 独立标记块（不修改 `dist/preload.js`、绝不覆写 `app.asar.bak`，与 `chinese-toolkit` / `agy-meme` 安全共存、随时 `host-asar restore` 无损剥离）；

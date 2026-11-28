@@ -1825,7 +1825,7 @@ export function bootGeminekoHive() {
         </div>`
       : '';
 
-    const displayVer = lastGithubPulse?.currentVersion || (typeof GEMINEKO_VERSION === 'string' ? GEMINEKO_VERSION : '0.8.5');
+    const displayVer = lastGithubPulse?.currentVersion || (typeof GEMINEKO_VERSION === 'string' ? GEMINEKO_VERSION : '0.8.6');
 
     bar.innerHTML = `
       <div class="gn-bar-top">
