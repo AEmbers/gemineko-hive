@@ -1,11 +1,13 @@
 /**
- * @file 基米窝宿主猫娘表情包全链路集成引擎（CDP 宿主侧注入，零修改 app.asar，不占主包体）
+ * @file 基米窝宿主猫娘表情包全链路集成引擎（CDP/Native ASAR 宿主侧注入，零修改 app.asar，不占主包体）
  * 1. 复用本机 ~/.gemini/meme-packs/gemini-neko 贴纸库，原地将 [表情: ...] 渲染为高清透明贴纸；
- * 2. 长任务收工汇报时可选弹出 1 张庆祝/收工猫娘贴纸气泡（工作进行中绝不弹窗）；
- * 3. 提供带分类与搜索的快捷表情拾取浮层，支持一键插入到输入框（不抢占 Ctrl+Shift+M）。
+ * 2. 兼容 Antigravity 2.36.0+ 流式逐词 fade-in <span> 拆分，采用 React 安全原地改写 TextNode.nodeValue；
+ * 3. 长任务收工汇报时可选弹出 1 张庆祝/收工猫娘贴纸气泡（工作进行中绝不弹窗）；
+ * 4. 提供带分类与搜索的快捷表情拾取浮层，支持一键插入到输入框（不抢占 Ctrl+Shift+M）。
  */
 
-const MEME_MARKER_RE = /^\[(?:表情|贴纸|meme)\s*[:：]\s*([^\]\r\n]{1,80})\]$/i;
+const MEME_MARKER_LINE_RE = /^\[(?:表情|贴纸|meme)\s*[:：]\s*([^\]\r\n]{1,80})\]$/i;
+const MEME_MARKER_GLOBAL_RE = /\[(?:表情|贴纸|meme)\s*[:：]\s*([^\[\]\r\n]{1,80})\]/gi;
 
 /**
  * 纯函数：提取单行 `[表情: <caption >]` 标记文本，未命中返回 null。
@@ -16,8 +18,37 @@ export function parseMemeCaptionFromText(rawLine) {
   if (typeof rawLine !== 'string') return null;
   const trimmed = rawLine.trim();
   if (!trimmed || trimmed.length > 96) return null;
-  const m = MEME_MARKER_RE.exec(trimmed);
+  const m = MEME_MARKER_LINE_RE.exec(trimmed);
   return m ? String(m[1] || '').trim() || null : null;
+}
+
+/**
+ * 纯函数：从可能被多个 <span> 拆分的行内文本片段数组中提取所有 `[表情: ...]` 标记。
+ * @param {Array<string | { text?: string }>} segments
+ * @returns {{ fullText: string, strippedText: string, matches: Array<{ raw: string, caption: string, index: number, end: number }> }}
+ */
+export function extractMemeMatchesFromSegments(segments) {
+  const list = Array.isArray(segments) ? segments : [];
+  let fullText = '';
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i];
+    fullText += typeof item === 'string' ? item : String(item?.text || '');
+  }
+  const matches = [];
+  MEME_MARKER_GLOBAL_RE.lastIndex = 0;
+  let m;
+  while ((m = MEME_MARKER_GLOBAL_RE.exec(fullText)) !== null) {
+    const caption = String(m[1] || '').trim();
+    if (!caption) continue;
+    matches.push({
+      raw: m[0],
+      caption,
+      index: m.index,
+      end: m.index + m[0].length,
+    });
+  }
+  const strippedText = fullText.replace(MEME_MARKER_GLOBAL_RE, '').trim();
+  return { fullText, strippedText, matches };
 }
 
 /**
@@ -32,6 +63,19 @@ export function buildHostMemeRuntimeSnippet() {
     const TOAST_ID = 'gemineko-meme-finish-toast';
     const RENDERED_ATTR = 'data-gk-meme-rendered';
     const INLINE_CARD_CLS = 'gk-inline-meme-card';
+    const OWN_MUTATION_SEL = '#gemineko-cdp-composer-dock, .' + INLINE_CARD_CLS + ', #' + PICKER_ID + ', #' + TOAST_ID;
+    const BUBBLE_SEL = '[data-markdown-root], [data-testid="planner-response-text"], [data-testid="agent-response"], [data-testid="user-message-content"], [data-testid="user-message-bubble"]';
+    const SKIP_ANCESTOR_SEL = 'pre, code, kbd, samp, style, script, svg, math, textarea, input, select, [contenteditable="true"], a, button, .monaco-editor, .' + INLINE_CARD_CLS + ', [data-ag-meme-slot], #gemineko-cdp-composer-dock, #gemineko-home-stage';
+    const BLOCK_BREAK_TAGS = new Set([
+      'ADDRESS', 'ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'BR', 'DD', 'DETAILS',
+      'DIALOG', 'DIV', 'DL', 'DT', 'FIELDSET', 'FIGCAPTION', 'FIGURE',
+      'FOOTER', 'FORM', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HEADER',
+      'HGROUP', 'HR', 'LI', 'MAIN', 'NAV', 'OL', 'P', 'PRE', 'SECTION',
+      'TABLE', 'TBODY', 'TD', 'TFOOT', 'TH', 'THEAD', 'TR', 'UL',
+    ]);
+    const MARKER_SCAN_RE = /\\[(?:表情|贴纸|meme)\\s*[:：]\\s*([^\\[\\]\\r\\n]{1,80})\\]/gi;
+    const SCAN_DEBOUNCE_MS = 160;
+    const SCAN_MAX_WAIT_MS = 320;
 
     let cfg = ctx.initialConfig && typeof ctx.initialConfig === 'object' ? ctx.initialConfig : {};
     let stopped = false;
@@ -39,7 +83,9 @@ export function buildHostMemeRuntimeSnippet() {
     let captionMap = new Map();
     let observer = null;
     let scanTimer = null;
+    let firstPendingAt = 0;
     let activeTag = 'all';
+    const activeGroups = new Set();
 
     function isMemeEnabled() {
       return cfg.enabled !== false && cfg.memes?.enabled !== false;
@@ -59,13 +105,18 @@ export function buildHostMemeRuntimeSnippet() {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  margin: 6px 0;
+  margin: 6px 6px 6px 0;
   padding: 6px;
   border-radius: 16px;
+  vertical-align: middle;
   background: color-mix(in srgb, var(--card, rgba(255,255,255,0.88)) 72%, var(--gk-role-primary, #8b5cf6) 8%);
   border: 1px solid color-mix(in srgb, var(--gk-role-primary, #8b5cf6) 24%, var(--glass-border, rgba(139,92,246,0.22)));
   box-shadow: 0 10px 26px -14px var(--gk-role-glow, rgba(139,92,246,0.32)), inset 0 1px 0 var(--gk-specular, rgba(255,255,255,0.85));
   transition: transform 0.2s cubic-bezier(.34,1.4,.64,1);
+}
+.\${INLINE_CARD_CLS}[data-gk-meme-standalone="1"] {
+  display: inline-flex;
+  margin: 6px 0;
 }
 .\${INLINE_CARD_CLS}:hover {
   transform: scale(1.04) translateY(-2px);
@@ -155,7 +206,7 @@ export function buildHostMemeRuntimeSnippet() {
 #\${PICKER_ID} button.gk-mp-item img { width: calc(56px * var(--gk-host-font-scale, 1)); height: calc(56px * var(--gk-host-font-scale, 1)); object-fit: contain; image-rendering: auto; }
 #\${PICKER_ID} button.gk-mp-item span { font-size: calc(9.5px * var(--gk-host-font-scale, 1)) !important; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
       \`;
-      document.head.appendChild(st);
+      document.head?.appendChild(st);
     }
 
     function matchMeme(caption) {
@@ -166,7 +217,7 @@ export function buildHostMemeRuntimeSnippet() {
       for (const m of catalog) {
         if (m.caption.toLowerCase().includes(low) || low.includes(m.caption.toLowerCase())) return m;
       }
-      const tokens = low.split(/[\s,，/]+/).filter(Boolean);
+      const tokens = low.split(/[\\s,，/]+/).filter(Boolean);
       for (const tk of tokens) {
         const hit = catalog.find((m) => (m.keywords + ' ' + m.caption).toLowerCase().includes(tk));
         if (hit) return hit;
@@ -174,7 +225,39 @@ export function buildHostMemeRuntimeSnippet() {
       return catalog[0] || null;
     }
 
+    function pruneStaleGroups() {
+      for (const group of activeGroups) {
+        const anyEntryAlive = group.entries.some((ent) => ent.node && ent.node.isConnected && ent.node.nodeValue === ent.expected);
+        const anySpawnAlive = group.spawned.some((s) => s && s.isConnected);
+        if (!anyEntryAlive || !anySpawnAlive) {
+          for (const s of group.spawned) {
+            if (s && s.parentNode) s.parentNode.removeChild(s);
+          }
+          for (const ent of group.entries) {
+            if (ent.node && ent.node.__gkMemeGroup === group) {
+              delete ent.node.__gkMemeGroup;
+            }
+          }
+          activeGroups.delete(group);
+        }
+      }
+    }
+
     function restoreInlineCards() {
+      for (const group of activeGroups) {
+        for (const s of group.spawned) {
+          if (s && s.parentNode) s.parentNode.removeChild(s);
+        }
+        for (const ent of group.entries) {
+          if (ent.node && ent.node.isConnected && ent.node.nodeValue === ent.expected) {
+            ent.node.nodeValue = ent.orig;
+          }
+          if (ent.node && ent.node.__gkMemeGroup === group) {
+            delete ent.node.__gkMemeGroup;
+          }
+        }
+      }
+      activeGroups.clear();
       document.querySelectorAll('[' + RENDERED_ATTR + '="1"]').forEach((el) => {
         const raw = el.getAttribute('data-gk-orig-meme') || '';
         const txt = document.createTextNode(raw);
@@ -182,39 +265,211 @@ export function buildHostMemeRuntimeSnippet() {
       });
     }
 
+    function collectInlineRuns(root) {
+      const runs = [];
+      let currentNodes = [];
+      let currentBlock = root;
+
+      function flush() {
+        if (currentNodes.length > 0) {
+          runs.push({ blockEl: currentBlock, nodes: currentNodes });
+          currentNodes = [];
+        }
+      }
+
+      function walk(node, blockEl) {
+        const children = node.childNodes;
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i];
+          if (child.nodeType === 3) {
+            if (child.__gkMemeSynthetic || child.__gkMemeGroup) {
+              flush();
+              continue;
+            }
+            if (!currentNodes.length) currentBlock = blockEl;
+            currentNodes.push(child);
+          } else if (child.nodeType === 1) {
+            if (child.matches && child.matches(SKIP_ANCESTOR_SEL)) {
+              flush();
+              continue;
+            }
+            if (child !== root && child.matches && child.matches(BUBBLE_SEL)) {
+              flush();
+              continue;
+            }
+            if (BLOCK_BREAK_TAGS.has(child.tagName)) {
+              flush();
+              walk(child, child.tagName === 'BR' ? blockEl : child);
+              flush();
+            } else {
+              walk(child, blockEl);
+            }
+          }
+        }
+      }
+
+      walk(root, root);
+      flush();
+      return runs;
+    }
+
+    function buildSegmentPieces(segs, matches) {
+      const result = new Array(segs.length);
+      for (let i = 0; i < segs.length; i++) {
+        const seg = segs[i];
+        const a = seg.start;
+        const b = seg.end;
+        const pieces = [];
+        let pos = a;
+        let touched = false;
+        for (let mi = 0; mi < matches.length; mi++) {
+          const m = matches[mi];
+          const mStart = m.index;
+          const mEnd = m.end;
+          if (mEnd <= a) continue;
+          if (mStart >= b) break;
+          touched = true;
+          if (mStart > pos) {
+            pieces.push({ type: 'text', val: seg.orig.slice(pos - a, mStart - a) });
+          }
+          if (mStart >= a && mStart < b) {
+            pieces.push({ type: 'card', raw: m.raw, caption: m.caption });
+          }
+          pos = mEnd < b ? mEnd : b;
+        }
+        if (pos < b) {
+          pieces.push({ type: 'text', val: seg.orig.slice(pos - a) });
+        }
+        result[i] = { touched, pieces };
+      }
+      return result;
+    }
+
+    function createInlineMemeCard(rawMarker, caption, isStandalone) {
+      const meme = matchMeme(caption);
+      if (!meme) return null;
+      const card = document.createElement('span');
+      card.className = INLINE_CARD_CLS;
+      card.setAttribute(RENDERED_ATTR, '1');
+      card.setAttribute('data-gk-orig-meme', rawMarker);
+      if (isStandalone) card.setAttribute('data-gk-meme-standalone', '1');
+      const img = document.createElement('img');
+      img.src = meme.url;
+      img.alt = caption;
+      img.loading = 'lazy';
+      const cap = document.createElement('span');
+      cap.className = 'gk-meme-cap';
+      cap.textContent = meme.caption;
+      card.appendChild(img);
+      card.appendChild(cap);
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.__GEMINEKO_EGG_API__?.onInlineMemeClick?.(card, e.clientX, e.clientY);
+      });
+      return card;
+    }
+
+    function applyMatchesToRun(run, matches, isStandalone) {
+      const nodes = run.nodes;
+      const segs = [];
+      let cursor = 0;
+      for (let i = 0; i < nodes.length; i++) {
+        const orig = nodes[i].nodeValue || '';
+        segs.push({ node: nodes[i], orig, start: cursor, end: cursor + orig.length });
+        cursor += orig.length;
+      }
+
+      const mapped = buildSegmentPieces(segs, matches);
+      const group = { entries: [], spawned: [] };
+
+      for (let i = 0; i < segs.length; i++) {
+        const seg = segs[i];
+        const info = mapped[i];
+        if (!info.touched) continue;
+        const parent = seg.node.parentNode;
+        if (!parent) continue;
+
+        const pieces = info.pieces;
+        const hasCard = pieces.some((p) => p.type === 'card');
+        if (!hasCard) {
+          const nextText = pieces.map((p) => p.val).join('');
+          if (seg.node.nodeValue !== nextText) seg.node.nodeValue = nextText;
+          seg.node.__gkMemeGroup = group;
+          group.entries.push({ node: seg.node, orig: seg.orig, expected: nextText });
+          continue;
+        }
+
+        let headText = '';
+        let startIdx = 0;
+        if (pieces.length > 0 && pieces[0].type === 'text') {
+          headText = pieces[0].val;
+          startIdx = 1;
+        }
+        if (seg.node.nodeValue !== headText) seg.node.nodeValue = headText;
+        seg.node.__gkMemeGroup = group;
+        group.entries.push({ node: seg.node, orig: seg.orig, expected: headText });
+
+        const anchorAfter = seg.node.nextSibling;
+        const frag = document.createDocumentFragment();
+        for (let pi = startIdx; pi < pieces.length; pi++) {
+          const pc = pieces[pi];
+          if (pc.type === 'card') {
+            const card = createInlineMemeCard(pc.raw, pc.caption, isStandalone);
+            if (card) {
+              group.spawned.push(card);
+              frag.appendChild(card);
+            } else {
+              const fallbackTxt = document.createTextNode(pc.raw);
+              fallbackTxt.__gkMemeSynthetic = true;
+              group.spawned.push(fallbackTxt);
+              frag.appendChild(fallbackTxt);
+            }
+          } else if (pc.val) {
+            const syn = document.createTextNode(pc.val);
+            syn.__gkMemeSynthetic = true;
+            group.spawned.push(syn);
+            frag.appendChild(syn);
+          }
+        }
+        if (frag.childNodes.length > 0) {
+          parent.insertBefore(frag, anchorAfter);
+        }
+      }
+
+      if (group.entries.length > 0 || group.spawned.length > 0) {
+        activeGroups.add(group);
+      }
+    }
+
     function scanChatMarkers() {
       if (stopped || !isInlineEnabled() || !catalog.length || !document.body) return;
       ensureStyle();
-      const containers = document.querySelectorAll('[data-testid="planner-response-text"], [data-testid="agent-response"], [data-testid="user-message-bubble"]');
+      pruneStaleGroups();
+      const containers = document.querySelectorAll(BUBBLE_SEL);
       for (const box of containers) {
         if (box.closest('#gemineko-cdp-composer-dock, #gemineko-home-stage')) continue;
-        const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT);
-        const matches = [];
-        let n;
-        while ((n = walker.nextNode())) {
-          const p = n.parentElement;
-          if (!p || p.closest('pre, code, textarea, [contenteditable="true"], .' + INLINE_CARD_CLS)) continue;
-          const raw = n.nodeValue || '';
-          const trimmed = raw.trim();
-          const m = /^\\[(?:表情|贴纸|meme)\\s*[:：]\\s*([^\\]\\r\\n]{1,80})\\]$/i.exec(trimmed);
-          if (!m) continue;
-          // 跳过已由原生 ASAR 补丁渲染过 img 的节点
-          if (p.querySelector('img[data-agy-meme], img[src*="meme"]')) continue;
-          matches.push({ node: n, raw, caption: String(m[1] || '').trim() });
-        }
-        for (const it of matches) {
-          const meme = matchMeme(it.caption);
-          if (!meme) continue;
-          const card = document.createElement('span');
-          card.className = INLINE_CARD_CLS;
-          card.setAttribute(RENDERED_ATTR, '1');
-          card.setAttribute('data-gk-orig-meme', it.raw);
-          card.innerHTML = \`<img src="\${meme.url}" alt="\${it.caption.replace(/"/g, '&quot;')}" loading="lazy" /><span class="gk-meme-cap">\${meme.caption}</span>\`;
-          card.addEventListener('click', (e) => {
-            e.stopPropagation();
-            window.__GEMINEKO_EGG_API__?.onInlineMemeClick?.(card, e.clientX, e.clientY);
-          });
-          it.node.replaceWith(card);
+        const runs = collectInlineRuns(box);
+        for (const run of runs) {
+          if (run.blockEl && run.blockEl.querySelector('[data-ag-meme-slot], img[data-ag-meme-img], img[data-agy-meme]')) {
+            continue;
+          }
+          let fullText = '';
+          for (let i = 0; i < run.nodes.length; i++) {
+            fullText += run.nodes[i].nodeValue || '';
+          }
+          if (!fullText) continue;
+          MARKER_SCAN_RE.lastIndex = 0;
+          const matches = [];
+          let m;
+          while ((m = MARKER_SCAN_RE.exec(fullText)) !== null) {
+            const caption = String(m[1] || '').trim();
+            if (!caption) continue;
+            matches.push({ raw: m[0], caption, index: m.index, end: m.index + m[0].length });
+          }
+          if (!matches.length) continue;
+          MARKER_SCAN_RE.lastIndex = 0;
+          const isStandalone = fullText.replace(MARKER_SCAN_RE, '').trim().length === 0 && matches.length === 1;
+          applyMatchesToRun(run, matches, isStandalone);
         }
       }
     }
@@ -234,7 +489,6 @@ export function buildHostMemeRuntimeSnippet() {
 
     function triggerFinishSticker() {
       if (stopped || !isMemeEnabled() || cfg.memes?.autoFinishSticker === false || !catalog.length) return;
-      // 若最近一条回复里已经含内联贴纸，不重复弹出收工浮层
       const resps = document.querySelectorAll('[data-testid="agent-response"], [data-testid="planner-response-text"]');
       const lastResp = resps.length ? resps[resps.length - 1] : null;
       if (lastResp && lastResp.querySelector('.' + INLINE_CARD_CLS + ', img[src*="meme"]')) return;
@@ -357,14 +611,45 @@ export function buildHostMemeRuntimeSnippet() {
       }
     }
 
+    function isOwnDomMutation(mutations) {
+      if (!Array.isArray(mutations) || !mutations.length) return false;
+      for (let i = 0; i < mutations.length; i++) {
+        const t = mutations[i]?.target;
+        const el = t && t.nodeType === 1 ? t : t?.parentElement;
+        if (!el || typeof el.closest !== 'function' || !el.closest(OWN_MUTATION_SEL)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function scheduleScan() {
+      const now = Date.now();
+      if (!firstPendingAt) firstPendingAt = now;
+      const elapsed = now - firstPendingAt;
+      if (elapsed >= SCAN_MAX_WAIT_MS) {
+        if (scanTimer) { clearTimeout(scanTimer); scanTimer = null; }
+        firstPendingAt = 0;
+        scanChatMarkers();
+        return;
+      }
+      if (scanTimer) clearTimeout(scanTimer);
+      const delay = Math.min(SCAN_DEBOUNCE_MS, Math.max(0, SCAN_MAX_WAIT_MS - elapsed));
+      scanTimer = setTimeout(() => {
+        scanTimer = null;
+        firstPendingAt = 0;
+        scanChatMarkers();
+      }, delay);
+    }
+
     function ensureObserver() {
       if (observer || !document.body) return;
-      observer = new MutationObserver(() => {
+      observer = new MutationObserver((mutations) => {
         if (stopped || !isInlineEnabled()) return;
-        if (scanTimer) clearTimeout(scanTimer);
-        scanTimer = setTimeout(() => { scanTimer = null; scanChatMarkers(); }, 180);
+        if (isOwnDomMutation(mutations)) return;
+        scheduleScan();
       });
-      observer.observe(document.body, { childList: true, subtree: true });
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     }
 
     function onDocClickClosePicker(e) {
@@ -377,6 +662,8 @@ export function buildHostMemeRuntimeSnippet() {
     function applyConfig(nextCfg) {
       cfg = nextCfg && typeof nextCfg === 'object' ? nextCfg : {};
       if (!isInlineEnabled()) {
+        if (scanTimer) { clearTimeout(scanTimer); scanTimer = null; }
+        firstPendingAt = 0;
         restoreInlineCards();
         if (observer) { observer.disconnect(); observer = null; }
       } else {
@@ -399,6 +686,7 @@ export function buildHostMemeRuntimeSnippet() {
     function unmount() {
       stopped = true;
       if (scanTimer) clearTimeout(scanTimer);
+      firstPendingAt = 0;
       if (observer) { observer.disconnect(); observer = null; }
       document.removeEventListener('click', onDocClickClosePicker, true);
       restoreInlineCards();

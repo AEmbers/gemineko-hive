@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.5] - 2026-11-28
+
+### Fixed & Improved
+- **根治 Antigravity `2.36.0` 聊天内联猫娘表情不渲染及 Dock DOM 高频自触发死循环（#13）**：
+  - **消除 Dock 60~144 FPS DOM 空转与扫描器饿死（[host-injector.mjs](src/cdp/host-injector.mjs)）**：`syncDockPosition()` 对 `collapseBtn.textContent` 与 `catEl.title` 增加变更前后对比守卫，避免值未变仍反复重建文本节点；同时 `domObserver` 过滤 `#gemineko-cdp-composer-dock`、`.gk-inline-meme-card`、`#gemineko-meme-picker-pop`、`#gemineko-meme-finish-toast` 内部变更，彻底消除 `onUrlCheck -> scheduleSync -> syncDockPosition` 每帧自触发死循环（此前每秒产生百余次 DOM 变更直接饿死表情扫描定时器）；
+  - **兼容 `2.36.0` 流式逐词 `<span>` 拆分与 React 安全原地渲染（[host-meme-runtime.mjs](src/cdp/host-meme-runtime.mjs)）**：升级 `scanChatMarkers()` 支持跨 `<span>` 连续行内文本流合并识别（自动跳过 `<pre>`/`<code>`/可编辑区），以就地改写 `TextNode.nodeValue` + `insertBefore` 替代会破坏 React 节点树的 `replaceWith()`，同步扩展 `[data-markdown-root]` / `[data-testid="user-message-content"]` 容器选择器、修复 `matchMeme` 模板字符串正则双写转义，并为 `MutationObserver` 增加 `SCAN_MAX_WAIT_MS = 320` 防饿死机制与 `characterData` 监听。
+
 ## [0.8.4] - 2026-11-28
 
 ### Fixed & Improved

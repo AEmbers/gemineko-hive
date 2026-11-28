@@ -27,7 +27,11 @@ import {
 import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../src/native-patcher.mjs';
 import { buildHostI18nRuntimeSnippet, translateHostText } from '../src/cdp/host-i18n-runtime.mjs';
 import { buildCdpOverlayScript, formatDockModelDisplay, formatDockToolDisplay } from '../src/cdp/host-injector.mjs';
-import { parseMemeCaptionFromText } from '../src/cdp/host-meme-runtime.mjs';
+import {
+  buildHostMemeRuntimeSnippet,
+  extractMemeMatchesFromSegments,
+  parseMemeCaptionFromText,
+} from '../src/cdp/host-meme-runtime.mjs';
 import { buildHostStartupRuntimeSnippet } from '../src/cdp/host-startup-runtime.mjs';
 import {
   STARTUP_ASAR_MARK_END,
@@ -2070,4 +2074,41 @@ test('启动动画冷启门禁、未满 420ms 中断不锁死、420ms 后标记�
     await srv.close();
     fs.rmSync(sb.root, { recursive: true, force: true });
   }
+});
+
+test('Antigravity 2.36.0 流式 <span> 拆分猫娘表情解析、React 安全原地渲染与 Dock DOM 防死循环回归（v0.8.5）', () => {
+  // 1. 验证 9-span 拆分、全角冒号与同行多贴纸提取纯函数
+  const split9 = ['[', '表情', ': ', '猫娘', '双', '赞', '好', '耶', ']'];
+  const r1 = extractMemeMatchesFromSegments(split9);
+  assert.equal(r1.matches.length, 1);
+  assert.equal(r1.matches[0].caption, '猫娘双赞好耶');
+  assert.equal(r1.strippedText, '');
+
+  const multi = extractMemeMatchesFromSegments([
+    '收工啦 ',
+    '[贴纸：',
+    '测试全绿通过]',
+    ' 继续冲 [meme: 猫娘拉礼花庆祝]！',
+  ]);
+  assert.equal(multi.matches.length, 2);
+  assert.deepEqual(
+    multi.matches.map((m) => m.caption),
+    ['测试全绿通过', '猫娘拉礼花庆祝'],
+  );
+  assert.equal(multi.strippedText, '收工啦  继续冲 ！');
+
+  // 2. 验证 host-meme-runtime 生成片段语法合法、转义正确且采用 React 安全原地修改与 maxWait 防饿死
+  const memeSnippet = buildHostMemeRuntimeSnippet();
+  assert.doesNotThrow(() => new Function('ctx', `${memeSnippet}\nreturn initHostMemeEngine;`));
+  assert.match(memeSnippet, /low\.split\(\/\[\\s,，\/\]\+\/\)/);
+  assert.match(memeSnippet, /MARKER_SCAN_RE\s*=\s*\/\\\[\(\?:表情\|贴纸\|meme\)/);
+  assert.match(memeSnippet, /SCAN_MAX_WAIT_MS\s*=\s*320/);
+  assert.match(memeSnippet, /characterData:\s*true/);
+  assert.match(memeSnippet, /insertBefore\(frag,\s*anchorAfter\)/);
+  assert.ok(!memeSnippet.includes('it.node.replaceWith(card)'), '不应直接用 replaceWith 销毁 React 管理的 TextNode');
+
+  // 3. 验证 host-injector 包含 Dock textContent 变更守卫与 SELF_MUTATION_SEL 过滤
+  const injectorSrc = fs.readFileSync(path.join(REPO_ROOT, 'src', 'cdp', 'host-injector.mjs'), 'utf8');
+  assert.match(injectorSrc, /collapseBtn\.textContent !== nextGlyph/);
+  assert.match(injectorSrc, /SELF_MUTATION_SEL/);
 });

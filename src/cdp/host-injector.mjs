@@ -665,11 +665,13 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     dock.classList.toggle('is-right', isRight);
     const catEl = dock.querySelector('.gk-dock-cat');
     if (catEl) {
-      catEl.title = isRight ? '点击摸头 💖（停靠在输入框右上方）' : '点击摸头 💖（停靠在输入框左上方）';
+      const nextTitle = isRight ? '点击摸头 💖（停靠在输入框右上方）' : '点击摸头 💖（停靠在输入框左上方）';
+      if (catEl.title !== nextTitle) catEl.title = nextTitle;
     }
     const collapseBtn = dock.querySelector('.gk-collapse-btn');
     if (collapseBtn) {
-      collapseBtn.textContent = isRight ? (collapsed ? '‹' : '›') : (collapsed ? '›' : '‹');
+      const nextGlyph = isRight ? (collapsed ? '‹' : '›') : (collapsed ? '›' : '‹');
+      if (collapseBtn.textContent !== nextGlyph) collapseBtn.textContent = nextGlyph;
     }
 
     const anchor = findComposerAnchor();
@@ -1191,8 +1193,18 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   replaceOpenSwarmPillLogo();
   startupEngine?.maybeAutoPlay?.();
 
-  domObserver = new MutationObserver(() => {
+  const SELF_MUTATION_SEL = '#gemineko-cdp-composer-dock, .gk-inline-meme-card, #gemineko-meme-picker-pop, #gemineko-meme-finish-toast';
+
+  domObserver = new MutationObserver((mutations) => {
     if (stopped) return;
+    if (Array.isArray(mutations) && mutations.length > 0) {
+      const allOwn = mutations.every((m) => {
+        const t = m?.target;
+        const el = t && t.nodeType === 1 ? t : t?.parentElement;
+        return Boolean(el && typeof el.closest === 'function' && el.closest(SELF_MUTATION_SEL));
+      });
+      if (allOwn) return;
+    }
     onUrlCheck();
   });
   if (document.body) {

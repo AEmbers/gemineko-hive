@@ -32,7 +32,7 @@ function stripModuleSyntax(src) {
 }
 
 export function buildGeminekoBundle() {
-  let pkgVersion = '0.8.4';
+  let pkgVersion = '0.8.5';
   try {
     const pkgRaw = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
     if (pkgRaw?.version) pkgVersion = String(pkgRaw.version).trim();

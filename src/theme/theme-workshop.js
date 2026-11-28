@@ -564,7 +564,7 @@ export function createThemeWorkshopController(deps) {
     const starTxt = Number.isFinite(Number(gh.stars)) ? `⭐ ${gh.stars} Star` : '⭐ 点 Star 支持';
     const verTxt = gh.hasUpdate
       ? `🚀 发现新版 v${escWorkshopHtml(gh.latestVersion)}（当前 v${escWorkshopHtml(gh.currentVersion)}）`
-      : `v${escWorkshopHtml(gh.currentVersion || state.brand?.version || (typeof GEMINEKO_VERSION === 'string' ? GEMINEKO_VERSION : '0.8.4'))} · 源 ${escWorkshopHtml(state.registrySource)}`;
+      : `v${escWorkshopHtml(gh.currentVersion || state.brand?.version || (typeof GEMINEKO_VERSION === 'string' ? GEMINEKO_VERSION : '0.8.5'))} · 源 ${escWorkshopHtml(state.registrySource)}`;
 
     const cardsHtml = state.registry.map((t) => {
       const isActive = activePackId === t.id;

@@ -11,7 +11,7 @@ description: >-
   Swarm bees, toggle the live chat catgirl overlay, or preview the swarm UI.
 ---
 
-# Gemineko Hive · 基米窝 (v0.8.4)
+# Gemineko Hive · 基米窝 (v0.8.5)
 
 把 Google Antigravity 原生 Swarm 面板、主对话区与侧边栏全面改造成《基米窝》宇宙：集成极薄 `app.asar` 原生 0ms 引导（免 `19222` 端口）、SSE 实时热引擎、剧场级反重力冷启有声动画、社区主题商店与精细工坊、13 控件哈基米彩蛋 & 水晶拯救物语软萌配音、以及可选全量汉化。
 
