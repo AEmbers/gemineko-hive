@@ -4,7 +4,7 @@
   <img src="assets/logo.png" width="124" alt="Gemineko Hive Icon" />
 </p>
 
-<h1 align="center">Gemineko Hive · 基米窝 v0.7.0</h1>
+<h1 align="center">Gemineko Hive · 基米窝 v0.8.3</h1>
 
 <p align="center">
   <strong>“坏了，捅了基米窝了！”</strong><br />
@@ -44,10 +44,10 @@
     - **Claude（`claude` · 橘发大小姐）**：橘红螺旋双卷发（**纯人类少女，无猫耳/无龙角**）+ 橘色菊花发饰与黑金蝴蝶结 + 琥珀金下垂眼 + 奶白高领披肩与黑束腰裙
     - **GPT（`gpt` · Q 版白紫龙娘）**：白发淡紫梢 + 分节淡紫龙角 + 蝙蝠小龙翼与鳞尾 + 淡紫盘扣花穗 + **灵魂呆萌空心白椭圆眼（无瞳孔）**
   - **真·逐帧透明动态 APNG**：由 `scripts/build-animated-sprites.mjs` 将原生 4 帧循环动画去白底羽化并底对齐至 `128×128 RGBA APNG`（含 `acTL` 动画块，保留气泡头像真动效）：**思考中**（托腮眨眼星光）、**读代码**（圆框眼镜放大镜翻书）、**改文件**（交替手势敲发光机械键盘）、**跑终端**（耳机盯绿屏终端欢呼）、**打盹**（抱星星枕头闭眼呼吸，全图零文字）。
-- **Antigravity 主对话区实时挂载（免改 `app.asar`）**：
+- **Antigravity 主对话区双通道实时挂载（极薄 `app.asar` 原生 0ms 引导 × CDP 免改包兜底）**：
   - 实时读取会话 `transcript.jsonl` 尾部日志，精准区分当前是 **编排模式（Planner）** 还是 **执行模式（Executor）**；
-  - 通过本地 CDP 自动在**主对话输入栏左上沿固定锚定**透明动态猫娘（不可拖拽、自适应字号与缩放、摸头会冒爱心 💖），并在聊天流最底部正在干活的 `Thinking for ...` / `Working` / `Running` 行旁同步挂载动态动作小立绘（回合结束自动收起）！
-  - 注：主对话挂件需要 Antigravity 以 `--remote-debugging-port=19222` 启动（Windows 开始菜单快捷方式默认已带此参数；未开启时插件会自动静默待机，不影响独立面板）。
+  - 默认通过本地 CDP 在**主对话输入栏左上沿固定锚定**透明动态猫娘（不可拖拽、自适应字号与缩放、摸头会冒爱心 💖），并在聊天流最底部正在干活的 `Thinking for ...` / `Working` / `Running` 行旁同步挂载动态动作小立绘（回合结束自动收起）；
+  - 推荐通过工坊「⚡ 5. 原生 0ms 沉浸引导」或 CLI `node bin/gemineko-hive.mjs host-asar apply` 写入 ~4KB 极薄主进程引导钩子：彻底摆脱 `--remote-debugging-port=19222` 参数依赖、冷启深色防白屏、并通过 Sidecar SSE 保持主题/汉化/彩蛋 <50ms 热刷新（完全保留 `chinese-toolkit`、`agy-meme` 与原版 `.bak`，随时一键无损剥离）。
 - **Swarm 全链路无损美化 & 入口小蜜蜂替换**：
   - 支持对官方 `swarm_board` 无损换肤并同步备份替换 `swarm/assets/logo.svg`，连聊天气泡里的 `[Open the Swarm UI]` 按钮也会变成可爱的基米窝图标！随时一键字节级还原官方原版。
 - **高浓度哈基米玩梗花名**：
@@ -87,9 +87,12 @@ git clone https://github.com/AEmbers/gemineko-hive.git ~/.gemini/config/plugins/
    - 主窗口支持 **新版 3 视觉模式**（默认 **`optical-neko` 光学高定哈基米** / **`vivid` 浓郁二次元** / **`minimal` 极简专注**）、`ask_question` 提问抱臂仰头思考 + `A? B? C? D?` 轮盘舞台、**全链路猫娘表情包渲染与收工贴纸**、`Overview` 悬浮卡猫耳重绘、发光 SVG 爪印雨（`Ctrl+Shift+P`），以及 **面向中文与国际用户的可选 Antigravity 全量汉化**。
 2. **CLI 命令行控制（可选）**：
    ```bash
-   node bin/gemineko-hive.mjs status   # 检查原生 Swarm 换肤状态、精灵数与 logo 替换状态
-   node bin/gemineko-hive.mjs apply    # 套用/升级后重新应用《基米窝》皮肤与入口图标
-   node bin/gemineko-hive.mjs restore  # 字节级无损还原官方原版 Swarm 与小蜜蜂图标
+   node bin/gemineko-hive.mjs status             # 检查原生 Swarm 换肤状态、精灵数与 logo 替换状态
+   node bin/gemineko-hive.mjs apply              # 套用/升级后重新应用《基米窝》皮肤与入口图标
+   node bin/gemineko-hive.mjs restore            # 字节级无损还原官方原版 Swarm 与小蜜蜂图标
+   node bin/gemineko-hive.mjs host-asar status   # 检查原生 0ms 引导钩子及第三方补丁共存状态
+   node bin/gemineko-hive.mjs host-asar apply    # 写入极薄 app.asar 主进程引导钩子（免 19222 端口）
+   node bin/gemineko-hive.mjs host-asar restore  # 无损剥离原生引导钩子（保留汉化与表情包补丁）
    ```
 
 ---

@@ -1,10 +1,21 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 import { buildGeminekoBundle } from '../scripts/build-bundle.mjs';
+import {
+  AsarArchive,
+  HOST_ASAR_MARK_END,
+  HOST_ASAR_MARK_START,
+  applyHostAsarPatch,
+  buildMainHostLoaderBlock,
+  getHostAsarStatus,
+  restoreHostAsarPatch,
+} from '../src/host-asar-patcher.mjs';
 import {
   classifyModelRole,
   classifyToolAction,
@@ -320,6 +331,8 @@ test('独立 Sidecar 服务端全路由、精灵图、实时活动与 CDP 接口
     appDataDirs: [sb.appDataDir],
     spriteCacheDir,
     themeConfigPath: path.join(spriteCacheDir, 'theme-config.json'),
+    runtimeEndpointPath: path.join(spriteCacheDir, 'runtime-endpoint.json'),
+    autoHealNativePatch: false,
     sideToken: 'test-hive-secret',
     enableCdp: false,
   });
@@ -647,6 +660,8 @@ test('activity-tracker 报错信号与 Sidecar v0.5.0 主题/事件/Range壁纸/
     appDataDirs: [sb.appDataDir],
     sideToken: 'test-v5-secret',
     themeConfigPath: path.join(sb.root, 'theme-config.json'),
+    runtimeEndpointPath: path.join(sb.root, 'runtime-endpoint.json'),
+    autoHealNativePatch: false,
   });
   try {
     const hz = await srv.inject({ url: '/healthz' });
@@ -1003,6 +1018,8 @@ test('Sidecar 社区商店接口、GitHub Star 与版本更新推送缓存闭环
     spritesSourceDir: path.join(REPO_ROOT, 'assets', 'sprites'),
     logoPngPath: path.join(REPO_ROOT, 'assets', 'logo.png'),
     themeConfigPath: cfgPath,
+    runtimeEndpointPath: path.join(sb.root, 'runtime-endpoint.json'),
+    autoHealNativePatch: false,
     themePacksDir: packsDir,
     githubCachePath: cachePath,
     fetchImpl: mockFetch,
@@ -1137,6 +1154,8 @@ test('13 控件哈基米专属彩蛋目录、水晶拯救跨版本连载、语�
     spritesSourceDir: path.join(REPO_ROOT, 'assets', 'sprites'),
     logoPngPath: path.join(REPO_ROOT, 'assets', 'logo.png'),
     themeConfigPath: cfgPath,
+    runtimeEndpointPath: path.join(sb.root, 'runtime-endpoint.json'),
+    autoHealNativePatch: false,
     themePacksDir: path.join(sb.root, 'packs'),
     githubCachePath: path.join(sb.root, 'gh-cache.json'),
     sideToken: 'test-egg-secret',
@@ -1490,4 +1509,251 @@ test('host-i18n-runtime 防抖不饥饿、React 复用节点重译与属性/剪�
   engine.unmount();
   assert.equal(activeObserver, null);
   assert.equal(mockWin.__GEMINEKO_I18N_API__, null);
+});
+
+/**
+ * 构造轻量标准 Electron ASAR 测试归档（含主入口、第三方汉化/表情包标记与额外打包文件）。
+ */
+function createTestAsarArchive(asarPath, filesMap) {
+  const entries = Object.entries(filesMap).map(([rel, content]) => ({
+    path: rel.replace(/\\/g, '/'),
+    buf: Buffer.isBuffer(content) ? content : Buffer.from(String(content), 'utf8'),
+  }));
+  const header = { files: {} };
+  let offset = 0n;
+  for (const item of entries) {
+    const parts = item.path.split('/');
+    let dir = header.files;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!dir[parts[i]]) dir[parts[i]] = { files: {} };
+      dir = dir[parts[i]].files;
+    }
+    dir[parts[parts.length - 1]] = { size: item.buf.length, offset: offset.toString() };
+    offset += BigInt(item.buf.length);
+  }
+  const headerBuf = AsarArchive.createHeaderBuffer(JSON.stringify(header));
+  const out = Buffer.concat([headerBuf, ...entries.map((e) => e.buf)]);
+  fs.mkdirSync(path.dirname(asarPath), { recursive: true });
+  fs.writeFileSync(asarPath, out);
+}
+
+test('极薄 app.asar 主进程引导引擎（v0.8.3）：增量注入 dist/main.js、vm 校验、幂等与第三方共存剥离', () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gemineko-host-asar-'));
+  const resourcesDir = path.join(tmpRoot, 'resources');
+  const asarPath = path.join(resourcesDir, 'app.asar');
+  const bakPath = path.join(resourcesDir, 'app.asar.bak');
+
+  const loaderCode = buildMainHostLoaderBlock();
+  assert.doesNotThrow(() => new vm.Script(loaderCode), 'buildMainHostLoaderBlock() 必须通过 vm.Script 语法校验');
+
+  const origMain = '"use strict";\nconst { app } = require("electron");\napp.whenReady().then(() => {});\n';
+  const origPreload = [
+    "'__ANTIGRAVITY_CHINESE_LOCALIZATION_START__';",
+    '// keep third-party localization',
+    "'__ANTIGRAVITY_CHINESE_LOCALIZATION_END__';",
+    "'__ANTIGRAVITY_MEME_RENDERER_START__';",
+    '// keep third-party meme',
+    "'__ANTIGRAVITY_MEME_RENDERER_END__';",
+  ].join('\n');
+
+  createTestAsarArchive(asarPath, {
+    'package.json': '{"name":"antigravity","version":"2.36.0"}',
+    'dist/main.js': origMain,
+    'dist/preload.js': origPreload,
+  });
+
+  // 预设已有第三方 .bak，确保绝不覆盖
+  fs.writeFileSync(bakPath, 'KEEP_EXISTING_BACKUP', 'utf8');
+
+  const stBefore = getHostAsarStatus({ resourcesDir, skipProcessCheck: true });
+  assert.equal(stBefore.found, true);
+  assert.equal(stBefore.patched, false);
+  assert.equal(stBefore.hasLocalization, true);
+  assert.equal(stBefore.hasMemeRenderer, true);
+  assert.equal(stBefore.bakExists, true);
+
+  const resApply1 = applyHostAsarPatch({ resourcesDir, skipProcessCheck: true });
+  assert.equal(resApply1.ok, true);
+  assert.equal(resApply1.action, 'applied');
+  assert.equal(resApply1.status.patched, true);
+  assert.equal(fs.readFileSync(bakPath, 'utf8'), 'KEEP_EXISTING_BACKUP', '绝不能覆盖既有 app.asar.bak');
+
+  const mainAfter1 = AsarArchive.readFile(asarPath, 'dist/main.js').toString('utf8');
+  assert.ok(mainAfter1.includes(HOST_ASAR_MARK_START));
+  assert.ok(mainAfter1.includes(HOST_ASAR_MARK_END));
+  assert.doesNotThrow(() => new vm.Script(mainAfter1), '注入后的 dist/main.js 必须通过 vm.Script 校验');
+  assert.equal(AsarArchive.readFile(asarPath, 'dist/preload.js').toString('utf8'), origPreload, 'dist/preload.js 必须原封不动');
+
+  // 二次 apply 必须幂等，不产生重复标记块
+  const resApply2 = applyHostAsarPatch({ resourcesDir, skipProcessCheck: true });
+  assert.equal(resApply2.ok, true);
+  const mainAfter2 = AsarArchive.readFile(asarPath, 'dist/main.js').toString('utf8');
+  assert.equal(mainAfter2.split(HOST_ASAR_MARK_START).length - 1, 1);
+
+  // 无损还原仅剥离自身标记块，第三方补丁与 .bak 完好保留
+  const resRestore = restoreHostAsarPatch({ resourcesDir, skipProcessCheck: true });
+  assert.equal(resRestore.ok, true);
+  assert.equal(resRestore.action, 'restored');
+  assert.equal(resRestore.status.patched, false);
+  assert.equal(resRestore.status.hasLocalization, true);
+  assert.equal(resRestore.status.hasMemeRenderer, true);
+  const mainRestored = AsarArchive.readFile(asarPath, 'dist/main.js').toString('utf8');
+  assert.equal(mainRestored.trimEnd(), origMain.trimEnd());
+  assert.equal(fs.readFileSync(bakPath, 'utf8'), 'KEEP_EXISTING_BACKUP');
+});
+
+test('Sidecar 端点名片、/api/host-bootstrap.js 鉴权与 /api/host-events SSE 实时热推送验证', async () => {
+  const { outPath: bundlePath } = buildGeminekoBundle();
+  const sb = createFakeSwarmSandbox();
+  const endpointPath = path.join(sb.root, 'nested', 'runtime-endpoint.json');
+
+  const srv = await createHiveSidecarServer({
+    port: 0,
+    bundlePath,
+    swarmDir: sb.swarmDir,
+    appDataDirs: [sb.appDataDir],
+    themeConfigPath: path.join(sb.root, 'theme-config.json'),
+    themePacksDir: path.join(sb.root, 'packs'),
+    githubCachePath: path.join(sb.root, 'gh-cache.json'),
+    runtimeEndpointPath: endpointPath,
+    autoHealNativePatch: false,
+    sideToken: 'test-sse-secret',
+    enableCdp: false,
+  });
+
+  let sseReq = null;
+  let sseRes = null;
+  try {
+    // 1. 验证 runtime-endpoint.json 名片写入正确
+    assert.equal(fs.existsSync(endpointPath), true);
+    const ep = JSON.parse(fs.readFileSync(endpointPath, 'utf8'));
+    assert.equal(ep.origin, srv.origin);
+    assert.equal(ep.port, srv.port);
+    assert.equal(ep.token, 'test-sse-secret');
+
+    // 2. /api/host-bootstrap.js 严格 token 鉴权与内容校验
+    const unauthBoot = await srv.inject({ url: '/api/host-bootstrap.js' });
+    assert.equal(unauthBoot.statusCode, 403);
+    const okBoot = await srv.inject({ url: '/api/host-bootstrap.js?token=test-sse-secret' });
+    assert.equal(okBoot.statusCode, 200);
+    assert.match(okBoot.text, /const TRANSPORT = "native-asar"/);
+    assert.match(okBoot.text, /\/api\/host-events/);
+
+    // 3. 建立真实 SSE 长连接，验证 hello、/api/cdp/status 原生连通与实时配置/事件广播
+    const receivedFrames = [];
+    await new Promise((resolveReady, rejectReady) => {
+      const timer = setTimeout(() => rejectReady(new Error('SSE hello timeout')), 3000);
+      sseReq = http.get(`${srv.origin}/api/host-events?token=test-sse-secret`, (res) => {
+        sseRes = res;
+        assert.equal(res.statusCode, 200);
+        assert.match(String(res.headers['content-type'] || ''), /text\/event-stream/);
+        let buf = '';
+        res.on('data', (chunk) => {
+          buf += chunk.toString('utf8');
+          const parts = buf.split('\n\n');
+          buf = parts.pop() || '';
+          for (const frame of parts) {
+            if (!frame.trim() || frame.startsWith(':')) continue;
+            receivedFrames.push(frame);
+            if (receivedFrames.some((f) => f.includes('event: hello'))) {
+              clearTimeout(timer);
+              resolveReady();
+            }
+          }
+        });
+      });
+      sseReq.on('error', (err) => {
+        clearTimeout(timer);
+        rejectReady(err);
+      });
+    });
+
+    const cdpSt = await srv.inject({ url: '/api/cdp/status' });
+    assert.equal(cdpSt.statusCode, 200);
+    assert.equal(cdpSt.json().cdp.nativeConnected, true);
+    assert.equal(cdpSt.json().cdp.nativeClientCount, 1);
+    assert.equal(cdpSt.json().cdp.transport, 'native-asar');
+
+    // 发送主题变更与彩蛋事件，断言 SSE 流毫秒级收到对应帧
+    await srv.inject({
+      method: 'POST',
+      url: '/api/theme/config',
+      headers: { 'Content-Type': 'application/json', 'X-Sidecar-Token': 'test-sse-secret' },
+      body: JSON.stringify({ preset: 'cream-paper' }),
+    });
+    await srv.inject({
+      method: 'POST',
+      url: '/api/theme/event',
+      headers: { 'Content-Type': 'application/json', 'X-Sidecar-Token': 'test-sse-secret' },
+      body: JSON.stringify({ type: 'poke', role: 'hydrogen', source: 'sidecar' }),
+    });
+
+    await new Promise((r) => setTimeout(r, 80));
+    const joined = receivedFrames.join('\n---\n');
+    assert.match(joined, /event: theme-config[\s\S]*"preset":"cream-paper"/);
+    assert.match(joined, /event: theme-event[\s\S]*"role":"hydrogen"/);
+  } finally {
+    try { sseRes?.destroy(); } catch {}
+    try { sseReq?.destroy(); } catch {}
+    await srv.close();
+  }
+
+  assert.equal(fs.existsSync(endpointPath), false, 'srv.close() 后应自动清理本进程 runtime-endpoint.json');
+});
+
+test('原生 Swarm 更新覆盖自动自愈：曾开启换肤则自动恢复，从未启用则保持原样', async () => {
+  const { outPath: bundlePath } = buildGeminekoBundle();
+
+  // 场景 A：曾换肤（存在 logo.svg.gemineko.bak）但更新后 index.html/main.mjs/logo.svg 被覆写回官方原版
+  const sbHealed = createFakeSwarmSandbox();
+  applyNativePatch({
+    swarmDir: sbHealed.swarmDir,
+    bundlePath,
+    spritesSourceDir: path.join(REPO_ROOT, 'assets', 'sprites'),
+    logoPngPath: path.join(REPO_ROOT, 'assets', 'logo.png'),
+  });
+  // 模拟客户端自动更新覆盖 index.html，但残留 .gemineko.bak
+  fs.writeFileSync(path.join(sbHealed.swarmDir, 'index.html'), '<!DOCTYPE html><html><body><div>official</div></body></html>', 'utf8');
+  assert.equal(getNativePatchStatus({ swarmDir: sbHealed.swarmDir, bundlePath, spritesSourceDir: path.join(REPO_ROOT, 'assets', 'sprites') }).upToDate, false);
+
+  const srvHealed = await createHiveSidecarServer({
+    port: 0,
+    bundlePath,
+    swarmDir: sbHealed.swarmDir,
+    appDataDirs: [sbHealed.appDataDir],
+    themeConfigPath: path.join(sbHealed.root, 'theme-config.json'),
+    runtimeEndpointPath: path.join(sbHealed.root, 'runtime-endpoint.json'),
+    autoHealNativePatch: true,
+    enableCdp: false,
+  });
+  try {
+    const healedSt = getNativePatchStatus({ swarmDir: sbHealed.swarmDir, bundlePath, spritesSourceDir: path.join(REPO_ROOT, 'assets', 'sprites') });
+    assert.equal(healedSt.patched, true);
+    assert.equal(healedSt.upToDate, true);
+    const apiSt = await srvHealed.inject({ url: '/api/host-asar/status' });
+    assert.equal(apiSt.statusCode, 200);
+    assert.equal(apiSt.json().nativePatchAutoHealed, true);
+  } finally {
+    await srvHealed.close();
+  }
+
+  // 场景 B：从未启用过换肤（无 .bak），启动 Sidecar 绝不擅自改写官方文件
+  const sbUntouched = createFakeSwarmSandbox();
+  const srvUntouched = await createHiveSidecarServer({
+    port: 0,
+    bundlePath,
+    swarmDir: sbUntouched.swarmDir,
+    appDataDirs: [sbUntouched.appDataDir],
+    themeConfigPath: path.join(sbUntouched.root, 'theme-config.json'),
+    runtimeEndpointPath: path.join(sbUntouched.root, 'runtime-endpoint.json'),
+    autoHealNativePatch: true,
+    enableCdp: false,
+  });
+  try {
+    const untouchedSt = getNativePatchStatus({ swarmDir: sbUntouched.swarmDir, bundlePath, spritesSourceDir: path.join(REPO_ROOT, 'assets', 'sprites') });
+    assert.equal(untouchedSt.patched, false);
+    assert.equal(untouchedSt.logoBackupExists, false);
+  } finally {
+    await srvUntouched.close();
+  }
 });

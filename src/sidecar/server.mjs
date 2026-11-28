@@ -16,7 +16,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { enrichSwarmMembersWithActivity, findActiveConversationActivity } from '../activity-tracker.mjs';
-import { CdpHostInjector } from '../cdp/host-injector.mjs';
+import { CdpHostInjector, buildCdpOverlayScript } from '../cdp/host-injector.mjs';
+import {
+  applyHostAsarPatch,
+  getDefaultRuntimeEndpointPath,
+  getHostAsarStatus,
+  restoreHostAsarPatch,
+} from '../host-asar-patcher.mjs';
 import { BRAND_META } from '../meta/brand.mjs';
 import { applyNativePatch, getNativePatchStatus, resolveSwarmPaths, restoreNativePatch } from '../native-patcher.mjs';
 import { buildDemoSwarmSnapshot } from '../theme/demo-data.js';
@@ -398,12 +404,99 @@ export async function createHiveSidecarServer(options = {}) {
     res.end(body);
   }
 
-  function verifyAuth(req) {
+  function verifyAuth(req, urlObj = null) {
     const reqTok = typeof req.headers['x-sidecar-token'] === 'string' ? req.headers['x-sidecar-token'].trim() : '';
-    return validTokens.some((tk) => safeTokenCompare(reqTok, tk));
+    const queryTok = urlObj ? String(urlObj.searchParams.get('token') || '').trim() : '';
+    const tok = reqTok || queryTok;
+    return validTokens.some((tk) => safeTokenCompare(tok, tk));
   }
 
   let cdpInjector = null;
+  let hostOverlayEnabled = true;
+  let nativePatchAutoHealed = false;
+  if (options.autoHealNativePatch !== false) {
+    try {
+      const nativeSt = getNativePatchStatus({
+        swarmDir: swarmPaths.swarmBoardDir,
+        bundlePath: swarmPaths.bundlePath,
+        spritesSourceDir: swarmPaths.spritesSourceDir,
+        logoPngPath: swarmPaths.logoPngPath,
+      });
+      if (nativeSt.swarmExists && nativeSt.bundleBuilt && nativeSt.logoBackupExists && !nativeSt.upToDate) {
+        applyNativePatch({
+          swarmDir: swarmPaths.swarmBoardDir,
+          bundlePath: swarmPaths.bundlePath,
+          spritesSourceDir: swarmPaths.spritesSourceDir,
+          logoPngPath: swarmPaths.logoPngPath,
+        });
+        nativePatchAutoHealed = true;
+      }
+    } catch {
+      /* 自愈失败不阻断 Sidecar 启动 */
+    }
+  }
+
+  const sseClients = new Set();
+  function broadcastSse(eventName, payload) {
+    if (sseClients.size === 0) return;
+    const frame = `event: ${eventName}\ndata: ${JSON.stringify(payload ?? {})}\n\n`;
+    for (const client of Array.from(sseClients)) {
+      if (client.destroyed || client.writableEnded) {
+        sseClients.delete(client);
+        continue;
+      }
+      try {
+        client.write(frame);
+      } catch {
+        sseClients.delete(client);
+      }
+    }
+  }
+  function broadcastThemeConfig(cfg) {
+    broadcastSse('theme-config', cfg);
+    if (cdpInjector) {
+      cdpInjector.pushThemeConfig(cfg).catch(() => {});
+    }
+  }
+  function broadcastThemeEvent(evt) {
+    broadcastSse('theme-event', evt);
+    if (cdpInjector) {
+      cdpInjector.pushThemeEvent(evt).catch(() => {});
+    }
+  }
+  function buildHostStatusSummary() {
+    const base = cdpInjector
+      ? cdpInjector.getStatus()
+      : { enabled: hostOverlayEnabled, state: hostOverlayEnabled ? 'disabled' : 'disabled-by-user', hint: '当前模式未启用 CDP 注入' };
+    const nativeClientCount = sseClients.size;
+    const nativeConnected = nativeClientCount > 0;
+    const transport = nativeConnected ? 'native-asar' : (base.state === 'attached' ? 'cdp' : 'none');
+    return {
+      ...base,
+      enabled: hostOverlayEnabled,
+      state: !hostOverlayEnabled ? 'disabled-by-user' : (nativeConnected ? 'attached' : base.state),
+      hint: nativeConnected
+        ? '已通过极薄 app.asar 引导钩子直连渲染，无需 19222 调试端口'
+        : base.hint,
+      nativeClientCount,
+      nativeConnected,
+      transport,
+    };
+  }
+  const ssePingTimer = setInterval(() => {
+    for (const client of Array.from(sseClients)) {
+      if (client.destroyed || client.writableEnded) {
+        sseClients.delete(client);
+        continue;
+      }
+      try {
+        client.write(': ping\n\n');
+      } catch {
+        sseClients.delete(client);
+      }
+    }
+  }, 25_000);
+  ssePingTimer.unref?.();
   const themeStore = createThemeConfigStore(options.themeConfigPath);
   const packManager = createThemePackManager({
     packsDir: options.themePacksDir,
@@ -920,9 +1013,7 @@ export async function createHiveSidecarServer(options = {}) {
         if (!wmCheck.ok) warningMsg = wmCheck.error || '水印图片路径无效';
       }
       const next = getEnrichedThemeConfig(themeStore.update(body));
-      if (cdpInjector) {
-        cdpInjector.pushThemeConfig(next).catch(() => {});
-      }
+      broadcastThemeConfig(next);
       sendJson(res, 200, {
         ok: true,
         config: next,
@@ -937,9 +1028,7 @@ export async function createHiveSidecarServer(options = {}) {
         return;
       }
       const next = getEnrichedThemeConfig(themeStore.reset());
-      if (cdpInjector) {
-        cdpInjector.pushThemeConfig(next).catch(() => {});
-      }
+      broadcastThemeConfig(next);
       sendJson(res, 200, { ok: true, config: next });
       return;
     }
@@ -972,9 +1061,7 @@ export async function createHiveSidecarServer(options = {}) {
             },
           }),
         );
-        if (cdpInjector) {
-          cdpInjector.pushThemeConfig(next).catch(() => {});
-        }
+        broadcastThemeConfig(next);
       }
       sendJson(res, 200, {
         ok: true,
@@ -1002,9 +1089,7 @@ export async function createHiveSidecarServer(options = {}) {
           },
         }),
       );
-      if (cdpInjector) {
-        cdpInjector.pushThemeConfig(next).catch(() => {});
-      }
+      broadcastThemeConfig(next);
       sendJson(res, 200, { ok: true, config: next });
       return;
     }
@@ -1060,7 +1145,7 @@ export async function createHiveSidecarServer(options = {}) {
         if (pack.basePreset) patch.preset = pack.basePreset;
         if (pack.themeIntensity) patch.themeIntensity = pack.themeIntensity;
         nextCfg = getEnrichedThemeConfig(themeStore.update(patch));
-        if (cdpInjector) cdpInjector.pushThemeConfig(nextCfg).catch(() => {});
+        broadcastThemeConfig(nextCfg);
       }
       sendJson(res, 200, { ...installRes, config: nextCfg });
       return;
@@ -1090,7 +1175,7 @@ export async function createHiveSidecarServer(options = {}) {
         nextPatch.themeIntensity = 'optical-neko';
       }
       const nextCfg = getEnrichedThemeConfig(themeStore.update(nextPatch));
-      if (cdpInjector) cdpInjector.pushThemeConfig(nextCfg).catch(() => {});
+      broadcastThemeConfig(nextCfg);
       sendJson(res, 200, { ok: true, config: nextCfg });
       return;
     }
@@ -1109,7 +1194,7 @@ export async function createHiveSidecarServer(options = {}) {
       let nextCfg = getEnrichedThemeConfig();
       if (themeStore.get().activeThemePackId === resUninstall.id) {
         nextCfg = getEnrichedThemeConfig(themeStore.update({ activeThemePackId: 'official-gemineko' }));
-        if (cdpInjector) cdpInjector.pushThemeConfig(nextCfg).catch(() => {});
+        broadcastThemeConfig(nextCfg);
       }
       sendJson(res, 200, { ok: true, id: resUninstall.id, config: nextCfg });
       return;
@@ -1170,8 +1255,8 @@ export async function createHiveSidecarServer(options = {}) {
       if (evtType === 'open-workshop' && body?.source === 'host') {
         themeEvents.latest.openWorkshop = true;
       }
-      if (cdpInjector && body?.source === 'sidecar') {
-        cdpInjector.pushThemeEvent(themeEvents.latest).catch(() => {});
+      if (body?.source === 'sidecar') {
+        broadcastThemeEvent(themeEvents.latest);
       }
       sendJson(res, 200, { ok: true, seq: themeEvents.seq, event: themeEvents.latest });
       return;
@@ -1231,10 +1316,87 @@ export async function createHiveSidecarServer(options = {}) {
       return;
     }
 
+    if (req.method === 'GET' && pathname === '/api/host-bootstrap.js') {
+      if (!verifyAuth(req, urlObj)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid sidecar token' });
+        return;
+      }
+      if (!hostOverlayEnabled) {
+        res.writeHead(200, { ...CORS_HEADERS, 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end('if (window.__GEMINEKO_CDP_UNMOUNT__) { try { window.__GEMINEKO_CDP_UNMOUNT__(); } catch {} }');
+        return;
+      }
+      const script = buildCdpOverlayScript(origin, logoDataUri, {
+        sideToken: validTokens[0] || generatedToken,
+        themeConfig: getEnrichedThemeConfig(),
+        transport: 'native-asar',
+      });
+      res.writeHead(200, { ...CORS_HEADERS, 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(script);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/host-events') {
+      if (!verifyAuth(req, urlObj)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid sidecar token' });
+        return;
+      }
+      res.writeHead(200, {
+        ...CORS_HEADERS,
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-store, no-transform',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      });
+      sseClients.add(res);
+      res.write(`event: hello\ndata: ${JSON.stringify({ ok: true, origin, seq: themeEvents.seq })}\n\n`);
+      const cleanupClient = () => sseClients.delete(res);
+      req.on('close', cleanupClient);
+      res.on('close', cleanupClient);
+      res.on('error', cleanupClient);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/host-asar/status') {
+      sendJson(res, 200, {
+        ...getHostAsarStatus(options.hostAsarOpts),
+        nativeClientCount: sseClients.size,
+        nativeConnected: sseClients.size > 0,
+        nativePatchAutoHealed,
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/host-asar/apply') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      try {
+        sendJson(res, 200, applyHostAsarPatch({ ...(options.hostAsarOpts || {}), allowKillRunning: false }));
+      } catch (err) {
+        sendJson(res, 500, { ok: false, error: err?.message || String(err) });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/host-asar/restore') {
+      if (!verifyAuth(req)) {
+        sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
+        return;
+      }
+      try {
+        sendJson(res, 200, restoreHostAsarPatch({ ...(options.hostAsarOpts || {}), allowKillRunning: false }));
+      } catch (err) {
+        sendJson(res, 500, { ok: false, error: err?.message || String(err) });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/cdp/status') {
       sendJson(res, 200, {
         ok: true,
-        cdp: cdpInjector ? cdpInjector.getStatus() : { enabled: false, state: 'disabled', hint: '当前模式未启用 CDP 注入' },
+        cdp: buildHostStatusSummary(),
       });
       return;
     }
@@ -1244,14 +1406,14 @@ export async function createHiveSidecarServer(options = {}) {
         sendJson(res, 403, { ok: false, error: 'Missing or invalid X-Sidecar-Token' });
         return;
       }
-      if (!cdpInjector) {
-        sendJson(res, 200, { ok: true, cdp: { enabled: false, state: 'disabled' } });
-        return;
-      }
       const body = await readJsonBody(req);
-      const nextEnabled = typeof body.enabled === 'boolean' ? body.enabled : !cdpInjector.enabled;
-      const status = await cdpInjector.setEnabled(nextEnabled);
-      sendJson(res, 200, { ok: true, cdp: status });
+      const nextEnabled = typeof body.enabled === 'boolean' ? body.enabled : !hostOverlayEnabled;
+      hostOverlayEnabled = nextEnabled;
+      if (cdpInjector) {
+        await cdpInjector.setEnabled(nextEnabled);
+      }
+      broadcastSse('host-toggle', { enabled: nextEnabled });
+      sendJson(res, 200, { ok: true, cdp: buildHostStatusSummary() });
       return;
     }
 
@@ -1361,6 +1523,30 @@ export async function createHiveSidecarServer(options = {}) {
   const addr = server.address();
   const actualPort = typeof addr === 'object' && addr ? addr.port : listenPort;
   const origin = `http://127.0.0.1:${actualPort}`;
+  const runtimeEndpointPath = options.runtimeEndpointPath
+    ? path.resolve(options.runtimeEndpointPath)
+    : getDefaultRuntimeEndpointPath();
+
+  const writeRuntimeEndpoint = () => {
+    try {
+      const dir = path.dirname(runtimeEndpointPath);
+      fs.mkdirSync(dir, { recursive: true });
+      const tmp = `${runtimeEndpointPath}.tmp.${process.pid}`;
+      const payload = {
+        origin,
+        port: actualPort,
+        token: validTokens[0] || generatedToken,
+        pid: process.pid,
+        version: BRAND_META.version,
+        updatedAt: Date.now(),
+      };
+      fs.writeFileSync(tmp, JSON.stringify(payload, null, 2), 'utf8');
+      fs.renameSync(tmp, runtimeEndpointPath);
+    } catch {
+      /* 忽略名片写入异常，不影响 Sidecar 主循环 */
+    }
+  };
+  writeRuntimeEndpoint();
 
   if (options.enableCdp !== false) {
     cdpInjector = new CdpHostInjector({
@@ -1395,11 +1581,26 @@ export async function createHiveSidecarServer(options = {}) {
     port: actualPort,
     origin,
     sideToken: generatedToken,
+    runtimeEndpointPath,
     cdpInjector,
     inject,
     close: () => {
+      clearInterval(ssePingTimer);
+      for (const client of Array.from(sseClients)) {
+        try { client.end(); } catch {}
+      }
+      sseClients.clear();
+      try {
+        if (fs.existsSync(runtimeEndpointPath)) {
+          const cur = JSON.parse(fs.readFileSync(runtimeEndpointPath, 'utf8'));
+          if (cur && Number(cur.pid) === process.pid) {
+            fs.unlinkSync(runtimeEndpointPath);
+          }
+        }
+      } catch {}
       if (cdpInjector) cdpInjector.stop();
       return new Promise((resolveClose) => {
+        server.closeAllConnections?.();
         server.close(() => resolveClose());
       });
     },

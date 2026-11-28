@@ -169,7 +169,7 @@ function pickPrimaryPageTarget(targets) {
  * 运行在宿主 Electron 渲染进程浏览器上下文中。
  * @param {string} serverBaseUrl 例如 http://127.0.0.1:19876
  * @param {string} [logoDataUri]
- * @param {{ sideToken?: string, themeConfig?: any }} [options]
+ * @param {{ sideToken?: string, themeConfig?: any, transport?: string }} [options]
  * @returns {string}
  */
 export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options = {}) {
@@ -177,6 +177,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   const logoJson = JSON.stringify(logoDataUri || '');
   const tokenJson = JSON.stringify(String(options?.sideToken || ''));
   const themeCfgJson = JSON.stringify(options?.themeConfig || null);
+  const transportJson = JSON.stringify(String(options?.transport || 'cdp'));
   const themeSnippet = buildHostThemeRuntimeSnippet();
   const i18nSnippet = buildHostI18nRuntimeSnippet();
   const memeSnippet = buildHostMemeRuntimeSnippet();
@@ -186,6 +187,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   const LOGO_URI = ${logoJson};
   const SIDE_TOKEN = ${tokenJson};
   const INITIAL_THEME_CONFIG = ${themeCfgJson};
+  const TRANSPORT = ${transportJson};
   const DOCK_ID = 'gemineko-cdp-composer-dock';
   const LEGACY_CAPSULE_ID = 'gemineko-cdp-live-capsule';
   const INLINE_CLASS = 'gk-live-inline-wrap';
@@ -211,6 +213,7 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   let pollTimer = null;
   let routeI18nTimer = null;
   let syncRaf = null;
+  let hostEventSource = null;
   let domObserver = null;
   let anchorResizeObserver = null;
   let dockResizeObserver = null;
@@ -1139,6 +1142,35 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     .then((d) => { if (d?.config) themeSuite.applyConfig(d.config); })
     .catch(() => {});
 
+  if (typeof window.EventSource === 'function') {
+    try {
+      const sseUrl = \`\${SERVER}/api/host-events?token=\${encodeURIComponent(SIDE_TOKEN || '')}\`;
+      hostEventSource = new window.EventSource(sseUrl);
+      hostEventSource.addEventListener('theme-config', (ev) => {
+        try {
+          const cfg = JSON.parse(String(ev.data || 'null'));
+          if (cfg && typeof cfg === 'object') themeSuite.applyConfig(cfg);
+        } catch {}
+      });
+      hostEventSource.addEventListener('theme-event', (ev) => {
+        try {
+          const evt = JSON.parse(String(ev.data || 'null'));
+          if (evt && typeof evt === 'object') themeSuite.triggerEvent(evt);
+        } catch {}
+      });
+      hostEventSource.addEventListener('host-toggle', (ev) => {
+        try {
+          const data = JSON.parse(String(ev.data || 'null'));
+          if (data && data.enabled === false) {
+            window.__GEMINEKO_CDP_UNMOUNT__?.();
+          }
+        } catch {}
+      });
+    } catch {
+      hostEventSource = null;
+    }
+  }
+
   ensureDock();
   syncDockPosition();
   syncActiveStatusSprite();
@@ -1158,6 +1190,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
   document.addEventListener('keydown', onOverlayTrigger, true);
   pollActivity();
 
+  window.__GEMINEKO_HOST_TRANSPORT__ = TRANSPORT;
+  window.__GEMINEKO_HOST_SERVER__ = SERVER;
   window.__GEMINEKO_CDP_OVERLAY_V2__ = true;
   window.__GEMINEKO_CDP_OVERLAY_V3__ = true;
   window.__GEMINEKO_CDP_OVERLAY_V5__ = true;
@@ -1168,6 +1202,10 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     if (pollTimer) clearTimeout(pollTimer);
     if (routeI18nTimer) { clearTimeout(routeI18nTimer); routeI18nTimer = null; }
     if (syncRaf) cancelAnimationFrame(syncRaf);
+    if (hostEventSource) {
+      try { hostEventSource.close(); } catch {}
+      hostEventSource = null;
+    }
     if (domObserver) domObserver.disconnect();
     if (anchorResizeObserver) anchorResizeObserver.disconnect();
     if (dockResizeObserver) dockResizeObserver.disconnect();
@@ -1185,6 +1223,8 @@ export function buildCdpOverlayScript(serverBaseUrl, logoDataUri = '', options =
     if (dock) dock.remove();
     const st = document.getElementById(STYLE_ID);
     if (st) st.remove();
+    window.__GEMINEKO_HOST_TRANSPORT__ = '';
+    window.__GEMINEKO_HOST_SERVER__ = '';
     window.__GEMINEKO_CDP_OVERLAY_V2__ = false;
     window.__GEMINEKO_CDP_OVERLAY_V3__ = false;
     window.__GEMINEKO_CDP_OVERLAY_V5__ = false;
@@ -1380,6 +1420,7 @@ export class CdpHostInjector {
       const script = buildCdpOverlayScript(this.serverBaseUrl, this.logoDataUri, {
         sideToken: this.sideToken,
         themeConfig: this.getThemeConfig(),
+        transport: 'cdp',
       });
       await this.evaluateOnTarget(script);
     }
@@ -1444,16 +1485,27 @@ export class CdpHostInjector {
         } catch {}
       });
 
-      ws.addEventListener('open', () => {
+      ws.addEventListener('open', async () => {
         clearTimeout(timeout);
         this.ws = ws;
         this.connectedUrl = target.webSocketDebuggerUrl;
         this.state = 'attached';
         this.hint = '已固定挂载到主对话输入栏与底部活跃状态行';
         this.lastError = '';
+        try {
+          const alreadySameServer = await this.evaluateOnTarget(
+            `Boolean(window.__GEMINEKO_CDP_OVERLAY_V7__ && window.__GEMINEKO_HOST_SERVER__ === ${JSON.stringify(this.serverBaseUrl)})`,
+            true,
+          );
+          if (alreadySameServer === true) {
+            finish();
+            return;
+          }
+        } catch {}
         const script = buildCdpOverlayScript(this.serverBaseUrl, this.logoDataUri, {
           sideToken: this.sideToken,
           themeConfig: this.getThemeConfig(),
+          transport: 'cdp',
         });
         this.evaluateOnTarget(script).catch(() => {});
         finish();

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.3] - 2026-11-28
+
+### Added & Fixed
+- **极薄 `app.asar` 主进程引导层 × SSE 实时热引擎（免 `19222` 端口 + 原生 Swarm 更新自愈）（#12）**：
+  - **极薄主进程引导引擎（[host-asar-patcher.mjs](src/host-asar-patcher.mjs)）**：新增 `AsarArchive` 无依赖补丁器与独立标记块（`__GEMINEKO_HOST_LOADER_START__..END__`），仅向 `dist/main.js` 增量写入极薄引导钩子（不碰 `dist/preload.js`，绕开沙箱限制），实现深色预设 `0ms` 防白屏、自动发现 Sidecar `runtime-endpoint.json` 并通过主进程直连回环拉取脚本注入主世界，彻底摆脱 `--remote-debugging-port=19222` 启动参数依赖；完整保留既有 `app.asar.bak` 与 `chinese-toolkit` / `agy-meme` 第三方补丁；
+  - **Sidecar SSE 实时热引擎（[server.mjs](src/sidecar/server.mjs)、[host-injector.mjs](src/cdp/host-injector.mjs)）**：Sidecar 启动即原子写入 `runtime-endpoint.json`，新增 `GET /api/host-bootstrap.js`、`GET /api/host-events` SSE 实时广播与 `/api/host-asar/{status,apply,restore}`，工坊调色、切主题、汉化切换与彩蛋事件毫秒级推送，同时保留 CDP 作为免改包兼容兜底；
+  - **原生 Swarm 更新自动自愈**：Sidecar 启动时若检测到用户先前已开启原生换肤（`logoBackupExists === true`）但被客户端更新覆盖，立即自动重套最新皮肤与入口图标；
+  - **CLI 与精细工坊控制**：[gemineko-hive.mjs](bin/gemineko-hive.mjs) 新增 `host-asar <status|apply|restore>`，[theme-workshop.js](src/theme/theme-workshop.js) 新增 **「⚡ 5. 原生 0ms 沉浸引导（免 19222 端口）」** 状态与一键控制卡。
+
 ## [0.8.2] - 2026-11-27
 
 ### Added

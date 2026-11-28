@@ -1691,9 +1691,10 @@ export function bootGeminekoHive() {
 
     let cdpText = '主对话挂件: 待机';
     if (lastCdpStatus) {
-      if (lastCdpStatus.state === 'attached') cdpText = '🟢 输入栏猫娘已挂载';
+      if (lastCdpStatus.nativeConnected) cdpText = '⚡ 原生 0ms 已直连';
+      else if (lastCdpStatus.state === 'attached') cdpText = '🟢 输入栏猫娘已挂载';
       else if (lastCdpStatus.state === 'disabled-by-user') cdpText = '⚪ 输入栏猫娘已暂停';
-      else if (lastCdpStatus.state === 'debug-port-disabled') cdpText = '🟡 主对话需调试端口';
+      else if (lastCdpStatus.state === 'debug-port-disabled') cdpText = '🟡 需调试端口或启用原生引导';
     }
 
     return `

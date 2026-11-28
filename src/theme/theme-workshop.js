@@ -33,6 +33,8 @@ export function createThemeWorkshopController(deps) {
     warning: '',
     exportedPack: null,
     alchemy: null,
+    hostAsar: null,
+    hostAsarCmdHint: '',
   };
 
   const TYPO_STORAGE_KEY = 'gemineko_typography_v1';
@@ -197,10 +199,11 @@ export function createThemeWorkshopController(deps) {
     state.loading = true;
     try {
       const suffix = forceRefresh ? '?refresh=1' : '';
-      const [cfgRes, regRes, ghRes] = await Promise.all([
+      const [cfgRes, regRes, ghRes, hostAsarRes] = await Promise.all([
         deps.hostApi('/api/theme/config'),
         deps.hostApi(`/api/store/registry${suffix}`),
         deps.hostApi(`/api/github/status${suffix}`),
+        deps.hostApi('/api/host-asar/status').catch(() => null),
       ]);
       if (cfgRes?.ok) {
         state.config = withLocalTypo(cfgRes.config);
@@ -218,6 +221,9 @@ export function createThemeWorkshopController(deps) {
       }
       if (ghRes?.ok) {
         state.github = ghRes;
+      }
+      if (hostAsarRes?.ok) {
+        state.hostAsar = hostAsarRes;
       }
       render();
     } catch {
@@ -834,7 +840,45 @@ export function createThemeWorkshopController(deps) {
           <div class="gn-ws-sub" style="margin-top:4px;">保留 Antigravity / Gemini 品牌与代码正文原样，切回「关闭」无损还原英文。</div>
         </div>
 
+        ${renderHostAsarCardHtml()}
+
         ${renderEggDexCardHtml(c)}
+      </div>
+    `;
+  }
+
+  function renderHostAsarCardHtml() {
+    const asar = state.hostAsar;
+    let badgeText = '检测中…';
+    if (asar) {
+      if (!asar.found) {
+        badgeText = '仅 CDP 模式（未检测到本地 app.asar）';
+      } else if (asar.nativeConnected) {
+        badgeText = `⚡ 原生 0ms 已直连（v${escWorkshopHtml(asar.version || '0.8.3')} · 免 19222 端口）`;
+      } else if (asar.patched) {
+        badgeText = `✅ 已写入引导钩子 v${escWorkshopHtml(asar.version || '0.8.3')}（重启 Antigravity 生效）`;
+      } else {
+        badgeText = '⚪ 当前走 19222 CDP 兜底通道（可一键开启原生 0ms 引导）';
+      }
+    }
+    const coexistHint = asar?.found
+      ? `共存检测：汉化 ${asar.hasLocalization ? '✅' : '—'} · 表情包 ${asar.hasMemeRenderer ? '✅' : '—'} · 原版备份 ${asar.bakExists ? '✅' : '自动创建'}（仅写入约 4KB 极薄钩子至 dist/main.js，热改色/词典/皮肤零重启）`
+      : '未找到本地客户端安装包，插件保持纯 CDP 兼容运行';
+    const cmdText = state.hostAsarCmdHint || (asar?.patched ? asar?.cliRestoreCmd : asar?.cliApplyCmd) || '';
+
+    return `
+      <div class="gn-ws-card">
+        <div class="gn-ws-card-title">⚡ 5. 原生 0ms 沉浸引导（免 19222 端口）</div>
+        <div class="gn-ws-sub">当前连接模式：<strong>${badgeText}</strong></div>
+        <div class="gn-ws-sub" style="margin-top:4px;">${escWorkshopHtml(coexistHint)}</div>
+        ${asar?.found ? `
+          <div class="gn-ws-row" style="margin-top:6px;flex-wrap:wrap;gap:6px;">
+            <button type="button" class="gn-pill is-primary" data-ws-act="apply-host-asar">⚡ ${asar.patched ? '更新原生引导钩子' : '启用原生 0ms 引导'}</button>
+            ${asar.patched ? '<button type="button" class="gn-pill" data-ws-act="restore-host-asar">↺ 无损移除引导钩子</button>' : ''}
+            ${cmdText ? '<button type="button" class="gn-pill" data-ws-act="copy-host-asar-cmd">📋 复制终端一键命令</button>' : ''}
+          </div>
+        ` : ''}
+        ${state.hostAsarCmdHint ? `<div class="gn-ws-sub" style="margin-top:4px;word-break:break-all;">关闭 Antigravity 后在终端执行：<code>${escWorkshopHtml(state.hostAsarCmdHint)}</code></div>` : ''}
       </div>
     `;
   }
@@ -987,6 +1031,41 @@ export function createThemeWorkshopController(deps) {
         else if (act === 'keep-alchemy') void keepAlchemy();
         else if (act === 'revert-alchemy') revertAlchemy();
         else if (act === 'reset-eggs') void resetEggProgress();
+        else if (act === 'apply-host-asar') {
+          showWorkshopToast('正在检测并写入极薄 app.asar 主进程引导钩子...');
+          void deps.hostApi('/api/host-asar/apply', { method: 'POST', body: '{}' }).then((r) => {
+            if (r?.status) state.hostAsar = r.status;
+            if (r?.ok) {
+              state.hostAsarCmdHint = '';
+              showWorkshopToast('✅ 原生 0ms 引导钩子写入成功（重启 Antigravity 后免 19222 端口生效）');
+            } else {
+              state.hostAsarCmdHint = r?.cliApplyCmd || state.hostAsar?.cliApplyCmd || '';
+              showWorkshopToast(r?.message || '客户端运行中占用文件，请完全退出后在独立终端执行下方命令', true);
+            }
+            render();
+          }).catch(() => showWorkshopToast('原生引导写入请求失败', true));
+        }
+        else if (act === 'restore-host-asar') {
+          void deps.hostApi('/api/host-asar/restore', { method: 'POST', body: '{}' }).then((r) => {
+            if (r?.status) state.hostAsar = r.status;
+            if (r?.ok) {
+              state.hostAsarCmdHint = '';
+              showWorkshopToast('↺ 已无损剥离原生引导钩子（汉化、表情包与原版备份完整保留）');
+            } else {
+              state.hostAsarCmdHint = r?.cliRestoreCmd || state.hostAsar?.cliRestoreCmd || '';
+              showWorkshopToast(r?.message || '客户端运行中占用文件，请完全退出后在独立终端执行移除命令', true);
+            }
+            render();
+          }).catch(() => showWorkshopToast('移除引导钩子请求失败', true));
+        }
+        else if (act === 'copy-host-asar-cmd') {
+          const cmd = state.hostAsarCmdHint || (state.hostAsar?.patched ? state.hostAsar?.cliRestoreCmd : state.hostAsar?.cliApplyCmd) || '';
+          if (cmd && navigator.clipboard?.writeText) {
+            void navigator.clipboard.writeText(cmd).then(() => showWorkshopToast('📋 已复制终端命令，完全退出 Antigravity 后粘贴执行即可'));
+          } else {
+            showWorkshopToast(cmd || '暂无命令');
+          }
+        }
         else if (act === 'supreme-parade') {
           deps.onReplaySidecarEgg?.('supreme');
           void triggerSidecarEgg('supreme-maodie-parade');

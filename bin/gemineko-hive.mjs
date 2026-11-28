@@ -5,8 +5,10 @@
  *   node bin/gemineko-hive.mjs status [--json] [--swarm-dir <path>]
  *   node bin/gemineko-hive.mjs apply [--json] [--swarm-dir <path>] [--bundle <path>]
  *   node bin/gemineko-hive.mjs restore [--json] [--swarm-dir <path>]
+ *   node bin/gemineko-hive.mjs host-asar <status|apply|restore> [--no-kill] [--no-restart] [--force-self] [--json]
  */
 
+import { applyHostAsarPatch, getHostAsarStatus, restoreHostAsarPatch } from '../src/host-asar-patcher.mjs';
 import { applyNativePatch, getNativePatchStatus, restoreNativePatch } from '../src/native-patcher.mjs';
 
 function parseArgs(argv) {
@@ -45,6 +47,41 @@ function main() {
   };
 
   let res;
+  if (cmd === 'host-asar') {
+    const subCmd = positional[1] || 'status';
+    const asarOpts = {
+      installDir: typeof flags['install-dir'] === 'string' ? flags['install-dir'] : undefined,
+      resourcesDir: typeof flags['resources-dir'] === 'string' ? flags['resources-dir'] : undefined,
+      allowKillRunning: !flags['no-kill'],
+      noRestart: Boolean(flags['no-restart']),
+      forceSelf: Boolean(flags['force-self']),
+    };
+    if (subCmd === 'status') res = getHostAsarStatus(asarOpts);
+    else if (subCmd === 'apply') res = applyHostAsarPatch(asarOpts);
+    else if (subCmd === 'restore') res = restoreHostAsarPatch(asarOpts);
+    else {
+      console.log('用法: node bin/gemineko-hive.mjs host-asar <status|apply|restore> [--no-kill] [--no-restart] [--json]');
+      return;
+    }
+    if (asJson) {
+      console.log(JSON.stringify(res, null, 2));
+      return;
+    }
+    if (subCmd === 'status') {
+      console.log(
+        `[基米窝 原生 0ms 引导] ${
+          res.found ? (res.patched ? `已写入 v${res.version}（免 19222 端口）` : '未写入（当前仅使用 19222 CDP 兜底）') : '未检测到 Antigravity app.asar'
+        }`,
+      );
+      if (res.found) {
+        console.log(`  resources: ${res.resourcesDir}`);
+        console.log(`  共存检测 : 汉化=${res.hasLocalization ? '✅' : '—'} | 表情包=${res.hasMemeRenderer ? '✅' : '—'} | bak=${res.bakExists ? '✅' : '—'}`);
+      }
+      return;
+    }
+    console.log(res.ok ? `[基米窝 原生 0ms 引导] 操作成功 (${res.action})` : `[基米窝 原生 0ms 引导] ${res.message || '未完成'}`);
+    return;
+  }
   if (cmd === 'status') {
     res = getNativePatchStatus(opts);
   } else if (cmd === 'apply') {
@@ -59,6 +96,7 @@ function main() {
       '  node bin/gemineko-hive.mjs status [--json] [--swarm-dir <path>]',
       '  node bin/gemineko-hive.mjs apply [--json] [--swarm-dir <path>] [--bundle <path>]',
       '  node bin/gemineko-hive.mjs restore [--json] [--swarm-dir <path>]',
+      '  node bin/gemineko-hive.mjs host-asar <status|apply|restore> [--no-kill] [--no-restart] [--json]',
     ].join('\n'));
     return;
   }
