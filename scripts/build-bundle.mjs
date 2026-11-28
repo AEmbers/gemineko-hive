@@ -32,6 +32,12 @@ function stripModuleSyntax(src) {
 }
 
 export function buildGeminekoBundle() {
+  let pkgVersion = '0.8.4';
+  try {
+    const pkgRaw = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+    if (pkgRaw?.version) pkgVersion = String(pkgRaw.version).trim();
+  } catch {}
+
   const assets = {
     logo: fileToDataUri(path.join(REPO_ROOT, 'assets', 'logo.png')),
   };
@@ -54,11 +60,12 @@ export function buildGeminekoBundle() {
   );
 
   const bundle = [
-    '// Built by Gemineko Hive v0.7.0 (scripts/build-bundle.mjs) — DO NOT EDIT DIRECTLY.',
+    `// Built by Gemineko Hive v${pkgVersion} (scripts/build-bundle.mjs) — DO NOT EDIT DIRECTLY.`,
     '(function() {',
     '  "use strict";',
     '  if (typeof window === "undefined" || window.__GEMINEKO_HIVE_LOADED__) return;',
     '  window.__GEMINEKO_HIVE_LOADED__ = true;',
+    `  const GEMINEKO_VERSION = ${JSON.stringify(pkgVersion)};`,
     `  const GEMINEKO_ASSETS = ${JSON.stringify(assets)};`,
     `  const GEMINEKO_CSS = ${JSON.stringify(themeCss)};`,
     '',

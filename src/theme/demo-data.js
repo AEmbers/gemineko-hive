@@ -117,7 +117,7 @@ export function buildDemoSwarmSnapshot(nowMs = Date.now()) {
       channel: 'main',
       time: iso(-120),
       ts: nowMs - 120000,
-      text: '欢迎来到 **Gemineko Hive · 基米窝 v0.4.0**！全透明 25 态 4 帧 APNG 官设还原 Q 版动态立绘、猫窝主题与全量花名已就绪喵～',
+      text: '欢迎来到 **Gemineko Hive · 基米窝 v0.8.4**！全透明 25 态 4 帧 APNG 官设还原 Q 版动态立绘、猫窝主题与全量花名已就绪喵～',
     },
     {
       seq: 2,

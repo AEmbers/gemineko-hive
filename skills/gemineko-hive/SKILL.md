@@ -11,13 +11,13 @@ description: >-
   Swarm bees, toggle the live chat catgirl overlay, or preview the swarm UI.
 ---
 
-# Gemineko Hive · 基米窝 (v0.2.0)
+# Gemineko Hive · 基米窝 (v0.8.4)
 
-把 Google Antigravity 原生 Swarm 与主对话编排/执行进程变成一窝 25 态活体哈基米 / AI 娘宇宙。
+把 Google Antigravity 原生 Swarm 面板、主对话区与侧边栏全面改造成《基米窝》宇宙：集成极薄 `app.asar` 原生 0ms 引导（免 `19222` 端口）、SSE 实时热引擎、剧场级反重力冷启有声动画、社区主题商店与精细工坊、13 控件哈基米彩蛋 & 水晶拯救物语软萌配音、以及可选全量汉化。
 
 ## 快捷入口
 
-- **直接打开独立《基米窝》侧边栏**（实时监测主对话编排/执行状态 + 5角色25态 Demo + 一键原生换肤 & CDP 挂件控制）：
+- **直接打开独立《基米窝》侧边栏**（实时监测主对话编排/执行状态 + 社区主题商店/精细工坊 + 一键原生换肤 & 引导控制）：
   `[Gemineko Hive · 基米窝](sidecar://gemineko-hive/hive_board/)`
 - **管理插件开关**：
   `[Gemineko Hive · 基米窝](customization://gemineko-hive)`
@@ -33,8 +33,17 @@ node "<PLUGIN_ROOT>/bin/gemineko-hive.mjs" apply
 
 # 字节级无损还原官方原版小蜜蜂面板与 swarm/assets/logo.svg
 node "<PLUGIN_ROOT>/bin/gemineko-hive.mjs" restore
+
+# 查看极薄 app.asar 主进程引导钩子状态及第三方补丁（汉化/表情包）共存检测
+node "<PLUGIN_ROOT>/bin/gemineko-hive.mjs" host-asar status
+
+# 关闭 Antigravity 后一键写入极薄 app.asar 主进程引导钩子（免 19222 端口 + 解锁冷启播音）
+node "<PLUGIN_ROOT>/bin/gemineko-hive.mjs" host-asar apply
+
+# 无损剥离极薄引导钩子（完整保留汉化、表情包与原版 app.asar.bak）
+node "<PLUGIN_ROOT>/bin/gemineko-hive.mjs" host-asar restore
 ```
 
 > 提示：
-> 1. 主对话区右上角悬浮胶囊通过本地 CDP（`--remote-debugging-port=19222`）自动挂载；未开调试端口时保持静默待机，侧边栏面板仍完全可用。
-> 2. 执行 `apply` 或 `restore` 后，如果官方原生 Swarm 侧边栏正好已经打开且旧进程仍在运行，关闭重开一次 Swarm 侧边栏即可看到新皮肤生效。
+> 1. 强烈推荐执行一次 `host-asar apply` 启用原生 0ms 引导：从此彻底摆脱 `--remote-debugging-port=19222` 参数依赖，享受到 0ms 深色防白屏、冷启免点击自动播音与 SSE 热刷新；未改 `app.asar` 时则自动回退到 CDP 兼容模式（`19222`）。
+> 2. Antigravity 更新后，原生 Swarm 换肤会在 Sidecar 启动时自动自愈；若 `app.asar` 被覆盖，彻底退出 Antigravity 后执行一次 `host-asar apply` 即可恢复。

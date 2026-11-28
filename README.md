@@ -4,29 +4,28 @@
   <img src="assets/logo.png" width="124" alt="Gemineko Hive Icon" />
 </p>
 
-<h1 align="center">Gemineko Hive · 基米窝 v0.8.3</h1>
+<h1 align="center">Gemineko Hive · 基米窝 v0.8.4</h1>
 
 <p align="center">
   <strong>“坏了，捅了基米窝了！”</strong><br />
-  面向 <strong>Google Antigravity</strong> 的开源主题引擎 × 社区主题商店：内置官方旗舰《基米窝》（3D 晶透猫耳星钻 + 25 态透明 APNG 伴生猫娘 + 5 角色联动皮肤），支持第三方主题包热插拔、一键打包投稿与 GitHub Star/更新推送闭环！
+  面向 <strong>Google Antigravity</strong> 的开源主题引擎 × 社区主题商店：内置官方旗舰《基米窝》（极薄 `app.asar` 主进程引导免 `19222` 端口 + 剧场级反重力冷启动画 + 3D 晶透猫耳星钻与跨版本拯救物语 + 13 控件专属彩蛋软萌配音 + 25 态透明 APNG 伴生猫娘 + 5 角色联动皮肤），支持第三方主题包热插拔、一键导出投稿与 GitHub Star/更新推送闭环！
 </p>
 
 ---
 
-## ✨ v0.9.0 剧场级反重力启动动画（双模 0ms 强化）
+## ✨ v0.8.0–v0.8.4 最新旗舰特性
 
-- **「星钻 × 五哈基米」60fps 开场过场（零入侵 CDP 默认开箱即用）**：
-  - 每次冷启自动演绎约 `2.6s` 剧场级实时光学片头：反重力星尘升腾 → 1024px 沉睡水晶星钻绽放 → 5 位真实动态 APNG 哈基米沿星轨依次亮起环绕 → 炫彩品牌字标，自动随当前主题深浅色与角色强调色联动；
-  - **智能双轨无缝收尾**：落在首页时片头星钻精准飞入并融合到首页大星钻 Logo；落在历史对话页时化作反重力棱镜光浪向上浮散退场；任意点击 / `Esc` 瞬时跳过，并严格遵守「专注 0fps」「关闭动效」与全局静音开关；
-  - **声音仪式感**：内置立体声星晶反重力主旋律音效（`startup-chime.mp3`）与猫娘招牌开机问候语音（`startup-welcome.mp3`），可在「精细工坊」独立开关音效/语音或随时点击 **✨ 立即重播预览**（主窗口快切栏亦提供一键重播）。
-- **可选 0ms 原生 `app.asar` 零白屏强化补丁**：
-  - 支持在「精细工坊 → 反重力启动动画」查看共存状态并一键启用/无损移除，或在关闭 Antigravity 后在终端执行：
-    ```bash
-    node bin/gemineko-hive.mjs startup-asar status
-    node bin/gemineko-hive.mjs startup-asar apply
-    node bin/gemineko-hive.mjs startup-asar restore
-    ```
-  - 采用独立标记块增量注入 `dist/preload.js`，绝不覆写已有 `app.asar.bak`，与 `chinese-toolkit` / `agy-meme` 安全共存、卸载仅剥离自身标记块。
+- **极薄 `app.asar` 主进程引导层 × SSE 实时热引擎（免 `19222` 端口 + 原生 Swarm 更新自愈，#12）**：
+  - 支持在「精细工坊 → ⚡ 5. 原生 0ms 沉浸引导」或关闭 Antigravity 后执行 `node bin/gemineko-hive.mjs host-asar apply`：仅向 `dist/main.js` 增量写入 ~4KB 独立标记块（不修改 `dist/preload.js`、绝不覆写 `app.asar.bak`，与 `chinese-toolkit` / `agy-meme` 安全共存、随时 `host-asar restore` 无损剥离）；
+  - 实现深色主题 `0ms` 防白屏、自动发现 Sidecar `runtime-endpoint.json` 并通过 `/api/host-events` SSE 毫秒级推送配色/主题/汉化与重播事件，同时自动解锁 Chromium 冷启免手势播音，**彻底告别 `--remote-debugging-port=19222` 参数依赖**（并继续保留 CDP 作为免改包兜底通道）；
+  - Sidecar 启动时自动检测并自愈被客户端更新覆盖的原生 Swarm 面板补丁，确保更新后不掉皮肤。
+- **「星钻 × 五哈基米」60fps 剧场级反重力启动动画（#11）**：
+  - 每次冷启经过就绪门禁与首帧预解码后自动演绎约 `2.6s` 实时光学片头：反重力星尘升腾 → 1024px 沉睡水晶星钻绽放 → 5 位真实动态 APNG 哈基米沿星轨依次亮起环绕 → 炫彩品牌字标，自动随当前主题深浅色与角色强调色联动；
+  - **智能双轨无缝收尾**：落在首页时片头星钻精准飞入融合到首页大星钻 Logo；落在历史对话页时化作反重力棱镜光浪向上浮散退场；任意点击 / `Esc` 瞬时跳过，严格遵守「专注 0fps」「关闭动效」与全局静音开关；
+  - **开机声音仪式感**：内置立体声星晶反重力主旋律音效（`startup-chime.mp3`）与猫娘招牌开机问候语音（`startup-welcome.mp3`），可在「精细工坊 → 6. 反重力启动动画」独立开关音效/语音或随时点击 **✨ 立即重播预览**（主窗口快切栏亦提供一键重播）。
+- **13 控件专属「哈基米热梗」彩蛋 × 沉睡水晶「跨版本拯救物语」（#6, #7）**：
+  - 主窗口 10 大控件 + 侧边栏 3 大控件均配备专属互动彩蛋（输入栏小猫连击变身脊背龙哈气、右键叮咚鸡运势盲盒、侧边栏凌晨三点跑酷、投喂小鱼干全窝围观、工坊炼丹试妆等），集齐 `13/13` 解锁终极「至尊圆头耄耋·星河大阅兵」；
+  - 首页沉睡水晶徽章 `#gemineko-home-emblem` 开启 5 章跨版本主线物语，现已上线第 1 章《晶中微语》：快速连点 10 次触发 `crystal-rattle.mp3` 玻璃摇晃音效与棱镜气泡 **`「主人，救救我……」`**，搭配 `Qwen3-TTS-12Hz-1.7B-VoiceDesign` 定制全套软萌猫娘语音，经 Sidecar `/gemineko-audio/` 零占主包体播放。
 
 ## ✨ v0.7.0 开放主题引擎 × 社区主题商店
 

@@ -1825,11 +1825,13 @@ export function bootGeminekoHive() {
         </div>`
       : '';
 
+    const displayVer = lastGithubPulse?.currentVersion || (typeof GEMINEKO_VERSION === 'string' ? GEMINEKO_VERSION : '0.8.4');
+
     bar.innerHTML = `
       <div class="gn-bar-top">
         <span class="gn-brand" data-gn-act="collapse" title="Gemineko Hive 开源主题引擎 · by AEmbers (Code: MIT · Artwork: CC BY-NC-SA 4.0)">
           <img class="gn-brand-dot" src="${GEMINEKO_ASSETS.logo}" alt="" />
-          <span>基米窝 v0.7</span>
+          <span>基米窝 v${displayVer}</span>
         </span>
         <div class="gn-top-actions">
           ${window.__GEMINEKO_SIDECAR_MODE__ ? `<button type="button" id="gn-workshop-toggle-btn" class="gn-pill ${workshop?.isOpen?.() ? 'is-active' : ''}" data-gn-act="toggle-workshop" title="打开《Gemineko Hive · 基米窝》社区主题商店与精细工坊">🏪 主题商店</button>
