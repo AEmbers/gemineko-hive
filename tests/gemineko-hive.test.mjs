@@ -60,6 +60,8 @@ import {
   CRYSTAL_STORY_CURRENT_CHAPTER,
   DEFAULT_HOST_THEME_CONFIG,
   EASTER_EGG_CATALOG,
+  PUBLIC_EASTER_EGG_CATALOG,
+  PUBLIC_EASTER_EGG_IDS,
   ROLE_PALETTES,
   THEME_PRESETS,
   createThemeConfigStore,
@@ -1100,13 +1102,16 @@ test('Sidecar 社区商店接口、GitHub Star 与版本更新推送缓存闭环
   }
 });
 
-test('13 控件哈基米专属彩蛋目录、水晶拯救跨版本连载、语音静态路由、解锁接口与 CDP/侧栏注入闭环', async () => {
+test('12 枚公开彩蛋 + 零剧透隐藏彩蛋、语音静态路由、解锁接口与公开文档无剧透回归', async () => {
+  assert.equal(PUBLIC_EASTER_EGG_CATALOG.length, 12);
+  assert.equal(PUBLIC_EASTER_EGG_IDS.size, 12);
   assert.equal(EASTER_EGG_CATALOG.length, 13);
   assert.equal(ALLOWED_EASTER_EGG_IDS.size, 13);
   assert.equal(CRYSTAL_STORY_CHAPTERS.length, 5);
   assert.equal(CRYSTAL_STORY_CURRENT_CHAPTER, 1);
-  assert.ok(ALLOWED_EASTER_EGG_IDS.has('emblem-crystal-rescue'), '首页星钻应升级为 emblem-crystal-rescue 跨版本主线彩蛋');
-  assert.ok(!ALLOWED_EASTER_EGG_IDS.has('emblem-greenbean'), '旧 emblem-greenbean 应已从首页目录撤下');
+  assert.ok(ALLOWED_EASTER_EGG_IDS.has('emblem-crystal-rescue'), '隐藏彩蛋仍应保留持久化 ID');
+  assert.ok(!PUBLIC_EASTER_EGG_IDS.has('emblem-crystal-rescue'), '隐藏彩蛋绝不应出现在公开目录与计数中');
+  assert.ok(!ALLOWED_EASTER_EGG_IDS.has('emblem-greenbean'), '旧 emblem-greenbean 应已从目录撤下');
 
   for (const fname of ['egg-spinosaurus-hiss.png', 'egg-maodie-boss.png', 'egg-greenbean-soy.png']) {
     const abs = path.join(REPO_ROOT, 'assets', 'sprites', fname);
@@ -1198,9 +1203,9 @@ test('13 控件哈基米专属彩蛋目录、水晶拯救跨版本连载、语�
 
     const cfgRes = await srv.inject({ url: '/api/theme/config' });
     assert.equal(cfgRes.statusCode, 200);
-    assert.equal(cfgRes.json().eggCatalog.length, 13);
-    assert.equal(cfgRes.json().crystalStory?.currentChapter, 1);
-    assert.equal(cfgRes.json().crystalStory?.chapters?.length, 5);
+    assert.equal(cfgRes.json().eggCatalog.length, 12, '未解锁前不应暴露隐藏彩蛋');
+    assert.ok(!cfgRes.json().eggCatalog.some((e) => e.id === 'emblem-crystal-rescue'));
+    assert.equal(cfgRes.json().crystalStory, undefined, '不应向前端暴露任何跨版本章节剧透字段');
 
     const badUnlock = await srv.inject({
       method: 'POST',
@@ -1230,8 +1235,9 @@ test('13 控件哈基米专属彩蛋目录、水晶拯救跨版本连载、语�
     assert.equal(uDup.statusCode, 200);
     assert.equal(uDup.json().newlyUnlocked, false);
 
+    // 集齐 12 枚公开彩蛋即触发 completedAll，绝不要求先发现隐藏彩蛋
     let lastRes = null;
-    for (const egg of EASTER_EGG_CATALOG) {
+    for (const egg of PUBLIC_EASTER_EGG_CATALOG) {
       lastRes = await srv.inject({
         method: 'POST',
         url: '/api/theme/egg/unlock',
@@ -1240,7 +1246,31 @@ test('13 控件哈基米专属彩蛋目录、水晶拯救跨版本连载、语�
       });
     }
     assert.equal(lastRes.json().completedAll, true);
-    assert.equal(lastRes.json().unlocked.length, 13);
+    assert.equal(lastRes.json().unlocked.length, 12);
+    assert.equal(lastRes.json().total, 12);
+
+    // 触发隐藏彩蛋后可持久化并在图鉴里低调呈现，但不附带章节或预告字段
+    const secretUnlock = await srv.inject({
+      method: 'POST',
+      url: '/api/theme/egg/unlock',
+      headers: { 'x-sidecar-token': 'test-egg-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'emblem-crystal-rescue' }),
+    });
+    assert.equal(secretUnlock.statusCode, 200);
+    const cfgAfterSecret = await srv.inject({ url: '/api/theme/config' });
+    const secretItem = cfgAfterSecret.json().eggCatalog.find((e) => e.id === 'emblem-crystal-rescue');
+    assert.ok(secretItem, '已发现后应在本人图鉴中保留重温入口');
+    assert.equal(secretItem.isStory, undefined);
+    assert.equal(secretItem.storyChapter, undefined);
+
+    // 防剧透回归校验：首页星钻悬停与全部公开文档不得泄露隐藏彩蛋线索
+    const hostThemeSrc = fs.readFileSync(path.join(REPO_ROOT, 'src', 'cdp', 'host-theme-runtime.mjs'), 'utf8');
+    assert.doesNotMatch(hostThemeSrc, /沉睡着哈基米|试着连续敲击/);
+    const spoilerRe = /晶中|拯救物语|救救我|沉睡水晶|连点\s*10|10\s*连击|crystal-rattle|crystal-ch1|CRYSTAL_STORY|初绽裂纹|掌心星光|棱镜共鸣|破壳新生/;
+    for (const docRel of ['README.md', 'CHANGELOG.md', 'docs/SPEC.md', 'skills/gemineko-hive/SKILL.md']) {
+      const docTxt = fs.readFileSync(path.join(REPO_ROOT, docRel), 'utf8');
+      assert.doesNotMatch(docTxt, spoilerRe, `${docRel} 不得出现隐藏彩蛋剧透描述`);
+    }
 
     const resetRes = await srv.inject({
       method: 'POST',

@@ -7,7 +7,7 @@
 - **双模合一**：
   1. 默认启用 **CDP 宿主渲染层**（零改动 `app.asar`，随 Sidecar 挂载即生效，官方升级零失效）；
   2. 可选一键启用 **原生 `app.asar` 0ms 强化补丁**（独立标记块注入 `dist/preload.js`，不覆写已有 `app.asar.bak`，与 `chinese-toolkit` / `agy-meme` 安全共存，支持无损剥离）。
-- **唯一剧场级主片头（不做视频导入）**：反重力星尘升腾 + 1024px 沉睡水晶星钻棱镜绽放 + 5 位真实哈基米 APNG 立绘沿星轨亮起环绕 + `ANTIGRAVITY × GEMINEKO HIVE` 炫彩字标。
+- **唯一剧场级主片头（不做视频导入）**：反重力星尘升腾 + 1024px 3D 棱镜星钻绽放 + 5 位真实哈基米 APNG 立绘沿星轨亮起环绕 + `ANTIGRAVITY × GEMINEKO HIVE` 炫彩字标。
 - **节奏与交互礼仪**：总时长 ~2.6s（60fps），同会话冷启仅自动播 1 次；任意点击 / `Esc` / `Space` / `Enter` 在 220ms 内瞬时淡出跳过；遵守 `cfg.enabled`、`cfg.focusMode`、`cfg.motionLevel !== 'off'` 与 `cfg.startup.enabled`；主窗口快切栏与精细工坊均支持「重播预览」。
 - **声音仪式感**：
   - `assets/audio/startup-chime.mp3`：纯净星晶反重力开机音效；

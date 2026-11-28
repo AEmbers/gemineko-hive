@@ -30,9 +30,8 @@ import { buildDemoSwarmSnapshot } from '../theme/demo-data.js';
 import {
   ALLOWED_EASTER_EGG_IDS,
   ALLOWED_SPRITE_QUALITIES,
-  CRYSTAL_STORY_CHAPTERS,
-  CRYSTAL_STORY_CURRENT_CHAPTER,
   EASTER_EGG_CATALOG,
+  PUBLIC_EASTER_EGG_IDS,
   ROLE_PALETTES,
   THEME_PRESETS,
   createThemeConfigStore,
@@ -965,18 +964,30 @@ export async function createHiveSidecarServer(options = {}) {
     }
 
     if (req.method === 'GET' && pathname === '/api/theme/config') {
+      const cfg = getEnrichedThemeConfig();
+      const unlockedSet = new Set(Array.isArray(cfg?.easterEggs?.unlocked) ? cfg.easterEggs.unlocked : []);
+      const visibleCatalog = EASTER_EGG_CATALOG
+        .filter((egg) => !egg.secret || unlockedSet.has(egg.id))
+        .map((egg) => {
+          if (!egg.secret) return egg;
+          return {
+            id: egg.id,
+            scope: egg.scope,
+            secret: true,
+            widget: egg.widget,
+            title: egg.title,
+            meme: egg.meme,
+            gesture: egg.gesture,
+            hint: egg.hint,
+          };
+        });
       sendJson(res, 200, {
         ok: true,
-        config: getEnrichedThemeConfig(),
+        config: cfg,
         hostScheme: reportedHostScheme || null,
         presets: THEME_PRESETS,
         rolePalettes: ROLE_PALETTES,
-        eggCatalog: EASTER_EGG_CATALOG,
-        crystalStory: {
-          currentChapter: CRYSTAL_STORY_CURRENT_CHAPTER,
-          totalChapters: CRYSTAL_STORY_CHAPTERS.length,
-          chapters: CRYSTAL_STORY_CHAPTERS,
-        },
+        eggCatalog: visibleCatalog,
         brand: BRAND_META,
       });
       return;
@@ -1051,7 +1062,7 @@ export async function createHiveSidecarServer(options = {}) {
       const newlyUnlocked = !set.has(eggId);
       set.add(eggId);
       const nextUnlocked = Array.from(set);
-      const completedAll = nextUnlocked.length === ALLOWED_EASTER_EGG_IDS.size;
+      const completedAll = Array.from(PUBLIC_EASTER_EGG_IDS).every((id) => set.has(id));
       let next = getEnrichedThemeConfig(curCfg);
       if (newlyUnlocked) {
         next = getEnrichedThemeConfig(
@@ -1070,7 +1081,7 @@ export async function createHiveSidecarServer(options = {}) {
         newlyUnlocked,
         completedAll,
         unlocked: nextUnlocked,
-        total: ALLOWED_EASTER_EGG_IDS.size,
+        total: PUBLIC_EASTER_EGG_IDS.size,
         config: next,
       });
       return;

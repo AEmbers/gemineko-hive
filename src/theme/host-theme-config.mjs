@@ -115,7 +115,7 @@ export const CRYSTAL_STORY_CHAPTERS = [
   },
 ];
 
-/** 13 个自研控件专属哈基米热梗彩蛋目录（全收集解锁终极圆头耄耋星河大阅兵） */
+/** 12 枚公开控件专属哈基米热梗彩蛋与 1 枚无提示隐藏彩蛋 */
 export const EASTER_EGG_CATALOG = [
   {
     id: 'dock-spinosaurus',
@@ -129,15 +129,12 @@ export const EASTER_EGG_CATALOG = [
   {
     id: 'emblem-crystal-rescue',
     scope: 'host',
-    isStory: true,
-    storyChapter: CRYSTAL_STORY_CURRENT_CHAPTER,
-    storyTotalChapters: CRYSTAL_STORY_CHAPTERS.length,
-    storyChapterTitle: '第 1 章 · 晶中微语',
-    widget: '首页沉睡水晶星钻',
-    title: '晶中哈基米 · 第1章：晶中微语',
-    meme: '跨版本拯救主线 1/5',
-    gesture: '快速连续点击首页水晶星钻 10 次',
-    hint: '水晶里似乎沉睡着某位熟悉的猫娘…试着连续敲击星钻唤醒她吧（连点 10 次）…',
+    secret: true,
+    widget: '首页星钻',
+    title: '晶中微语',
+    meme: '隐藏彩蛋',
+    gesture: '',
+    hint: '',
   },
   {
     id: 'stage-mambo-choir',
@@ -240,6 +237,8 @@ export const EASTER_EGG_CATALOG = [
   },
 ];
 
+export const PUBLIC_EASTER_EGG_CATALOG = EASTER_EGG_CATALOG.filter((e) => !e.secret);
+export const PUBLIC_EASTER_EGG_IDS = new Set(PUBLIC_EASTER_EGG_CATALOG.map((e) => e.id));
 export const ALLOWED_EASTER_EGG_IDS = new Set(EASTER_EGG_CATALOG.map((e) => e.id));
 export const ALLOWED_WALLPAPER_MODES = new Set([
   'off',

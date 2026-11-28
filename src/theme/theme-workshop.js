@@ -23,7 +23,6 @@ export function createThemeWorkshopController(deps) {
     presets: {},
     rolePalettes: {},
     eggCatalog: [],
-    crystalStory: null,
     brand: null,
     registry: [],
     registrySource: 'bundled',
@@ -213,7 +212,6 @@ export function createThemeWorkshopController(deps) {
         state.presets = cfgRes.presets || {};
         state.rolePalettes = cfgRes.rolePalettes || {};
         if (Array.isArray(cfgRes.eggCatalog)) state.eggCatalog = cfgRes.eggCatalog;
-        if (cfgRes.crystalStory) state.crystalStory = cfgRes.crystalStory;
         if (cfgRes.brand) state.brand = cfgRes.brand;
         notifyHostTheme(state.config, cfgRes.hostScheme);
       }
@@ -486,7 +484,7 @@ export function createThemeWorkshopController(deps) {
         state.config = withLocalTypo(data.config);
         notifyHostTheme(state.config);
         render();
-        showWorkshopToast('已重置 13 枚彩蛋图鉴，重新探索吧 🥚');
+        showWorkshopToast('已重置 12 枚彩蛋图鉴，重新探索吧 🥚');
       }
     } catch {}
   }
@@ -923,35 +921,27 @@ export function createThemeWorkshopController(deps) {
   function renderEggDexCardHtml(c) {
     const catalog = Array.isArray(state.eggCatalog) ? state.eggCatalog : [];
     const unlockedSet = new Set(Array.isArray(c.easterEggs?.unlocked) ? c.easterEggs.unlocked : []);
-    const total = catalog.length || 13;
-    const found = catalog.length ? catalog.filter((e) => unlockedSet.has(e.id)).length : unlockedSet.size;
+    const publicCatalog = catalog.filter((e) => !e.secret);
+    const total = publicCatalog.length || 12;
+    const found = publicCatalog.filter((e) => unlockedSet.has(e.id)).length;
     const pct = Math.min(100, Math.round((found / Math.max(1, total)) * 100));
     const allDone = found >= total && total > 0;
 
-    const storyInfo = state.crystalStory && Array.isArray(state.crystalStory.chapters) ? state.crystalStory : null;
-    const nextStoryCh = storyInfo
-      ? storyInfo.chapters.find((ch) => Number(ch.chapter) === Number(storyInfo.currentChapter || 1) + 1)
-      : null;
-
-    const cardsHtml = catalog.map((egg) => {
+    const visibleEggs = catalog.filter((egg) => !egg.secret || unlockedSet.has(egg.id));
+    const cardsHtml = visibleEggs.map((egg) => {
       const done = unlockedSet.has(egg.id);
-      const isStory = Boolean(egg.isStory);
-      const storyBadge = isStory
-        ? `<span class="gn-egg-story-badge">📖 跨版本主线 ${escWorkshopHtml(egg.storyChapter || 1)}/${escWorkshopHtml(egg.storyTotalChapters || 5)}</span>`
-        : '';
-      const replayLabel = isStory ? `▶ 重温第${escWorkshopHtml(egg.storyChapter || 1)}章` : '▶ 重温';
+      const isSecret = Boolean(egg.secret);
+      const replayLabel = '▶ 重温';
       const hintLine = done
-        ? (isStory && nextStoryCh
-            ? `${egg.gesture}（${egg.meme}） · 🔮 下版本预告：${nextStoryCh.title}`
-            : `${egg.gesture}（${egg.meme}）`)
+        ? (isSecret ? (egg.meme || '隐藏彩蛋') : `${egg.gesture}（${egg.meme}）`)
         : egg.hint;
       return `
-        <div class="gn-egg-card ${done ? 'is-unlocked' : ''} ${isStory ? 'is-story-card' : ''}">
+        <div class="gn-egg-card ${done ? 'is-unlocked' : ''}">
           <div class="gn-egg-card-top">
-            <span>${done ? (isStory ? '💎' : '✨') : '🔒'} ${escWorkshopHtml(done ? egg.title : (isStory ? '沉睡水晶·未知呼救' : '？？？待发掘'))}</span>
+            <span>${done ? (isSecret ? '💎' : '✨') : '🔒'} ${escWorkshopHtml(done ? egg.title : '？？？待发掘')}</span>
             ${done ? `<button type="button" class="gn-pill" data-ws-replay-egg="${escWorkshopHtml(egg.id)}" data-ws-replay-scope="${escWorkshopHtml(egg.scope)}">${replayLabel}</button>` : ''}
           </div>
-          <div class="gn-egg-card-widget">${escWorkshopHtml(egg.widget)} · ${egg.scope === 'sidecar' ? '侧边栏' : '主窗口'} ${storyBadge}</div>
+          <div class="gn-egg-card-widget">${escWorkshopHtml(egg.widget)} · ${egg.scope === 'sidecar' ? '侧边栏' : '主窗口'}</div>
           <div class="gn-egg-card-hint">${escWorkshopHtml(hintLine)}</div>
         </div>
       `;
@@ -962,7 +952,7 @@ export function createThemeWorkshopController(deps) {
         <div class="gn-ws-card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
           <span>🥚 7. 哈基米彩蛋图鉴（已发现 ${found} / ${total}）</span>
           <div style="display:flex;gap:6px;align-items:center;">
-            ${allDone ? `<button type="button" class="gn-pill is-primary" data-ws-act="supreme-parade">👑 召唤至尊圆头耄耋阅兵</button>` : '<span class="gn-ws-sub">集齐 13 枚解锁终极隐藏彩蛋</span>'}
+            ${allDone ? `<button type="button" class="gn-pill is-primary" data-ws-act="supreme-parade">👑 召唤至尊圆头耄耋阅兵</button>` : '<span class="gn-ws-sub">集齐 12 枚解锁终极隐藏彩蛋</span>'}
             <button type="button" class="gn-pill" data-ws-act="reset-eggs" title="清空收集记录">↺ 重置图鉴</button>
           </div>
         </div>

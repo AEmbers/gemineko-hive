@@ -2658,7 +2658,7 @@ html[data-gk-theme][data-gk-intensity="optical-neko"]:is([data-gk-focus="1"], [d
       if (!emblem) {
         emblem = document.createElement('div');
         emblem.id = HOME_EMBLEM_ID;
-        emblem.title = '沉睡着哈基米的棱镜水晶 ✦ 试着连续敲击看看…';
+        emblem.title = 'Gemineko Hive · 基米窝';
         emblem.innerHTML = '<span class="gk-he-halo"></span><div class="gk-he-stage"><span class="gk-he-caustic"></span><span class="gk-he-gem"></span><span class="gk-he-sheen"></span><span class="gk-he-spark gk-he-spark-a">✦</span><span class="gk-he-spark gk-he-spark-b">✦</span></div>';
         emblem.addEventListener('click', (e) => {
           e.stopPropagation();

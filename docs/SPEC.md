@@ -1,6 +1,6 @@
 # Gemineko Hive · 基米窝 — 产品需求与架构契约 (SPEC v0.8.5)
 
-> 在 `v0.4.0` 官设锁定三视图与 25 态透明 APNG 基线上，历经 `v0.5–v0.8.5` 持续演进，形成「**开放主题引擎 × 社区商店 × 极薄 `app.asar` 原生引导 × SSE 热引擎 × 13 控件彩蛋与跨版本水晶物语 × 剧场级启动动画**」完整架构。
+> 在 `v0.4.0` 官设锁定三视图与 25 态透明 APNG 基线上，历经 `v0.5–v0.8.5` 持续演进，形成「**开放主题引擎 × 社区商店 × 极薄 `app.asar` 原生引导 × SSE 热引擎 × 12 控件彩蛋与软萌配音 × 剧场级启动动画**」完整架构。
 
 ## 1. 形态与三大融合入口
 - **原生 Swarm 无损换肤与更新自愈**：注入标记块与 `/gemineko-sprites/*.png` 独立二进制路由（绝不破坏官方 UTF-8 `STATIC`），同时备份并无损替换 `swarm/assets/logo.svg`，让主对话区 `[Open the Swarm UI]` 按钮小蜜蜂一并换装；Sidecar 启动时若检测到曾开启换肤（`logoBackupExists`）但被 Antigravity 更新覆盖，自动重新 `apply` 自愈；还原时字节级恢复原样。
@@ -27,6 +27,6 @@
 
 ## 4. 主题引擎、多端彩蛋矩阵、剧场级启动动画与全量汉化（`v0.5–v0.8.5`）
 - **开放主题引擎 & 社区商店（`src/theme/theme-store.mjs`、`host-theme-config.mjs`、`host-theme-runtime.mjs`）**：4 套基底配色 + 5 角色流光 + HTTP `206 Range` 流式本机壁纸/立绘水印 + `themes/registry.json` 社区主题热插拔（HTTPS Raw 消毒防 SSRF）与一键导出投稿。
-- **13 控件哈基米彩蛋 & 跨版本水晶物语（`src/cdp/host-easter-eggs-runtime.mjs`）**：主窗口 10 大 + 侧边栏 3 大专属彩蛋、13/13 终极耄耋阅兵、`CRYSTAL_STORY_CHAPTERS` 5 章跨版本主线连载（第 1 章《晶中微语》10 连击碎震呼救）及 `/gemineko-audio/*.mp3` 软萌二创配音体系。
+- **12 控件哈基米彩蛋矩阵（`src/cdp/host-easter-eggs-runtime.mjs`）**：主窗口 9 大 + 侧边栏 3 大专属彩蛋、12/12 终极耄耋阅兵及 `/gemineko-audio/*.mp3` 软萌二创配音体系。
 - **剧场级反重力启动动画（`src/cdp/host-startup-runtime.mjs`）**：Canvas 2D 星尘 + 1024px 星钻 + 5 角色环绕 + 开机双音效/语音，配备 `#t=` 过渡与首帧就绪门禁、`>=420ms` 延迟锁定、首帧 `Image()` 预解码及双轨收尾。
 - **无损全量汉化（`src/cdp/host-i18n-runtime.mjs`）**：`60ms` 固定窗口节流 + ShadowRoot/属性扫描 + `{ orig, applied }` 复用节点状态机，支持一键切回原版英文与代码正文隔离保护。

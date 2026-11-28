@@ -27,6 +27,8 @@ export function buildHostEasterEggsRuntimeSnippet() {
     const OVERLAY_CLASS = 'gk-egg-temp-fx';
     const CATALOG = ${catalogJson};
     const CATALOG_MAP = new Map(CATALOG.map((it) => [it.id, it]));
+    const PUBLIC_CATALOG = CATALOG.filter((it) => !it.secret);
+    const PUBLIC_ID_SET = new Set(PUBLIC_CATALOG.map((it) => it.id));
     const CRYSTAL_CHAPTERS = ${storyChaptersJson};
     const CRYSTAL_CURRENT_CH = Number(${currentStoryChapterJson}) || 1;
     const activeCrystalStory = CRYSTAL_CHAPTERS.find((c) => c.chapter === CRYSTAL_CURRENT_CH) || CRYSTAL_CHAPTERS[0];
@@ -662,8 +664,9 @@ export function buildHostEasterEggsRuntimeSnippet() {
       const meta = CATALOG_MAP.get(eggId);
       const localFirst = !unlockedSet.has(eggId);
       unlockedSet.add(eggId);
-      if (localFirst) {
-        showUnlockToast(\`🥚 发现新彩蛋（\${unlockedSet.size}/\${CATALOG.length}）：\${meta.title}\`);
+      if (localFirst && !meta.secret) {
+        const publicUnlockedCount = Array.from(unlockedSet).filter((id) => PUBLIC_ID_SET.has(id)).length;
+        showUnlockToast(\`🥚 发现新彩蛋（\${publicUnlockedCount}/\${PUBLIC_CATALOG.length}）：\${meta.title}\`);
       }
       fetch(\`\${ctx.server}/api/theme/egg/unlock\`, {
         method: 'POST',
@@ -844,7 +847,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
 
         const header = document.createElement('div');
         header.className = 'gk-egg-crystal-ch';
-        header.innerHTML = \`<span>💎 \${ch.title}</span><span>连载 \${ch.chapter}/\${CRYSTAL_CHAPTERS.length}</span>\`;
+        header.innerHTML = '<span>💎 晶中微语</span>';
 
         const lineEl = document.createElement('div');
         lineEl.className = 'gk-egg-crystal-line';
@@ -1263,7 +1266,7 @@ export function buildHostEasterEggsRuntimeSnippet() {
       stage.className = 'gk-egg-supreme-stage ' + OVERLAY_CLASS;
       stage.innerHTML = \`
         <div class="gk-egg-bean-banner" style="background:linear-gradient(90deg,#f59e0b,#ec4899,#8b5cf6);font-size:14px !important;padding:7px 18px;">
-          👑 13/13 全彩蛋收集完成 · 至尊圆头耄耋星河大阅兵 👑
+          👑 12/12 全彩蛋收集完成 · 至尊圆头耄耋星河大阅兵 👑
         </div>
         <div class="gk-egg-supreme-trio">
           <img src="\${ctx.server}/gemineko-sprites/egg-spinosaurus-hiss.png?v=0.8.1" alt="脊背龙" />
